@@ -1,0 +1,1 @@
+# como o feed corta resultados em páginas, em vez de mandar 10 mil itinerários de uma vez

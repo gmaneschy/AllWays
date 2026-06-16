@@ -1,0 +1,1 @@
+# parte da função da view que recebe a requisição HTTP do React / React Native e devolve a resposta

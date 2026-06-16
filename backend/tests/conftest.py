@@ -1,0 +1,1 @@
+# fixtures compartilhadas do pytest (ex: usuário de teste, client da API)

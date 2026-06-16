@@ -1,0 +1,1 @@
+# lógica de recomendação isolada

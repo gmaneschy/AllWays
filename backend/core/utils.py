@@ -1,0 +1,1 @@
+# funções pequenas sem lar fixo, tipo cálculo de distância entre dois pontos (usado tanto em itineraries quanto potencialmente em places)

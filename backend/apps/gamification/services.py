@@ -1,0 +1,1 @@
+# lógica e concessão de distintivo (badge) isolada
