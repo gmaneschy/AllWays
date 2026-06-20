@@ -50,3 +50,10 @@ Ordem de ESQUELETOS (classes existindo no código, completas ou não):
 Ordem de MIGRATIONS:
 makemigrations gamification users itineraries (numa única chamada, 
 já que há referências cruzadas entre os três)
+
+
+!!!!!!!!
+def perform_create(self, serializer):
+    # Por enquanto sem autenticação real, então aceitamos autor vindo no body.
+    # Quando JWT estiver configurado, troque para: serializer.save(autor=self.request.user)
+    serializer.save()
