@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/places/', include('apps.places.urls')),
     path('api/social/', include('apps.social.urls')),
     path('api/itineraries/', include('apps.itineraries.urls')),
+    path('api/feed/', include('apps.feed.urls')),
 ]

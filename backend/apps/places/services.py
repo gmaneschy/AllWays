@@ -1,5 +1,6 @@
 import googlemaps
 from django.conf import settings
+import requests
 
 _client = None
 
@@ -45,3 +46,22 @@ def buscar_detalhes(place_id):
         'latitude': info['geometry']['location']['lat'],
         'longitude': info['geometry']['location']['lng'],
     }
+
+
+def calcular_distancia(origem_lat, origem_lng, destino_lat, destino_lng):
+    """Sempre calcula a distância a pé (modo 'foot'), como referência objetiva.
+    O meio_deslocamento real do usuário é só informativo, não afeta esse cálculo."""
+    url = f"https://router.project-osrm.org/route/v1/foot/{origem_lng},{origem_lat};{destino_lng},{destino_lat}"
+
+    try:
+        resposta = requests.get(url, params={'overview': 'false'}, timeout=5)
+        dados = resposta.json()
+
+        if dados.get('code') != 'Ok':
+            print(f"OSRM retornou erro: {dados}")
+            return None
+
+        return dados['routes'][0]['distance']
+    except requests.RequestException as e:
+        print(f"Erro de conexão com OSRM: {e}")
+        return None

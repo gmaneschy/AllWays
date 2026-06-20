@@ -1,3 +1,5 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 
 # Create your models here.
@@ -29,20 +31,45 @@ class Itinerario(models.Model):
 class PontoItinerario(models.Model):
     itinerario = models.ForeignKey('itineraries.Itinerario', on_delete=models.CASCADE, related_name='pontos')
     local = models.ForeignKey('places.Place', on_delete=models.CASCADE, related_name='pontos_itinerario')
-    ordem = models.PositiveIntegerField()
+    ordem = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
     movimentacao = models.CharField(max_length=20, choices=[
         ('vazio', 'Vazio'), ('populado', 'Populado'), ('cheio', 'Cheio')
     ], blank=True)
-    seguranca = models.PositiveSmallIntegerField(null=True, blank=True)
-    preco_medio = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    seguranca = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    entrada_gratuita = models.BooleanField(default=False)
+    preco_medio = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
     distancia_ate_proximo = models.FloatField(null=True, blank=True)
-    meio_deslocamento = models.CharField(max_length=20, blank=True)
+    MEIO_DESLOCAMENTO_CHOICES = [
+        ('a_pe', 'A pé'),
+        ('carro', 'Carro'),
+        ('taxi_app', 'Táxi/App de transporte'),
+        ('transporte_publico', 'Transporte público'),
+        ('bicicleta', 'Bicicleta'),
+    ]
+    meio_deslocamento = models.CharField(
+        max_length=20, choices=MEIO_DESLOCAMENTO_CHOICES, blank=True
+    )
     horario_estimado = models.TimeField(null=True, blank=True)
     comentario = models.TextField(blank=True)
 
     class Meta:
         ordering = ['itinerario', 'ordem']
+        constraints = [
+            models.UniqueConstraint(fields=['itinerario', 'ordem'], name='ordem_unica_por_itinerario')
+        ]
+
+    def clean(self):
+        if self.entrada_gratuita and self.preco_medio is not None:
+            raise DjangoValidationError("Local gratuito não deve ter avaliação de preço.")
+        if not self.entrada_gratuita and self.preco_medio is None:
+            raise DjangoValidationError("Informe a avaliação de preço, ou marque como entrada gratuita.")
 
     def __str__(self):
         return f"{self.itinerario.titulo} — {self.local.nome} (#{self.ordem})"

@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from .models import Itinerario, PontoItinerario
+from . import services as itinerario_services
 
 
 class PontoItinerarioSerializer(serializers.ModelSerializer):
@@ -10,10 +11,23 @@ class PontoItinerarioSerializer(serializers.ModelSerializer):
         model = PontoItinerario
         fields = [
             'id', 'local', 'local_nome', 'ordem',
-            'movimentacao', 'seguranca', 'preco_medio',
+            'movimentacao', 'seguranca',
+            'entrada_gratuita', 'preco_medio',
             'distancia_ate_proximo', 'meio_deslocamento',
             'horario_estimado', 'comentario',
         ]
+        read_only_fields = ['distancia_ate_proximo']
+
+    def validate(self, data):
+        if data.get('entrada_gratuita') and data.get('preco_medio'):
+            raise serializers.ValidationError(
+                "Local gratuito não deve ter avaliação de preço."
+            )
+        if not data.get('entrada_gratuita') and data.get('preco_medio') is None:
+            raise serializers.ValidationError(
+                "Informe a avaliação de preço, ou marque como entrada gratuita."
+            )
+        return data
 
 
 class ItinerarioSerializer(serializers.ModelSerializer):
@@ -45,5 +59,7 @@ class ItinerarioSerializer(serializers.ModelSerializer):
 
         for ponto_data in pontos_data:
             PontoItinerario.objects.create(itinerario=itinerario, **ponto_data)
+
+        itinerario_services.calcular_distancias_itinerario(itinerario)
 
         return itinerario

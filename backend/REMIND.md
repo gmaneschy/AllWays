@@ -57,3 +57,24 @@ def perform_create(self, serializer):
     # Por enquanto sem autenticação real, então aceitamos autor vindo no body.
     # Quando JWT estiver configurado, troque para: serializer.save(autor=self.request.user)
     serializer.save()
+
+
+Sobre o cálculo de distância:
+O servidor gratuito (router.project-osrm.org) é mantido pela comunidade, sem garantia de disponibilidade (SLA) — ótimo para desenvolvimento e MVP, mas se o AllWays crescer e tiver volume real de usuários, vale migrar para hospedar sua própria instância OSRM (é open source, você pode rodar num servidor próprio) ou adotar um provedor pago como Geoapify/TravelTime, que oferecem mais estabilidade.
+
+
+Princípio: lógica em serializers.py (validate, create customizado) 
+só roda via API (/api/...). O Admin (/admin/...) passa direto pelo 
+ModelForm do Django, ignorando serializers completamente.
+
+Regras que PRECISAM valer em qualquer caminho de entrada (Admin incluso) 
+→ colocar no model (clean(), validators=, constraints=).
+
+Regras/processos que só fazem sentido no fluxo real do produto 
+(o usuário final nunca usa o Admin) → podem ficar só no serializer/view,
+sem necessidade de duplicar no model.
+
+Exemplos já tratados:
+- seguranca 1-5 → validators no MODEL (precisa valer também no Admin)
+- entrada_gratuita + preco_medio → clean() no MODEL (idem)
+- distancia_ate_proximo calculada → só no SERIALIZER (Admin não precisa)
