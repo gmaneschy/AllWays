@@ -1,6 +1,32 @@
-"""
-No caso do autor do comentário ser None, isto é, se a conta do usuário foi desativada ou apagada,
-esta classe faz o tratamento da exibição do comentário, exibindo "Usuário removido".
+from rest_framework import serializers
+from .models import Follow, Message, Comment, Hashtag
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = ['id', 'seguidor', 'seguido_usuario', 'seguido_local', 'seguido_hashtag']
+
+    def validate(self, data):
+        alvos = [data.get('seguido_usuario'), data.get('seguido_local'), data.get('seguido_hashtag')]
+        preenchidos = [a for a in alvos if a is not None]
+
+        if len(preenchidos) == 0:
+            raise serializers.ValidationError(
+                "É necessário informar um usuário, local ou hashtag para seguir."
+            )
+        if len(preenchidos) > 1:
+            raise serializers.ValidationError(
+                "Só é possível seguir um tipo de alvo por vez (usuário, local ou hashtag)."
+            )
+        return data
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = ['id', 'remetente', 'destinatario', 'texto']
+
 
 class CommentSerializer(serializers.ModelSerializer):
     autor_nome = serializers.SerializerMethodField()
@@ -10,5 +36,11 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'autor_nome', 'local', 'texto']
-"""
+        fields = ['id', 'autor', 'autor_nome', 'itinerario', 'texto']
+        read_only_fields = ['autor']  # autor vem do usuário autenticado, não do body da requisição
+
+
+class HashtagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Hashtag
+        fields = ['id', 'nome']

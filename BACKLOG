@@ -1,0 +1,41 @@
+Apps:
+users:
+    página de login e cadastro
+    página de usuário
+
+
+feed:
+    página de feed principal
+    página "explorar"
+
+
+gamification:
+
+
+places:
+    página de lugares individuais
+
+itineraries:
+    sistema de criação de post
+    página de criação de post
+
+
+social:
+    página de mensagens entre usuários
+    usuários pesquisáveis
+
+    Dois tipos de comentário:
+        Avaliação do autor sobre o ponto (PontoItinerario.comentario)
+            Texto + dados estruturados (movimentação, segurança, preço) que o autor escreve ao construir o itinerário. Esse é o dado que alimenta a agregação em Place — é o que torna a média confiável, porque só quem documentou uma visita real gera esse dado.
+
+        Comentário social no post/itinerario
+            Qualquer usuário pode comentar no post (itinerário) de outra pessoa — like um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
+
+
+
+1. places        ✓ completo e testado (Google Places integrado, autocomplete validado em React)
+2. gamification  ✓ completo, admin funcionando
+3. users         ✓ completo, admin registrado
+4. itineraries   ⚠ esqueleto mínimo só (Itinerario, PontoItinerario) — falta endpoints/serializers completos
+5. social        ✓ Follow e Message testados; Comment pendente de Itinerario real
+6. feed          — não iniciado

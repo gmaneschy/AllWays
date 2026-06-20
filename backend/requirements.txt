@@ -20,6 +20,7 @@ redis==5.0
 django-storages==1.14
 Pillow==12.2.0
 boto3==1.35
+python-dotenv
 
 # Dados colaborativos
 django-taggit==6.1
