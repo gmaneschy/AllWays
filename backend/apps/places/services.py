@@ -31,21 +31,39 @@ def buscar_sugestoes(texto_busca):
 
 
 def buscar_detalhes(place_id):
-    """Place Details: usuário já escolheu uma sugestão, queremos os dados completos."""
     client = get_client()
     resultado = client.place(
         place_id=place_id,
         language='pt-BR',
-        fields=['place_id', 'name', 'formatted_address', 'geometry']
+        fields=['place_id', 'name', 'formatted_address', 'geometry', 'photos']  # + photos
     )
     info = resultado['result']
+
+    foto_referencia = None
+    if 'photos' in info and len(info['photos']) > 0:
+        foto_referencia = info['photos'][0]['photo_reference']
+
     return {
         'place_id': info['place_id'],
         'nome': info['name'],
         'endereco': info.get('formatted_address', ''),
         'latitude': info['geometry']['location']['lat'],
         'longitude': info['geometry']['location']['lng'],
+        'foto_referencia_google': foto_referencia,
     }
+
+
+def montar_url_foto_google(foto_referencia, max_width=800):
+    """Monta a URL da Photos API do Google a partir da referência salva.
+    O Google não fornece um link direto e permanente — a URL precisa
+    ser remontada dinamicamente toda vez que a foto for exibida."""
+    if not foto_referencia:
+        return None
+
+    return (
+        f"https://maps.googleapis.com/maps/api/place/photo"
+        f"?maxwidth={max_width}&photo_reference={foto_referencia}&key={settings.GOOGLE_MAPS_API_KEY}"
+    )
 
 
 def calcular_distancia(origem_lat, origem_lng, destino_lat, destino_lng):

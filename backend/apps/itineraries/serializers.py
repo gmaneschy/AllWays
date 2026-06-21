@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Itinerario, PontoItinerario
+from .models import Itinerario, PontoItinerario, FotoPontoItinerario
 from . import services as itinerario_services
 
 
@@ -55,11 +55,21 @@ class ItinerarioSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         pontos_data = validated_data.pop('pontos')
+
+        if validated_data.get('status') == 'publicado':
+            validated_data['publicado_em'] = timezone.now()
+
         itinerario = Itinerario.objects.create(**validated_data)
 
         for ponto_data in pontos_data:
             PontoItinerario.objects.create(itinerario=itinerario, **ponto_data)
 
         itinerario_services.calcular_distancias_itinerario(itinerario)
-
         return itinerario
+
+
+class FotoPontoItinerarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FotoPontoItinerario
+        fields = ['id', 'ponto', 'imagem', 'enviada_em']
+        read_only_fields = ['enviada_em']

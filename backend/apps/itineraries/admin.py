@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Itinerario, PontoItinerario
+from .models import Itinerario, PontoItinerario, FotoPontoItinerario
 
 # Register your models here.
 
@@ -13,4 +13,5 @@ class ItinerarioAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Itinerario, ItinerarioAdmin)
-admin.site.register(PontoItinerario)  # mantém o registro solto também, útil às vezes
+admin.site.register(PontoItinerario)
+admin.site.register(FotoPontoItinerario)

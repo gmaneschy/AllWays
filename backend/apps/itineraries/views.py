@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions
-from .models import Itinerario
-from .serializers import ItinerarioSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Itinerario, FotoPontoItinerario
+from .serializers import ItinerarioSerializer, FotoPontoItinerarioSerializer
 
 # Create your views here.
 
@@ -14,3 +15,10 @@ class ItinerarioViewSet(viewsets.ModelViewSet):
         # Por enquanto sem autenticação real, então aceitamos autor vindo no body.
         # Quando JWT estiver configurado, troque para: serializer.save(autor=self.request.user)
         serializer.save()
+
+
+class FotoPontoItinerarioViewSet(viewsets.ModelViewSet):
+    queryset = FotoPontoItinerario.objects.all()
+    serializer_class = FotoPontoItinerarioSerializer
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [permissions.AllowAny] # trocar para IsAuthenticated quando JWT estiver pronto

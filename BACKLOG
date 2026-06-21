@@ -36,6 +36,6 @@ social:
 1. places        ✓ completo e testado (Google Places integrado, autocomplete validado em React)
 2. gamification  ✓ completo, admin funcionando
 3. users         ✓ completo, admin registrado
-4. itineraries   ⚠ esqueleto mínimo só (Itinerario, PontoItinerario) — falta endpoints/serializers completos
-5. social        ✓ Follow e Message testados; Comment pendente de Itinerario real
+4. itineraries   ✓ quase completo, falta criação de rascunho e uso de usuários reais
+5. social        ✓ Follow e Message testados; Comment pendente de Itinerario real, validar quando criar login de usuário real
 6. feed          — não iniciado

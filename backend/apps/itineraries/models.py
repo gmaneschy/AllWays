@@ -73,3 +73,8 @@ class PontoItinerario(models.Model):
 
     def __str__(self):
         return f"{self.itinerario.titulo} — {self.local.nome} (#{self.ordem})"
+
+class FotoPontoItinerario(models.Model):
+    ponto = models.ForeignKey('itineraries.PontoItinerario', on_delete=models.CASCADE, related_name='fotos')
+    imagem = models.ImageField(upload_to='itinerarios/fotos/')
+    enviada_em = models.DateTimeField(auto_now_add=True)

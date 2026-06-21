@@ -1,0 +1,108 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+
+const API_BASE = 'http://127.0.0.1:8000/api';
+
+const TIPO_LABEL = {
+  day_trip: 'Day Trip',
+  multi_day: 'Multi-Day Trip',
+};
+
+const MOVIMENTACAO_LABEL = {
+  vazio: 'Vazio',
+  populado: 'Populado',
+  cheio: 'Cheio',
+};
+
+function formatarData(dataIso) {
+  if (!dataIso) return null;
+  const [ano, mes, dia] = dataIso.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function Feed() {
+  const [itinerarios, setItinerarios] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
+
+  useEffect(() => {
+    async function buscar() {
+      setCarregando(true);
+      setErro(null);
+      try {
+        const resposta = await axios.get(`${API_BASE}/feed/principal/`);
+        setItinerarios(resposta.data);
+      } catch (err) {
+        setErro('Erro ao carregar o feed.');
+      } finally {
+        setCarregando(false);
+      }
+    }
+    buscar();
+  }, []);
+
+  if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando feed...</p>;
+  if (erro) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
+
+  return (
+    <div style={{ maxWidth: 650, margin: '40px auto', fontFamily: 'sans-serif' }}>
+      <h1>Feed</h1>
+
+      {itinerarios.length === 0 && (
+        <p style={{ color: '#999' }}>Nenhum itinerário publicado ainda.</p>
+      )}
+
+      {itinerarios.map((it) => (
+        <div
+          key={it.id}
+          style={{ border: '1px solid #ddd', borderRadius: 8, padding: 20, marginBottom: 20 }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h2 style={{ margin: 0 }}>{it.titulo}</h2>
+            <span style={{ fontSize: 12, color: '#888' }}>{TIPO_LABEL[it.tipo]}</span>
+          </div>
+
+          <p style={{ color: '#666', margin: '4px 0 12px' }}>
+            por <strong>{it.autor_nome}</strong>
+            {it.data_inicio && ` · ${formatarData(it.data_inicio)}`}
+            {it.data_fim && it.data_fim !== it.data_inicio && ` a ${formatarData(it.data_fim)}`}
+          </p>
+
+          <ol style={{ paddingLeft: 20, margin: 0 }}>
+            {it.pontos.map((ponto) => (
+              <li key={ponto.id} style={{ marginBottom: 10 }}>
+                <Link
+                  to={`/place/${ponto.local}`}
+                  style={{ fontWeight: 'bold', textDecoration: 'none', color: '#1a73e8' }}
+                >
+                  {ponto.local_nome}
+                </Link>
+
+                <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                  {ponto.movimentacao && <span>{MOVIMENTACAO_LABEL[ponto.movimentacao]} · </span>}
+                  {ponto.entrada_gratuita
+                    ? <span>Entrada gratuita</span>
+                    : ponto.preco_medio && <span>Custo-benefício {ponto.preco_medio}/5</span>}
+                  {ponto.seguranca && <span> · Segurança {ponto.seguranca}/5</span>}
+                </div>
+
+                {ponto.comentario && (
+                  <p style={{ fontSize: 14, margin: '4px 0 0' }}>{ponto.comentario}</p>
+                )}
+
+                {ponto.distancia_ate_proximo != null && (
+                  <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0' }}>
+                    ↓ {Math.round(ponto.distancia_ate_proximo)}m até o próximo
+                  </p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default Feed;

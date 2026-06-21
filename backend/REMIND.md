@@ -15,14 +15,6 @@ React Native recebe o JSON
 A view é a integração com o frontend (é ela que recebe e responde a requisição). 
 O serializer é uma ferramenta que a view usa para não precisar converter manualmente cada campo do model em JSON e validar cada campo recebido na mão.
 
-Fluxo de dependências dos Apps
-1. places        — não depende de ninguém em nível de model
-2. gamification  — precisa existir antes de users (User.badge_destaque é FK pra BadgeUsuario)
-3. users         — depende de gamification; users.User é referenciado por quase todo o resto
-4. itineraries   — depende de users, places, gamification (ItinerarioBadge)
-5. social        — depende de users, places, itineraries (Comment.local, etc)
-6. feed          — só lê de todos; não escreve; nunca recebe FK; construir por último
-
 Regra: FK para User usa SET_NULL quando o registro é CONTEÚDO 
 com valor independente do autor (comentário, itinerário, mensagem).
 
@@ -40,12 +32,6 @@ User.badge_destaque (exibição do selo "verificado" junto ao nome).
 Todo o restante do fluxo (concessão de badges, critérios, histórico) 
 é gamification OBSERVANDO outros apps via signals — nunca o contrário.
 
-
-Ordem de ESQUELETOS (classes existindo no código, completas ou não):
-1. places.Place          (esqueleto mínimo)
-2. itineraries.Itinerario (esqueleto mínimo) ← necessário por gamification.ItinerarioBadge
-3. gamification (4 classes completas)
-4. users.User (completo)
 
 Ordem de MIGRATIONS:
 makemigrations gamification users itineraries (numa única chamada, 
@@ -78,3 +64,32 @@ Exemplos já tratados:
 - seguranca 1-5 → validators no MODEL (precisa valer também no Admin)
 - entrada_gratuita + preco_medio → clean() no MODEL (idem)
 - distancia_ate_proximo calculada → só no SERIALIZER (Admin não precisa)
+
+Regra: toda query que agrega/exibe dados de PontoItinerario para terceiros
+(página de Place, feed, médias) DEVE filtrar itinerario__status='publicado'.
+Rascunhos só são visíveis para o próprio autor, em endpoints futuros tipo
+"meus rascunhos".
+
+## Navegação React (pendências de protótipo)
+- Link "Local de teste" na Navbar está hardcoded para /place/3 — substituir
+  quando a busca (pessoas/locais/hashtags) estiver implementada.
+- Página de busca ainda não existe: futuramente, campo de pesquisa estilo
+  Instagram, cobrindo locais (Place), pessoas (User) e hashtags (Hashtag).
+  Adiada propositalmente para não gastar cota de autocomplete/fotos do
+  Google Places durante a fase de prototipagem.
+
+## Ordem de construção (atualizada)
+1. places        — esqueleto + integração Google completa
+2. gamification  — 4 classes, admin funcionando
+3. users         — model customizado, badge_destaque
+4. itineraries   — completo: model, serializers aninhados, distância via OSRM, fotos
+5. social        — Follow/Message/Comment testados (Comment depende de Itinerario real)
+6. feed          — PRÓXIMO PASSO: versão simples cronológica (sem algoritmo ainda)
+
+## Pendências técnicas conhecidas
+- autor em ItinerarioSerializer está temporariamente aceito via body
+  (não read_only) por falta de JWT. Reverter quando simplejwt for configurado:
+  voltar autor para read_only_fields e usar serializer.save(autor=request.user)
+  no perform_create.
+- Página do Place (PaginaPlace.jsx) está sem navegação dinâmica ainda —
+  precisa de busca/links reais assim que existir tela de busca ou feed.

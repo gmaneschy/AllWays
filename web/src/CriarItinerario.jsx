@@ -28,6 +28,7 @@ function pontoVazio() {
     entrada_gratuita: false,
     preco_medio: '',
     meio_deslocamento: '',
+    horario_estimado: '',
     comentario: '',
   };
 }
@@ -37,6 +38,7 @@ function CriarItinerario() {
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState('day_trip');
   const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [pontos, setPontos] = useState([pontoVazio()]);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
@@ -76,6 +78,7 @@ function CriarItinerario() {
       tipo,
       status: 'publicado',
       data_inicio: dataInicio || null,
+      data_fim: tipo === 'multi_day' ? (dataFim || null) : null,
       pontos: pontos.map((p, index) => ({
         local: p.local.id,
         ordem: index + 1,
@@ -84,6 +87,7 @@ function CriarItinerario() {
         entrada_gratuita: p.entrada_gratuita,
         preco_medio: p.entrada_gratuita || p.preco_medio === '' ? null : Number(p.preco_medio),
         meio_deslocamento: p.meio_deslocamento,
+        horario_estimado: p.horario_estimado || null,
         comentario: p.comentario,
       })),
     };
@@ -132,13 +136,25 @@ function CriarItinerario() {
         <option value="multi_day">Multi-Day Trip</option>
       </select>
 
-      <label>Data do itinerário</label>
+      <label>Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
       <input
         type="date"
         value={dataInicio}
         onChange={(e) => setDataInicio(e.target.value)}
-        style={{ width: '100%', padding: 8, marginBottom: 20 }}
+        style={{ width: '100%', padding: 8, marginBottom: tipo === 'multi_day' ? 12 : 20 }}
       />
+
+      {tipo === 'multi_day' && (
+        <>
+          <label>Data de término</label>
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            style={{ width: '100%', padding: 8, marginBottom: 20 }}
+          />
+        </>
+      )}
 
       <h2>Pontos</h2>
 
@@ -210,6 +226,14 @@ function CriarItinerario() {
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+
+          <label style={{ display: 'block', marginTop: 8 }}>Horário estimado</label>
+          <input
+            type="time"
+            value={ponto.horario_estimado}
+            onChange={(e) => atualizarPonto(index, 'horario_estimado', e.target.value)}
+            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+          />
 
           <label style={{ display: 'block', marginTop: 8 }}>Comentário</label>
           <textarea
