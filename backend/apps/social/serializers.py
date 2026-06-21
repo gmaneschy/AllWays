@@ -6,6 +6,7 @@ class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
         fields = ['id', 'seguidor', 'seguido_usuario', 'seguido_local', 'seguido_hashtag']
+        read_only_fields = ['seguidor']
 
     def validate(self, data):
         alvos = [data.get('seguido_usuario'), data.get('seguido_local'), data.get('seguido_hashtag')]
@@ -26,6 +27,7 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ['id', 'remetente', 'destinatario', 'texto']
+        read_only_fields = ['remetente']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -37,7 +39,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'autor', 'autor_nome', 'itinerario', 'texto']
-        read_only_fields = ['autor']  # autor vem do usuário autenticado, não do body da requisição
+        read_only_fields = ['autor']
 
 
 class HashtagSerializer(serializers.ModelSerializer):

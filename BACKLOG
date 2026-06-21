@@ -5,37 +5,47 @@ users:
 
 
 feed:
-    página de feed principal
+    ok - página de feed principal
     página "explorar"
-
+    tornar usuários pesquisáveis (devem ser encontráveis tanto pelo nome de usuário quanto pelo nome do perfil)
+    tornar hashtags pesquisáveis
+    tornar hashtag "seguível"
 
 gamification:
 
-
 places:
-    página de lugares individuais
+    tornar place "seguível"
 
 itineraries:
-    sistema de criação de post
-    página de criação de post
-
+    campo para hashtags
+    ok - Avaliação do autor sobre o ponto (PontoItinerario.comentario): Texto + dados estruturados (movimentação, segurança, preço) que o autor escreve ao construir o itinerário. Esse é o dado que alimenta a agregação em Place — é o que torna a média confiável, porque só quem documentou uma visita real gera esse dado.
+    tornar itinerário "salvável"
 
 social:
     página de mensagens entre usuários
-    usuários pesquisáveis
 
     Dois tipos de comentário:
-        Avaliação do autor sobre o ponto (PontoItinerario.comentario)
-            Texto + dados estruturados (movimentação, segurança, preço) que o autor escreve ao construir o itinerário. Esse é o dado que alimenta a agregação em Place — é o que torna a média confiável, porque só quem documentou uma visita real gera esse dado.
 
         Comentário social no post/itinerario
             Qualquer usuário pode comentar no post (itinerário) de outra pessoa — like um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
 
 
 
-1. places        ✓ completo e testado (Google Places integrado, autocomplete validado em React)
+1. places        ✓ quase completo, testado (Google Places integrado, autocomplete validado em React), falta tornar seguível
 2. gamification  ✓ completo, admin funcionando
-3. users         ✓ completo, admin registrado
+3. users         ✓ quase completo, admin registrado
 4. itineraries   ✓ quase completo, falta criação de rascunho e uso de usuários reais
 5. social        ✓ Follow e Message testados; Comment pendente de Itinerario real, validar quando criar login de usuário real
-6. feed          — não iniciado
+6. feed          ✓ feed básico, itinerários em ordem cronológica
+
+
+Verificar se há autenticação de usuário a fazer no Feed.jsx e no PaginaPlace.jsx
+Verificar validação de username na criação do usuário.
+
+APIs:
+/api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
+/api/places/autocomplete/?q=
+/api/social/comments/
+/api/itineraries/fotos/
+/api/itineraries/itinerarios/
+/api/feed/principal/ sem autenticação de usuário, incluir.

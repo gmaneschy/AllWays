@@ -93,3 +93,24 @@ Rascunhos só são visíveis para o próprio autor, em endpoints futuros tipo
   no perform_create.
 - Página do Place (PaginaPlace.jsx) está sem navegação dinâmica ainda —
   precisa de busca/links reais assim que existir tela de busca ou feed.
+
+
+!!!!!!! Sobre vídeos no itinerário:
+A complexidade real está em armazenamento e entrega, por três motivos concretos:
+
+Tamanho: o limite padrão do Django para manter upload em memória é 2.5MB — qualquer vídeo passa disso facilmente, então cai automaticamente para escrita em arquivo temporário, o que já é tratado pelo Django, mas exige atenção a timeouts de servidor. GitHub
+Compressão/transcodificação: depois do upload, normalmente é necessário otimizar imagens ou transcodificar vídeo para formatos mais leves, o que deveria rodar de forma assíncrona — é aqui que celery + redis (que você já tinha planejado no roadmap original) entra: o vídeo é recebido, salvo, e a compressão roda em background, sem travar a resposta da API. freeCodeCamp
+Entrega: arquivos grandes não deveriam ser servidos direto pelo seu servidor — o ideal é offloadear para armazenamento em nuvem (S3, Cloud Storage), melhorando escalabilidade e performance, idealmente atrás de um CDN. GitHub
+
+Conclusão prática: vídeo é viável, mas é trabalho de infraestrutura de produção (Celery, S3, CDN), não algo que faça sentido prototipar agora em SQLite local. Vale manter no backlog como item futuro, dependente da migração para PostgreSQL + armazenamento em nuvem que você já tinha cogitado.
+
+
+Regra: Se a view CRIA/EDITA algo vinculado a um usuário 
+(autor, remetente, seguidor) → IsAuthenticated, sempre.
+Sem isso, o campo de "quem fez" é falsificável por qualquer requisição.
+
+Se a view só LÊ dado público (feed, página de local, busca de hashtag)
+→ pode ficar público (AllowAny ou sem declarar, que é o padrão).
+
+Views mistas (GET público + POST que precisa de autor) → considerar
+permissions.IsAuthenticatedOrReadOnly em vez de travar tudo.

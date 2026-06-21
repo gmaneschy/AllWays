@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from './api';
 import BuscaLocal from './BuscaLocal';
-
-const API_BASE = 'http://127.0.0.1:8000/api';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
   { value: '', label: '—' },
@@ -34,7 +32,6 @@ function pontoVazio() {
 }
 
 function CriarItinerario() {
-  const [autorId, setAutorId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState('day_trip');
   const [dataInicio, setDataInicio] = useState('');
@@ -67,13 +64,12 @@ function CriarItinerario() {
     setErro(null);
     setResultado(null);
 
-    if (!autorId || !titulo || pontos.some((p) => !p.local)) {
-      setErro('Preencha autor, título e selecione um local para cada ponto.');
+    if (!titulo || pontos.some((p) => !p.local)) {
+      setErro('Preencha o título e selecione um local para cada ponto.');
       return;
     }
 
     const payload = {
-      autor: Number(autorId),
       titulo,
       tipo,
       status: 'publicado',
@@ -94,10 +90,11 @@ function CriarItinerario() {
 
     setEnviando(true);
     try {
-      const resposta = await axios.post(`${API_BASE}/itineraries/itinerarios/`, payload);
+      const resposta = await api.post('/itineraries/itinerarios/', payload);
       setResultado(resposta.data);
       setTitulo('');
       setDataInicio('');
+      setDataFim('');
       setPontos([pontoVazio()]);
     } catch (err) {
       setErro(JSON.stringify(err.response?.data || err.message));
@@ -109,14 +106,6 @@ function CriarItinerario() {
   return (
     <div style={{ maxWidth: 600, margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Criar Itinerário</h1>
-
-      <label>ID do autor (temporário, sem auth ainda)</label>
-      <input
-        type="number"
-        value={autorId}
-        onChange={(e) => setAutorId(e.target.value)}
-        style={{ width: '100%', padding: 8, marginBottom: 12 }}
-      />
 
       <label>Título</label>
       <input

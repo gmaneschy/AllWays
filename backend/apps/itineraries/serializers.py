@@ -41,7 +41,7 @@ class ItinerarioSerializer(serializers.ModelSerializer):
             'data_inicio', 'data_fim', 'publicado_em',
             'itinerario_original', 'pontos',
         ]
-        read_only_fields = ['publicado_em']
+        read_only_fields = ['autor', 'publicado_em']
 
     def validate_pontos(self, value):
         if len(value) == 0:

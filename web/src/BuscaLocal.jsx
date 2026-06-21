@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from './api';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
 const DEBOUNCE_MS = 400;
 
 function BuscaLocal({ onSelecionar, localSelecionado }) {
@@ -19,9 +18,7 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
 
     timeoutRef.current = setTimeout(async () => {
       try {
-        const resposta = await axios.get(`${API_BASE}/places/autocomplete/`, {
-          params: { q: texto }
-        });
+        const resposta = await api.get('/places/autocomplete/', { params: { q: texto } });
         setSugestoes(resposta.data);
       } catch (err) {
         console.error('Erro ao buscar sugestões:', err.message);
@@ -36,9 +33,7 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
     setTexto(descricao);
 
     try {
-      const resposta = await axios.post(`${API_BASE}/places/`, {
-        place_id: placeId
-      });
+      const resposta = await api.post('/places/', { place_id: placeId });
       onSelecionar(resposta.data);
     } catch (err) {
       console.error('Erro ao salvar local:', err.message);

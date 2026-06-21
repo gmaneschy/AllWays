@@ -9,7 +9,7 @@ from .serializers import ItinerarioSerializer, FotoPontoItinerarioSerializer
 class ItinerarioViewSet(viewsets.ModelViewSet):
     queryset = Itinerario.objects.all().prefetch_related('pontos')
     serializer_class = ItinerarioSerializer
-    permission_classes = [permissions.AllowAny]  # trocar para IsAuthenticated quando JWT estiver pronto
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         # Por enquanto sem autenticação real, então aceitamos autor vindo no body.
@@ -21,4 +21,4 @@ class FotoPontoItinerarioViewSet(viewsets.ModelViewSet):
     queryset = FotoPontoItinerario.objects.all()
     serializer_class = FotoPontoItinerarioSerializer
     parser_classes = [MultiPartParser, FormParser]
-    permission_classes = [permissions.AllowAny] # trocar para IsAuthenticated quando JWT estiver pronto
+    permission_classes = [permissions.IsAuthenticated]
