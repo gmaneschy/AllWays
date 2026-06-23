@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE = 'http://127.0.0.1:8000/api';
+import api from './api';
 
 function PaginaPlace() {
   const { placeId } = useParams();
@@ -15,7 +13,7 @@ function PaginaPlace() {
       setCarregando(true);
       setErro(null);
       try {
-        const resposta = await axios.get(`${API_BASE}/places/${placeId}/detalhe/`);
+        const resposta = await api.get(`/places/${placeId}/detalhe/`);
         setDados(resposta.data);
       } catch (err) {
         setErro(err.response?.data?.erro || 'Erro ao carregar o local.');

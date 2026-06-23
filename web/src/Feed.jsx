@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE = 'http://127.0.0.1:8000/api';
+import api from './api';
 
 const TIPO_LABEL = {
   day_trip: 'Day Trip',
@@ -31,7 +29,7 @@ function Feed() {
       setCarregando(true);
       setErro(null);
       try {
-        const resposta = await axios.get(`${API_BASE}/feed/principal/`);
+        const resposta = await api.get('/feed/principal/');
         setItinerarios(resposta.data);
       } catch (err) {
         setErro('Erro ao carregar o feed.');
