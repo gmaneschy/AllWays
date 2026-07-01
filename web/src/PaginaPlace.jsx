@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api from './api';
+import api, { estaLogado } from './api';
 
 function PaginaPlace() {
   const { placeId } = useParams();
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  const [seguindo, setSeguindo] = useState(false);
+  const [enviandoFollow, setEnviandoFollow] = useState(false);
+  const logado = estaLogado();
+
+  useEffect(() => {
+    // Verificar se já segue este local (só se logado)
+    async function verificarFollow() {
+      if (!logado || !placeId) return;
+      try {
+        const res = await api.get(`/social/follow/status/?tipo=local&alvo_id=${placeId}`);
+        setSeguindo(res.data.seguindo);
+      } catch (_) {}
+    }
+    verificarFollow();
+  }, [placeId, logado]);
 
   useEffect(() => {
     async function buscar() {
@@ -24,6 +39,17 @@ function PaginaPlace() {
     if (placeId) buscar();
   }, [placeId]);
 
+  async function alternarSeguir() {
+    if (enviandoFollow) return;
+    setEnviandoFollow(true);
+    try {
+      const res = await api.post('/social/follow/', { tipo: 'local', alvo_id: Number(placeId) });
+      setSeguindo(res.data.seguindo);
+    } catch (_) {} finally {
+      setEnviandoFollow(false);
+    }
+  }
+
   if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando...</p>;
   if (erro) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
   if (!dados) return null;
@@ -40,7 +66,24 @@ function PaginaPlace() {
         />
       )}
 
-      <h1 style={{ marginBottom: 4 }}>{place.nome}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+        <h1 style={{ margin: 0 }}>{place.nome}</h1>
+        {logado && (
+          <button
+            onClick={alternarSeguir}
+            disabled={enviandoFollow}
+            style={{
+              padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+              border: seguindo ? '1px solid #ccc' : 'none',
+              background: seguindo ? '#f0f0f0' : '#1a73e8',
+              color: seguindo ? '#333' : '#fff',
+              fontWeight: 'bold', whiteSpace: 'nowrap',
+            }}
+          >
+            {seguindo ? 'Seguindo' : 'Seguir lugar'}
+          </button>
+        )}
+      </div>
       <p style={{ color: '#666', marginTop: 0 }}>{place.endereco}</p>
 
       <div style={{ display: 'flex', gap: 24, margin: '16px 0', padding: 16, background: '#f5f5f5', borderRadius: 8 }}>

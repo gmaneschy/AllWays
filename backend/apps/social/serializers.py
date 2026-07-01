@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from apps.users.models import User
 from apps.places.models import Place
-from .models import Follow, Hashtag, Comment
+from .models import Follow, Hashtag, Comment, Message
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -69,3 +69,17 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['id', 'autor', 'autor_nome', 'autor_foto', 'itinerario', 'texto', 'criado_em']
         read_only_fields = ['autor', 'criado_em']
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    remetente_nome = serializers.CharField(source='remetente.username', read_only=True)
+    remetente_foto = serializers.ImageField(source='remetente.foto_perfil', read_only=True)
+    destinatario_nome = serializers.CharField(source='destinatario.username', read_only=True)
+
+    class Meta:
+        model = Message
+        fields = [
+            'id', 'remetente', 'remetente_nome', 'remetente_foto',
+            'destinatario', 'destinatario_nome', 'texto', 'enviada_em',
+        ]
+        read_only_fields = ['remetente', 'enviada_em']

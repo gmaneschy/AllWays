@@ -1,44 +1,38 @@
 Apps:
 users:
-    
+    Verificar validação de username na criação do usuário.
 
+    Mensagens: o Message model não tem enviada_em no original que você me mandou — eu adicionei no social/models.py gerado na sessão anterior. Confirma que o campo já está na migration antes de testar o inbox.
+
+    Em "seguindo", na página de perfil, lugares seguidos aparecem na contagem, mas não tem visualização na lista. Ou lugares seguidos tem representação na lista (em separado), ou não devem ser considerados na contagem.
 
 feed:
-    ok - página de feed principal
-    página "explorar"
-    tornar usuários pesquisáveis (devem ser encontráveis tanto pelo nome de usuário quanto pelo nome do perfil)
-    tornar hashtags pesquisáveis
-    tornar hashtag "seguível"
+    tornar hashtags pesquisáveis (testar)
+    tornar hashtag "seguível" (testar)
 
 gamification:
 
 places:
-    tornar place "seguível"
+    Em Explorar, apenas os lugares pesquisados (e, portanto, salvos no banco de dados) aparecem para pesquisa.
+    Na página do lugar, deve haver uma contagem de seguidores (decidir se usuários que seguem são anônimos ou públicos)
 
 itineraries:
-    campo para hashtags
-    ok - Avaliação do autor sobre o ponto (PontoItinerario.comentario): Texto + dados estruturados (movimentação, segurança, preço) que o autor escreve ao construir o itinerário. Esse é o dado que alimenta a agregação em Place — é o que torna a média confiável, porque só quem documentou uma visita real gera esse dado.
+    campo para hashtags (testar)
     tornar itinerário "salvável"
+    rascunhos de itinerários ainda não são possíveis
 
 social:
-    página de mensagens entre usuários
+    Melhorar página de mensagens
 
-    Dois tipos de comentário:
+    Itinerários de outros usuários ainda não tem página de visualização, portanto, não é possível "salva-los" e reaproveita-los
+    Explorar: o link /itinerario/:id usado nos cards ainda não tem rota em App.jsx — quando for criar a página de detalhe do itinerário, é só adicionar <Route path="/itinerario/:id" element={<PaginaItinerario />} />.
 
-        Comentário social no post/itinerario
-            Qualquer usuário pode comentar no post (itinerário) de outra pessoa — like um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
-
-
-
-1. places        ✓ quase completo, testado (Google Places integrado, autocomplete validado em React), falta tornar seguível
-2. gamification  ✓ completo, admin funcionando
-3. users         ✓ quase completo, admin registrado
-4. itineraries   ✓ quase completo, falta criação de rascunho e uso de usuários reais
-5. social        ✓ Follow e Message testados; Comment pendente de Itinerario real, validar quando criar login de usuário real
-6. feed          ✓ feed básico, itinerários em ordem cronológica
+    incluir - Qualquer usuário pode comentar no post (itinerário) de outra pessoa — como um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
 
 
-Verificar validação de username na criação do usuário.
+1 - tornar itinerário (de outros usuários) "salvável"
+2 - tornar itinerário rascunhável
+
 
 APIs:
 /api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
@@ -47,35 +41,3 @@ APIs:
 /api/itineraries/fotos/
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
-
-1 - página de perfil do usuário
-2 - página "explorar"
-3 - tornar usuário seguível e pesquisável (devem ser encontráveis tanto pelo nome de usuário quanto pelo nome do perfil)
-4 - tornar hashtag seguível e pesquisável
-5 - tornar place seguível e pesquisável
-6 - tornar itinerário "salvável"
-7 - página de mensagens entre usuários
-Sendo as prioridades:
-Perfil do usuário (1)
-    ↑ necessário para
-    ├── Usuário seguível (3) — "seguir" aparece na página do perfil
-    ├── Itinerário salvável (6) — "salvar" aparece nos cards do feed/perfil
-    └── Mensagens (7) — "enviar mensagem" aparece no perfil de outro usuário
-
-Explorar (2)
-    ↑ necessário para
-    ├── Busca de usuário (3) — resultados de busca levam ao perfil
-    ├── Busca de hashtag (4) — resultados de busca listam itinerários com aquela hashtag
-    └── Busca de place (5) — resultados de busca levam à PaginaPlace que já existe
-
-Hashtag seguível (4)
-    ↑ necessário para
-    └── Feed personalizado — quando o algoritmo considerar hashtags seguidas
-E a melhor ordem:
-1. Perfil do usuário  ← desbloqueia 3, 6, 7
-2. Explorar + busca   ← desbloqueia 3, 4, 5 de forma navegável
-3. Seguir usuário     ← depende de 1 (perfil) e 2 (busca)
-4. Seguir/buscar place ← Place já tem página, falta só o botão de seguir
-5. Seguir/buscar hashtag ← exige que hashtags existam nos itinerários primeiro
-6. Salvar itinerário  ← aparece no feed + perfil
-7. Mensagens          ← mais isolado, pode vir quando quiser

@@ -6,6 +6,8 @@ import PaginaPlace from './PaginaPlace';
 import Login from './Login';
 import RotaProtegida from './RotaProtegida';
 import PaginaPerfil from './PaginaPerfil';
+import PaginaMensagens from './PaginaMensagens';
+import PaginaExplorar from './PaginaExplorar';
 
 function App() {
   return (
@@ -24,6 +26,15 @@ function App() {
         />
         <Route path="/place/:placeId" element={<PaginaPlace />} />
         <Route path="/perfil/:username" element={<PaginaPerfil />} />
+        <Route path="/explorar" element={<PaginaExplorar />} />
+        <Route
+          path="/mensagens"
+          element={
+            <RotaProtegida>
+              <PaginaMensagens />
+            </RotaProtegida>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

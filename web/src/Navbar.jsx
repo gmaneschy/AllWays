@@ -3,6 +3,7 @@ import { estaLogado, getUsuarioLogado, logout } from './api';
 
 const LINKS_PUBLICOS = [
   { to: '/', label: 'Feed' },
+  { to: '/explorar', label: 'Explorar' },
 ];
 
 function Navbar() {
@@ -45,6 +46,18 @@ function Navbar() {
             }}
           >
             Criar Itinerário
+          </Link>
+        )}
+        {logado && (
+          <Link
+            to="/mensagens"
+            style={{
+              textDecoration: 'none',
+              fontWeight: location.pathname === '/mensagens' ? 'bold' : 'normal',
+              color: location.pathname === '/mensagens' ? '#1a73e8' : '#333'
+            }}
+          >
+            Mensagens
           </Link>
         )}
       </div>
