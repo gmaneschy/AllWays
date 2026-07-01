@@ -28,6 +28,7 @@ function pontoVazio() {
     meio_deslocamento: '',
     horario_estimado: '',
     comentario: '',
+    arquivos: [], // File[] selecionados para upload, ainda não enviados
   };
 }
 
@@ -52,12 +53,41 @@ function CriarItinerario() {
     setPontos(novosPontos);
   }
 
+  function adicionarArquivos(index, fileList) {
+    const novosArquivos = Array.from(fileList);
+    const novosPontos = [...pontos];
+    novosPontos[index] = {
+      ...novosPontos[index],
+      arquivos: [...novosPontos[index].arquivos, ...novosArquivos],
+    };
+    setPontos(novosPontos);
+  }
+
+  function removerArquivo(indexPonto, indexArquivo) {
+    const novosPontos = [...pontos];
+    novosPontos[indexPonto] = {
+      ...novosPontos[indexPonto],
+      arquivos: novosPontos[indexPonto].arquivos.filter((_, i) => i !== indexArquivo),
+    };
+    setPontos(novosPontos);
+  }
+
   function adicionarPonto() {
     setPontos([...pontos, pontoVazio()]);
   }
 
   function removerPonto(index) {
     setPontos(pontos.filter((_, i) => i !== index));
+  }
+
+  async function enviarFotosDoPonto(pontoId, arquivos) {
+    const formData = new FormData();
+    formData.append('ponto', pontoId);
+    arquivos.forEach((arquivo) => formData.append('imagens', arquivo));
+
+    await api.post('/itineraries/fotos/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   }
 
   async function publicar() {
@@ -91,11 +121,35 @@ function CriarItinerario() {
     setEnviando(true);
     try {
       const resposta = await api.post('/itineraries/itinerarios/', payload);
+
+      // Upload das fotos: casamos cada ponto local (por ordem) com o
+      // PontoItinerario real retornado pela API (também ordenado por 'ordem').
+      const pontosCriados = resposta.data.pontos;
+      const uploadsComFalha = [];
+
+      for (let i = 0; i < pontos.length; i++) {
+        const arquivos = pontos[i].arquivos;
+        if (arquivos.length === 0) continue;
+
+        const pontoCriado = pontosCriados.find((pc) => pc.ordem === i + 1);
+        if (!pontoCriado) continue;
+
+        try {
+          await enviarFotosDoPonto(pontoCriado.id, arquivos);
+        } catch (err) {
+          uploadsComFalha.push(i + 1);
+        }
+      }
+
       setResultado(resposta.data);
       setTitulo('');
       setDataInicio('');
       setDataFim('');
       setPontos([pontoVazio()]);
+
+      if (uploadsComFalha.length > 0) {
+        setErro(`Itinerário criado, mas as fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas. Tente reenviá-las depois.`);
+      }
     } catch (err) {
       setErro(JSON.stringify(err.response?.data || err.message));
     } finally {
@@ -230,6 +284,41 @@ function CriarItinerario() {
             onChange={(e) => atualizarPonto(index, 'comentario', e.target.value)}
             style={{ width: '100%', padding: 6, marginBottom: 8 }}
           />
+
+          <label style={{ display: 'block', marginTop: 8 }}>Fotos deste local</label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => adicionarArquivos(index, e.target.files)}
+            style={{ marginBottom: 8 }}
+          />
+          {ponto.arquivos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+              {ponto.arquivos.map((arquivo, iArq) => (
+                <div key={iArq} style={{ position: 'relative' }}>
+                  <img
+                    src={URL.createObjectURL(arquivo)}
+                    alt={`foto ${iArq + 1}`}
+                    style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removerArquivo(index, iArq)}
+                    style={{
+                      position: 'absolute', top: 2, right: 2,
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.6)', color: '#fff',
+                      border: 'none', cursor: 'pointer', fontSize: 11,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {pontos.length > 1 && (
             <button type="button" onClick={() => removerPonto(index)} style={{ color: 'red' }}>

@@ -52,7 +52,9 @@ function Navbar() {
       <div>
         {logado ? (
           <span style={{ fontSize: 14 }}>
-            Olá, {usuario?.username}{' '}
+            <Link to={`/perfil/${usuario?.username}`} style={{ textDecoration: 'none', color: '#333' }}>
+              {usuario?.username}
+            </Link>
             <button onClick={handleLogout} style={{ marginLeft: 8, cursor: 'pointer' }}>
               Sair
             </button>

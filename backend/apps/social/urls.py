@@ -1,10 +1,11 @@
-from rest_framework.routers import DefaultRouter
-from .views import FollowViewSet, MessageViewSet, CommentViewSet, HashtagViewSet
+from django.urls import path
+from .views import (
+    FollowToggleView, SeguidoresUsuarioView, SeguindoUsuarioView, StatusFollowView
+)
 
-router = DefaultRouter()
-router.register('follows', FollowViewSet)
-router.register('messages', MessageViewSet)
-router.register('comments', CommentViewSet)
-router.register('hashtags', HashtagViewSet)
-
-urlpatterns = router.urls
+urlpatterns = [
+    path('follow/', FollowToggleView.as_view(), name='follow-toggle'),
+    path('follow/status/', StatusFollowView.as_view(), name='follow-status'),
+    path('usuarios/<str:username>/seguidores/', SeguidoresUsuarioView.as_view(), name='seguidores'),
+    path('usuarios/<str:username>/seguindo/', SeguindoUsuarioView.as_view(), name='seguindo'),
+]

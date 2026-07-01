@@ -5,6 +5,7 @@ import CriarItinerario from './CriarItinerario';
 import PaginaPlace from './PaginaPlace';
 import Login from './Login';
 import RotaProtegida from './RotaProtegida';
+import PaginaPerfil from './PaginaPerfil';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           }
         />
         <Route path="/place/:placeId" element={<PaginaPlace />} />
+        <Route path="/perfil/:username" element={<PaginaPerfil />} />
       </Routes>
     </BrowserRouter>
   );

@@ -35,7 +35,7 @@ def buscar_detalhes(place_id):
     resultado = client.place(
         place_id=place_id,
         language='pt-BR',
-        fields=['place_id', 'name', 'formatted_address', 'geometry', 'photos']  # + photos
+        fields=['place_id', 'name', 'formatted_address', 'geometry', 'photo']
     )
     info = resultado['result']
 

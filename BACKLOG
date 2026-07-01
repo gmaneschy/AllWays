@@ -1,7 +1,6 @@
 Apps:
 users:
-    página de login e cadastro
-    página de usuário
+    
 
 
 feed:
@@ -39,7 +38,6 @@ social:
 6. feed          ✓ feed básico, itinerários em ordem cronológica
 
 
-Verificar se há autenticação de usuário a fazer no Feed.jsx e no PaginaPlace.jsx
 Verificar validação de username na criação do usuário.
 
 APIs:
@@ -49,3 +47,35 @@ APIs:
 /api/itineraries/fotos/
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
+
+1 - página de perfil do usuário
+2 - página "explorar"
+3 - tornar usuário seguível e pesquisável (devem ser encontráveis tanto pelo nome de usuário quanto pelo nome do perfil)
+4 - tornar hashtag seguível e pesquisável
+5 - tornar place seguível e pesquisável
+6 - tornar itinerário "salvável"
+7 - página de mensagens entre usuários
+Sendo as prioridades:
+Perfil do usuário (1)
+    ↑ necessário para
+    ├── Usuário seguível (3) — "seguir" aparece na página do perfil
+    ├── Itinerário salvável (6) — "salvar" aparece nos cards do feed/perfil
+    └── Mensagens (7) — "enviar mensagem" aparece no perfil de outro usuário
+
+Explorar (2)
+    ↑ necessário para
+    ├── Busca de usuário (3) — resultados de busca levam ao perfil
+    ├── Busca de hashtag (4) — resultados de busca listam itinerários com aquela hashtag
+    └── Busca de place (5) — resultados de busca levam à PaginaPlace que já existe
+
+Hashtag seguível (4)
+    ↑ necessário para
+    └── Feed personalizado — quando o algoritmo considerar hashtags seguidas
+E a melhor ordem:
+1. Perfil do usuário  ← desbloqueia 3, 6, 7
+2. Explorar + busca   ← desbloqueia 3, 4, 5 de forma navegável
+3. Seguir usuário     ← depende de 1 (perfil) e 2 (busca)
+4. Seguir/buscar place ← Place já tem página, falta só o botão de seguir
+5. Seguir/buscar hashtag ← exige que hashtags existam nos itinerários primeiro
+6. Salvar itinerário  ← aparece no feed + perfil
+7. Mensagens          ← mais isolado, pode vir quando quiser

@@ -78,3 +78,45 @@ class FotoPontoItinerario(models.Model):
     ponto = models.ForeignKey('itineraries.PontoItinerario', on_delete=models.CASCADE, related_name='fotos')
     imagem = models.ImageField(upload_to='itinerarios/fotos/')
     enviada_em = models.DateTimeField(auto_now_add=True)
+
+class ItinerarioSalvo(models.Model):
+    usuario = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='itinerarios_salvos'
+    )
+    itinerario = models.ForeignKey(
+        'itineraries.Itinerario', on_delete=models.CASCADE,
+        related_name='salvos_por'
+    )
+    salvo_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario', 'itinerario'],
+                name='salvo_unico_por_usuario'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.usuario.username} salvou {self.itinerario.titulo}"
+
+
+class ItinerarioBaixado(models.Model):
+    usuario = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='itinerarios_baixados'
+    )
+    itinerario = models.ForeignKey(
+        'itineraries.Itinerario', on_delete=models.CASCADE,
+        related_name='baixados_por'
+    )
+    baixado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario', 'itinerario'],
+                name='baixado_unico_por_usuario'
+            )
+        ]

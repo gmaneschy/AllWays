@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Itinerario, PontoItinerario, FotoPontoItinerario
+from .models import Itinerario, PontoItinerario, FotoPontoItinerario, ItinerarioBaixado, ItinerarioSalvo
+
 
 # Register your models here.
 
@@ -15,3 +16,5 @@ class ItinerarioAdmin(admin.ModelAdmin):
 admin.site.register(Itinerario, ItinerarioAdmin)
 admin.site.register(PontoItinerario)
 admin.site.register(FotoPontoItinerario)
+admin.site.register(ItinerarioSalvo)
+admin.site.register(ItinerarioBaixado)
