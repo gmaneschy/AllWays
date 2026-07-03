@@ -73,3 +73,57 @@ class FotoPontoItinerarioSerializer(serializers.ModelSerializer):
         model = FotoPontoItinerario
         fields = ['id', 'ponto', 'imagem', 'enviada_em']
         read_only_fields = ['enviada_em']
+
+class FotoPontoDetalheSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FotoPontoItinerario
+        fields = ['id', 'url', 'enviada_em']
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.imagem.url) if request else obj.imagem.url
+
+
+class PontoDetalheSerializer(serializers.ModelSerializer):
+    local_nome = serializers.CharField(source='local.nome', read_only=True)
+    local_endereco = serializers.CharField(source='local.endereco', read_only=True)
+    local_id = serializers.IntegerField(source='local.id', read_only=True)
+    fotos = FotoPontoDetalheSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PontoItinerario
+        fields = [
+            'id', 'ordem', 'local_id', 'local_nome', 'local_endereco',
+            'movimentacao', 'seguranca', 'entrada_gratuita', 'preco_medio',
+            'distancia_ate_proximo', 'meio_deslocamento', 'horario_estimado',
+            'comentario', 'fotos',
+        ]
+
+
+class ItinerarioDetalheSerializer(serializers.ModelSerializer):
+    pontos = PontoDetalheSerializer(many=True, read_only=True)
+    autor_username = serializers.CharField(source='autor.username', read_only=True)
+    autor_foto = serializers.SerializerMethodField()
+    salvo_por_mim = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Itinerario
+        fields = [
+            'id', 'titulo', 'tipo', 'status', 'data_inicio', 'data_fim',
+            'publicado_em', 'autor', 'autor_username', 'autor_foto',
+            'salvo_por_mim', 'pontos',
+        ]
+
+    def get_autor_foto(self, obj):
+        request = self.context.get('request')
+        if obj.autor and obj.autor.foto_perfil:
+            return request.build_absolute_uri(obj.autor.foto_perfil.url) if request else obj.autor.foto_perfil.url
+        return None
+
+    def get_salvo_por_mim(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.salvos_por.filter(usuario=request.user).exists()

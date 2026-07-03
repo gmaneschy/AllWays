@@ -41,3 +41,12 @@ APIs:
 /api/itineraries/fotos/
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
+
+
+Em "seguindo", na página de perfil, lugares seguidos aparecem na contagem, mas não tem visualização na lista. Ou lugares seguidos tem representação na lista (em separado), ou não devem ser considerados na contagem.
+Em Explorar, apenas os lugares pesquisados (e, portanto, salvos no banco de dados) aparecem para pesquisa.
+Na página do lugar, deve haver uma contagem de seguidores (decidir se usuários que seguem são anônimos ou públicos).
+Melhorar página de mensagens.
+Itinerários de outros usuários ainda não tem página de visualização, portanto, não é possível rascunhar um itinerário nem salvar um para reaproveitamento.
+Na página de criar itinerário, deve haver uma opção para salvar o rascunho, guardando todas as informações.
+Na página de criar itinerário, deve haver uma opção de carregar um itinerário salvo, copiando todas as informações exceto a data do itinerário e os comentários de cada ponto.

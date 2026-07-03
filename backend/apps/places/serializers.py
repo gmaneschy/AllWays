@@ -12,11 +12,15 @@ class PlaceDetailSerializer(serializers.ModelSerializer):
     foto_capa = serializers.SerializerMethodField()
     seguranca_media = serializers.ReadOnlyField()
     preco_medio_geral = serializers.ReadOnlyField()
+    total_seguidores = serializers.SerializerMethodField()
 
     class Meta:
         model = Place
         fields = ['id', 'place_id', 'nome', 'endereco', 'latitude', 'longitude',
-                  'foto_capa', 'seguranca_media', 'preco_medio_geral']
+                  'foto_capa', 'seguranca_media', 'preco_medio_geral', 'total_seguidores']
+
+    def get_total_seguidores(self, obj):
+        return obj.seguidores.count()
 
     def get_foto_capa(self, obj):
         from .services import montar_url_foto_google

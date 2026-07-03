@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from './api';
 
 function useDebounce(valor, delay) {
@@ -9,6 +9,45 @@ function useDebounce(valor, delay) {
     return () => clearTimeout(t);
   }, [valor, delay]);
   return debouncado;
+}
+
+function LugarResultado({ lugar, onNavegar }) {
+  const navigate = useNavigate();
+  const [salvando, setSalvando] = useState(false);
+
+  async function handleClick() {
+    if (lugar.tipo === 'salvo') {
+      onNavegar();
+      navigate(`/place/${lugar.id}`);
+      return;
+    }
+    // Lugar do Google: criar no banco primeiro, depois navegar
+    setSalvando(true);
+    try {
+      const res = await api.post('/places/', { place_id: lugar.place_id });
+      onNavegar();
+      navigate(`/place/${res.data.id}`);
+    } catch (_) {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={!salvando ? handleClick : undefined}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0',
+        cursor: salvando ? 'wait' : 'pointer', color: 'inherit' }}
+    >
+      <div style={{ width: 32, height: 32, borderRadius: 6, background: '#f0f0f0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+        {salvando ? '⏳' : '📍'}
+      </div>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 'bold' }}>{lugar.nome}</div>
+        {lugar.endereco && <div style={{ fontSize: 12, color: '#999' }}>{lugar.endereco}</div>}
+      </div>
+    </div>
+  );
 }
 
 function SecaoBusca({ titulo, itens, renderItem }) {
@@ -196,21 +235,7 @@ function PaginaExplorar() {
                   titulo="Lugares"
                   itens={resultados.lugares}
                   renderItem={(p) => (
-                    <Link
-                      key={p.id}
-                      to={`/place/${p.id}`}
-                      onClick={() => setQuery('')}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <div style={{ width: 32, height: 32, borderRadius: 6, background: '#f0f0f0',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                        📍
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 'bold' }}>{p.nome}</div>
-                        {p.endereco && <div style={{ fontSize: 12, color: '#999' }}>{p.endereco}</div>}
-                      </div>
-                    </Link>
+                    <LugarResultado key={p.id ?? p.place_id} lugar={p} onNavegar={() => setQuery('')} />
                   )}
                 />
 

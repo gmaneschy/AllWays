@@ -164,8 +164,9 @@ class MensagensConversaView(APIView):
 
 class BuscaView(APIView):
     """GET /api/social/busca/?q=termo
-    Retorna usuários, lugares e hashtags que batem com o termo,
-    agrupados em seções separadas."""
+    Retorna usuários (banco), lugares (banco + Google Places) e hashtags (banco),
+    agrupados em seções. Lugares do banco têm page própria; sugestões do Google
+    são redirecionadas para criação via POST /api/places/ quando clicadas."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
@@ -174,25 +175,107 @@ class BuscaView(APIView):
             return Response({'usuarios': [], 'lugares': [], 'hashtags': []})
 
         usuarios = User.objects.filter(username__icontains=q)[:8]
-        lugares = Place.objects.filter(nome__icontains=q)[:8]
         hashtags = Hashtag.objects.filter(nome__icontains=q)[:8]
+
+        # Lugares salvos no banco
+        lugares_banco = Place.objects.filter(nome__icontains=q)[:5]
+        lugares_data = [
+            {
+                'tipo': 'salvo',
+                'id': p.id,
+                'nome': p.nome,
+                'endereco': p.endereco,
+            }
+            for p in lugares_banco
+        ]
+
+        # Sugestões do Google Places (apenas se query tiver 3+ caracteres)
+        if len(q) >= 3:
+            try:
+                from apps.places.services import buscar_sugestoes
+                sugestoes_google = buscar_sugestoes(q)
+                # IDs do Google já no banco (para não duplicar)
+                place_ids_no_banco = set(Place.objects.filter(
+                    place_id__in=[s['place_id'] for s in sugestoes_google]
+                ).values_list('place_id', flat=True))
+
+                for s in sugestoes_google:
+                    if s['place_id'] in place_ids_no_banco:
+                        continue  # já aparece na lista do banco
+                    # buscar_sugestoes retorna 'descricao' como string única
+                    # ex: "Kremlin, Moscou, Rússia" — separamos na primeira vírgula
+                    descricao = s.get('descricao', '')
+                    partes = descricao.split(',', 1)
+                    nome = partes[0].strip()
+                    endereco = descricao  # endereço completo como contexto
+                    lugares_data.append({
+                        'tipo': 'google',
+                        'place_id': s['place_id'],
+                        'nome': nome,
+                        'endereco': endereco,
+                    })
+                    if len(lugares_data) >= 8:
+                        break
+            except Exception:
+                pass  # falha silenciosa: continua com só o banco
 
         return Response({
             'usuarios': [
-                {'id': u.id, 'username': u.username,
-                 'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None}
+                {
+                    'id': u.id,
+                    'username': u.username,
+                    'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None,
+                }
                 for u in usuarios
             ],
-            'lugares': [
-                {'id': p.id, 'nome': p.nome, 'endereco': p.endereco,
-                 'foto_capa': request.build_absolute_uri(p.foto_capa.url) if getattr(p, 'foto_capa', None) and p.foto_capa else None}
-                for p in lugares
-            ],
+            'lugares': lugares_data,
             'hashtags': [
                 {'id': h.id, 'nome': h.nome, 'total_seguidores': h.seguidores.count()}
                 for h in hashtags
             ],
         })
+
+
+# ─── Explorar ─────────────────────────────────────────────────────────────────
+
+class UsuariosParaMensagemView(APIView):
+    """GET /api/social/mensagens/destinatarios/?q=termo
+    Retorna usuários para selecionar como destinatário de mensagem.
+    Prioriza seguidos, depois outros usuários. Filtra por username se q fornecido."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip()
+        user = request.user
+
+        seguidos_ids = Follow.objects.filter(
+            seguidor=user,
+            seguido_usuario__isnull=False,
+        ).values_list('seguido_usuario_id', flat=True)
+
+        qs = User.objects.exclude(pk=user.pk)
+        if q:
+            qs = qs.filter(username__icontains=q)
+
+        # Seguidos primeiro, depois os demais — via annotation de prioridade
+        from django.db.models import Case, When, Value, IntegerField
+        qs = qs.annotate(
+            prioridade=Case(
+                When(pk__in=seguidos_ids, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ).order_by('prioridade', 'username')[:20]
+
+        return Response([
+            {
+                'id': u.id,
+                'username': u.username,
+                'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None,
+                'seguido': u.pk in seguidos_ids,
+            }
+            for u in qs
+        ])
 
 
 # ─── Explorar ─────────────────────────────────────────────────────────────────
@@ -223,7 +306,7 @@ class ExplorarView(APIView):
                 'autor': {
                     'username': it.autor.username if it.autor else None,
                     'foto_perfil': request.build_absolute_uri(it.autor.foto_perfil.url)
-                                   if it.autor and it.autor.foto_perfil else None,
+                    if it.autor and it.autor.foto_perfil else None,
                 },
                 'lugar_principal': {
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,

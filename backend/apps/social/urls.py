@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     FollowToggleView, SeguidoresUsuarioView, SeguindoUsuarioView, StatusFollowView,
-    ConversasView, MensagensConversaView,
+    ConversasView, MensagensConversaView, UsuariosParaMensagemView,
     BuscaView, ExplorarView,
 )
 
@@ -14,6 +14,7 @@ urlpatterns = [
 
     # Mensagens
     path('mensagens/', ConversasView.as_view(), name='conversas'),
+    path('mensagens/destinatarios/', UsuariosParaMensagemView.as_view(), name='destinatarios'),
     path('mensagens/<str:username>/', MensagensConversaView.as_view(), name='conversa'),
 
     # Busca e explorar

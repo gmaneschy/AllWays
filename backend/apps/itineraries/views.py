@@ -2,18 +2,65 @@ from django.shortcuts import render, get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from .models import Itinerario, FotoPontoItinerario, PontoItinerario
-from .serializers import ItinerarioSerializer, FotoPontoItinerarioSerializer
+from .serializers import ItinerarioSerializer, FotoPontoItinerarioSerializer, ItinerarioDetalheSerializer
 
-# Create your views here.
 
 class ItinerarioViewSet(viewsets.ModelViewSet):
     queryset = Itinerario.objects.all().prefetch_related('pontos')
     serializer_class = ItinerarioSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        # Leitura pública; escrita exige autenticação
+        if self.action in ('list', 'retrieve'):
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = Itinerario.objects.prefetch_related('pontos__local', 'pontos__fotos')
+
+        # ?autor=me → só itinerários do usuário logado (rascunhos + publicados)
+        if self.request.query_params.get('autor') == 'me':
+            if self.request.user.is_authenticated:
+                return qs.filter(autor=self.request.user).order_by('-publicado_em', '-id')
+            return qs.none()
+
+        # Não-autenticados e outros usuários só veem publicados
+        if not self.request.user.is_authenticated:
+            return qs.filter(status='publicado')
+        # Dono vê os próprios (inclusive rascunhos) + publicados de outros
+        return qs.filter(
+            status='publicado'
+        ) | qs.filter(autor=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(autor=self.request.user)
+
+
+class ItinerarioDetalhePublicoView(APIView):
+    """GET /api/itineraries/itinerarios/<id>/detalhe/
+    Retorna itinerário completo com pontos, fotos e info do autor.
+    Rascunhos só acessíveis pelo próprio autor."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        it = get_object_or_404(
+            Itinerario.objects.select_related('autor').prefetch_related(
+                'pontos__local', 'pontos__fotos'
+            ),
+            pk=pk,
+        )
+        # Rascunho: só o próprio autor pode ver
+        if it.status == 'rascunho':
+            if not request.user.is_authenticated or request.user != it.autor:
+                return Response(
+                    {'erro': 'Este itinerário não está disponível.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        serializer = ItinerarioDetalheSerializer(it, context={'request': request})
+        return Response(serializer.data)
 
 
 class FotoPontoItinerarioViewSet(viewsets.ModelViewSet):

@@ -155,8 +155,14 @@ function PaginaPerfil() {
             {' · '}
             <button onClick={() => abrirModal('seguindo')}
               style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}>
-              <strong>{perfil.total_seguindo}</strong> seguindo
+              <strong>{perfil.total_seguindo_usuarios}</strong> usuários seguidos
             </button>
+            {perfil.total_seguindo_lugares > 0 && (
+              <>
+                {' · '}
+                <strong>{perfil.total_seguindo_lugares}</strong> lugar{perfil.total_seguindo_lugares !== 1 ? 'es' : ''} seguido{perfil.total_seguindo_lugares !== 1 ? 's' : ''}
+              </>
+            )}
           </p>
         </div>
       </div>

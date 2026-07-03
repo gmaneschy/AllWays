@@ -39,7 +39,8 @@ class BadgeResumoSerializer(serializers.ModelSerializer):
 class PerfilPublicoSerializer(serializers.ModelSerializer):
     """Perfil de qualquer usuário — visível a todos."""
     total_seguidores = serializers.SerializerMethodField()
-    total_seguindo = serializers.SerializerMethodField()
+    total_seguindo_usuarios = serializers.SerializerMethodField()
+    total_seguindo_lugares = serializers.SerializerMethodField()
     itinerarios_publicados = serializers.SerializerMethodField()
     badges = BadgeResumoSerializer(source='usuariobadge_set', many=True, read_only=True)
     voce_segue = serializers.SerializerMethodField()
@@ -48,25 +49,24 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'bio', 'foto_perfil', 'badge_destaque',
-            'total_seguidores', 'total_seguindo',
+            'total_seguidores', 'total_seguindo_usuarios', 'total_seguindo_lugares',
             'itinerarios_publicados', 'badges', 'voce_segue',
         ]
 
     def get_total_seguidores(self, obj):
         return obj.seguidores.count()
 
-    def get_total_seguindo(self, obj):
-        return obj.seguindo.count()
+    def get_total_seguindo_usuarios(self, obj):
+        return obj.seguindo.filter(seguido_usuario__isnull=False).count()
+
+    def get_total_seguindo_lugares(self, obj):
+        return obj.seguindo.filter(seguido_local__isnull=False).count()
 
     def get_itinerarios_publicados(self, obj):
         qs = Itinerario.objects.filter(autor=obj, status='publicado')
         return ItinerarioResumoSerializer(qs, many=True).data
 
     def get_voce_segue(self, obj):
-        """Se há um usuário autenticado fazendo a requisição (que não seja
-        o próprio dono do perfil), indica se ele já segue este usuário.
-        Retorna None quando não há usuário logado ou é o próprio perfil —
-        o frontend usa isso para decidir se mostra o botão de seguir."""
         request = self.context.get('request')
         if not request or not request.user.is_authenticated or request.user == obj:
             return None

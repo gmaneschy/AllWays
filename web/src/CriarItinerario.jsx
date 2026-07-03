@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from './api';
 import BuscaLocal from './BuscaLocal';
 
@@ -33,6 +34,7 @@ function pontoVazio() {
 }
 
 function CriarItinerario() {
+  const [searchParams] = useSearchParams();
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState('day_trip');
   const [dataInicio, setDataInicio] = useState('');
@@ -41,6 +43,98 @@ function CriarItinerario() {
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState(null);
+  const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const [rascunhoSalvo, setRascunhoSalvo] = useState(false);
+  const [itinerariosSalvos, setItinerariosSalvos] = useState([]);
+  const [mostraCarregar, setMostraCarregar] = useState(false);
+  const [carregandoSalvos, setCarregandoSalvos] = useState(false);
+
+  // Se veio de "Usar como base" na PaginaItinerario, carrega automaticamente
+  useEffect(() => {
+    const baseId = searchParams.get('base');
+    if (baseId) carregarItinerario(baseId);
+  }, []);
+
+  function payloadAtual(statusEnvio) {
+    return {
+      titulo,
+      tipo,
+      status: statusEnvio,
+      data_inicio: dataInicio || null,
+      data_fim: tipo === 'multi_day' ? (dataFim || null) : null,
+      pontos: pontos
+        .filter((p) => p.local) // ignora pontos sem local no rascunho
+        .map((p, index) => ({
+          local: p.local.id,
+          ordem: index + 1,
+          movimentacao: p.movimentacao,
+          seguranca: p.seguranca === '' ? null : Number(p.seguranca),
+          entrada_gratuita: p.entrada_gratuita,
+          preco_medio: p.entrada_gratuita || p.preco_medio === '' ? null : Number(p.preco_medio),
+          meio_deslocamento: p.meio_deslocamento,
+          horario_estimado: p.horario_estimado || null,
+          comentario: p.comentario,
+        })),
+    };
+  }
+
+  async function salvarRascunho() {
+    if (!titulo) { setErro('Adicione um título antes de salvar o rascunho.'); return; }
+    setErro(null);
+    setSalvandoRascunho(true);
+    try {
+      await api.post('/itineraries/itinerarios/', payloadAtual('rascunho'));
+      setRascunhoSalvo(true);
+      setTimeout(() => setRascunhoSalvo(false), 3000);
+    } catch (err) {
+      setErro(JSON.stringify(err.response?.data || err.message));
+    } finally {
+      setSalvandoRascunho(false);
+    }
+  }
+
+  async function abrirCarregar() {
+    setMostraCarregar(true);
+    setCarregandoSalvos(true);
+    try {
+      // ?autor=me retorna todos os itinerários do próprio usuário (publicados + rascunhos)
+      const res = await api.get('/itineraries/itinerarios/?autor=me');
+      setItinerariosSalvos(res.data.results ?? res.data);
+    } catch (_) {
+      setItinerariosSalvos([]);
+    } finally {
+      setCarregandoSalvos(false);
+    }
+  }
+
+  async function carregarItinerario(id) {
+    try {
+      const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
+      const it = res.data;
+      setTitulo(`Cópia de ${it.titulo}`);
+      setTipo(it.tipo);
+      setDataInicio(''); // data não é copiada conforme especificado
+      setDataFim('');
+      setPontos(
+        (it.pontos || []).map((p) => ({
+          local: p.local_id ? { id: p.local_id, nome: p.local_nome } : null,
+          movimentacao: p.movimentacao || '',
+          seguranca: p.seguranca ?? '',
+          entrada_gratuita: p.entrada_gratuita || false,
+          preco_medio: p.preco_medio ?? '',
+          meio_deslocamento: p.meio_deslocamento || '',
+          horario_estimado: p.horario_estimado || '',
+          comentario: '', // comentário não é copiado conforme especificado
+          arquivos: [],
+        }))
+      );
+      setMostraCarregar(false);
+      setResultado(null);
+      setErro(null);
+    } catch (_) {
+      setErro('Não foi possível carregar o itinerário.');
+    }
+  }
 
   function atualizarPonto(index, campo, valor) {
     const novosPontos = [...pontos];
@@ -99,25 +193,7 @@ function CriarItinerario() {
       return;
     }
 
-    const payload = {
-      titulo,
-      tipo,
-      status: 'publicado',
-      data_inicio: dataInicio || null,
-      data_fim: tipo === 'multi_day' ? (dataFim || null) : null,
-      pontos: pontos.map((p, index) => ({
-        local: p.local.id,
-        ordem: index + 1,
-        movimentacao: p.movimentacao,
-        seguranca: p.seguranca === '' ? null : Number(p.seguranca),
-        entrada_gratuita: p.entrada_gratuita,
-        preco_medio: p.entrada_gratuita || p.preco_medio === '' ? null : Number(p.preco_medio),
-        meio_deslocamento: p.meio_deslocamento,
-        horario_estimado: p.horario_estimado || null,
-        comentario: p.comentario,
-      })),
-    };
-
+    const payload = payloadAtual('publicado');
     setEnviando(true);
     try {
       const resposta = await api.post('/itineraries/itinerarios/', payload);
@@ -159,7 +235,50 @@ function CriarItinerario() {
 
   return (
     <div style={{ maxWidth: 600, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      <h1>Criar Itinerário</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <h1 style={{ margin: 0 }}>Criar Itinerário</h1>
+        <button
+          type="button"
+          onClick={abrirCarregar}
+          style={{ fontSize: 13, padding: '6px 14px', borderRadius: 6, border: '1px solid #ddd', background: '#736060', cursor: 'pointer' }}
+        >
+          📂 Carregar existente
+        </button>
+      </div>
+
+      {/* Modal de carregar itinerário */}
+      {mostraCarregar && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 10, padding: 16, marginBottom: 20, background: '#fafafa' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <strong>Selecionar itinerário para copiar</strong>
+            <button onClick={() => setMostraCarregar(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+          </div>
+          <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px' }}>
+            Data e comentários dos pontos não serão copiados.
+          </p>
+          {carregandoSalvos && <p style={{ color: '#999' }}>Carregando...</p>}
+          {!carregandoSalvos && itinerariosSalvos.length === 0 && (
+            <p style={{ color: '#999' }}>Nenhum itinerário encontrado.</p>
+          )}
+          {itinerariosSalvos.map((it) => (
+            <div
+              key={it.id}
+              onClick={() => carregarItinerario(it.id)}
+              style={{
+                padding: '10px 12px', borderRadius: 8, border: '1px solid #eee',
+                marginBottom: 8, cursor: 'pointer', background: '#fff',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f0f5ff'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+            >
+              <strong>{it.titulo}</strong>
+              <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
+                {it.status === 'rascunho' ? '· Rascunho' : '· Publicado'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <label>Título</label>
       <input
@@ -334,14 +453,28 @@ function CriarItinerario() {
 
       <br />
 
-      <button
-        type="button"
-        onClick={publicar}
-        disabled={enviando}
-        style={{ padding: '10px 20px', fontSize: 16 }}
-      >
-        {enviando ? 'Publicando...' : 'Publicar Itinerário'}
-      </button>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
+        <button
+          type="button"
+          onClick={publicar}
+          disabled={enviando}
+          style={{ padding: '10px 20px', fontSize: 16 }}
+        >
+          {enviando ? 'Publicando...' : 'Publicar Itinerário'}
+        </button>
+        <button
+          type="button"
+          onClick={salvarRascunho}
+          disabled={salvandoRascunho}
+          style={{
+            padding: '10px 20px', fontSize: 16,
+            background: '#635858', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer',
+          }}
+        >
+          {salvandoRascunho ? 'Salvando...' : '💾 Salvar rascunho'}
+        </button>
+        {rascunhoSalvo && <span style={{ color: 'green', fontSize: 13 }}>✓ Rascunho salvo!</span>}
+      </div>
 
       {erro && <p style={{ color: 'red', marginTop: 16 }}>{erro}</p>}
 

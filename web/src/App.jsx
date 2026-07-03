@@ -8,6 +8,7 @@ import RotaProtegida from './RotaProtegida';
 import PaginaPerfil from './PaginaPerfil';
 import PaginaMensagens from './PaginaMensagens';
 import PaginaExplorar from './PaginaExplorar';
+import PaginaItinerario from './PaginaItinerario';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         />
         <Route path="/place/:placeId" element={<PaginaPlace />} />
         <Route path="/perfil/:username" element={<PaginaPerfil />} />
+        <Route path="/itinerario/:id" element={<PaginaItinerario />} />
         <Route path="/explorar" element={<PaginaExplorar />} />
         <Route
           path="/mensagens"
