@@ -121,6 +121,7 @@ function CardItinerario({ it }) {
 }
 
 function PaginaExplorar() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState(null);
   const [buscando, setBuscando] = useState(false);
@@ -128,6 +129,26 @@ function PaginaExplorar() {
   const [carregandoFeed, setCarregandoFeed] = useState(true);
   const queryDebounced = useDebounce(query, 300);
   const inputRef = useRef(null);
+
+  function handleEnter(e) {
+    if (e.key !== 'Enter') return;
+    const q = query.trim();
+    if (!q) return;
+    // Hashtag: #exemplo ou simplesmente "exemplo" com # na frente
+    if (q.startsWith('#')) {
+      const nome = q.slice(1).toLowerCase();
+      if (nome) { setQuery(''); navigate(`/hashtag/${nome}`); }
+    }
+    // Usuário único nos resultados → navega direto
+    else if (resultados?.usuarios?.length === 1 && resultados.lugares.length === 0 && resultados.hashtags.length === 0) {
+      setQuery(''); navigate(`/perfil/${resultados.usuarios[0].username}`);
+    }
+    // Lugar único salvo no banco → navega direto
+    else if (resultados?.lugares?.length === 1 && resultados.lugares[0].tipo === 'salvo' && resultados.usuarios.length === 0) {
+      setQuery(''); navigate(`/place/${resultados.lugares[0].id}`);
+    }
+    // Caso contrário: mantém dropdown aberto com os resultados já exibidos
+  }
 
   // Carrega feed ao entrar na página
   useEffect(() => {
@@ -175,6 +196,7 @@ function PaginaExplorar() {
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleEnter}
           placeholder="🔍  Buscar usuários, lugares ou hashtags..."
           style={{
             width: '100%', padding: '12px 16px', borderRadius: 12,
