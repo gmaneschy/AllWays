@@ -6,30 +6,27 @@ from .models import Follow, Hashtag, Comment, Message
 
 
 class HashtagSerializer(serializers.ModelSerializer):
-    total_seguidores = serializers.SerializerMethodField()
+    total_itinerarios = serializers.SerializerMethodField()
 
     class Meta:
         model = Hashtag
-        fields = ['id', 'nome', 'total_seguidores']
+        fields = ['id', 'nome', 'total_itinerarios']
 
-    def get_total_seguidores(self, obj):
-        return obj.seguidores.count()
+    def get_total_itinerarios(self, obj):
+        return obj.itinerarios.filter(status='publicado').count()
 
 
 class UsuarioResumoSerializer(serializers.ModelSerializer):
-    """Versão compacta de User para listas de seguidores/seguindo."""
     class Meta:
         model = User
         fields = ['id', 'username', 'foto_perfil']
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    """Serializer de criação. O alvo é informado via 'tipo' + 'alvo_id'
-    em vez de expor os três FKs diretamente — evita o cliente mandar
-    mais de um alvo preenchido sem precisar duplicar validação aqui
-    (a constraint do banco já impede, mas validar antes dá erro mais claro)."""
+    """Alvo informado via 'tipo' (usuario|local) + 'alvo_id'.
+    Follow de hashtag foi removido."""
 
-    tipo = serializers.ChoiceField(choices=['usuario', 'local', 'hashtag'], write_only=True)
+    tipo = serializers.ChoiceField(choices=['usuario', 'local'], write_only=True)
     alvo_id = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -47,10 +44,8 @@ class FollowSerializer(serializers.ModelSerializer):
             if alvo == request.user:
                 raise serializers.ValidationError("Você não pode seguir a si mesmo.")
             data['seguido_usuario'] = alvo
-        elif tipo == 'local':
-            data['seguido_local'] = get_object_or_404(Place, pk=alvo_id)
         else:
-            data['seguido_hashtag'] = get_object_or_404(Hashtag, pk=alvo_id)
+            data['seguido_local'] = get_object_or_404(Place, pk=alvo_id)
 
         return data
 
@@ -63,23 +58,46 @@ class FollowSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     autor_nome = serializers.CharField(source='autor.username', read_only=True)
-    autor_foto = serializers.ImageField(source='autor.foto_perfil', read_only=True)
+    autor_foto = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ['id', 'autor', 'autor_nome', 'autor_foto', 'itinerario', 'texto', 'criado_em']
         read_only_fields = ['autor', 'criado_em']
 
+    def get_autor_foto(self, obj):
+        request = self.context.get('request')
+        if obj.autor and obj.autor.foto_perfil:
+            return request.build_absolute_uri(obj.autor.foto_perfil.url) if request else obj.autor.foto_perfil.url
+        return None
+
 
 class MessageSerializer(serializers.ModelSerializer):
     remetente_nome = serializers.CharField(source='remetente.username', read_only=True)
-    remetente_foto = serializers.ImageField(source='remetente.foto_perfil', read_only=True)
+    remetente_foto = serializers.SerializerMethodField()
     destinatario_nome = serializers.CharField(source='destinatario.username', read_only=True)
 
     class Meta:
         model = Message
         fields = [
             'id', 'remetente', 'remetente_nome', 'remetente_foto',
-            'destinatario', 'destinatario_nome', 'texto', 'enviada_em',
+            'destinatario', 'destinatario_nome',
+            'tipo', 'texto', 'imagem', 'audio', 'enviada_em',
         ]
         read_only_fields = ['remetente', 'enviada_em']
+
+    def get_remetente_foto(self, obj):
+        request = self.context.get('request')
+        if obj.remetente and obj.remetente.foto_perfil:
+            return request.build_absolute_uri(obj.remetente.foto_perfil.url) if request else obj.remetente.foto_perfil.url
+        return None
+
+    def validate(self, data):
+        tipo = data.get('tipo', 'texto')
+        if tipo == 'texto' and not data.get('texto', '').strip():
+            raise serializers.ValidationError("Mensagem de texto não pode ser vazia.")
+        if tipo == 'imagem' and not data.get('imagem'):
+            raise serializers.ValidationError("Mensagem de imagem requer um arquivo.")
+        if tipo == 'audio' and not data.get('audio'):
+            raise serializers.ValidationError("Mensagem de áudio requer um arquivo.")
+        return data

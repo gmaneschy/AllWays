@@ -255,7 +255,7 @@ function PaginaExplorar() {
                       </div>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 'bold' }}>#{h.nome}</div>
-                        <div style={{ fontSize: 12, color: '#999' }}>{h.total_seguidores} seguidores</div>
+                        <div style={{ fontSize: 12, color: '#999' }}>{h.total_itinerarios} itinerário{h.total_itinerarios !== 1 ? 's' : ''}</div>
                       </div>
                     </Link>
                   )}

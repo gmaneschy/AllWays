@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     FollowToggleView, SeguidoresUsuarioView, SeguindoUsuarioView, StatusFollowView,
+    ComentariosItinerarioView, HashtagFeedView,
     ConversasView, MensagensConversaView, UsuariosParaMensagemView,
     BuscaView, ExplorarView,
 )
@@ -11,6 +12,12 @@ urlpatterns = [
     path('follow/status/', StatusFollowView.as_view(), name='follow-status'),
     path('usuarios/<str:username>/seguidores/', SeguidoresUsuarioView.as_view(), name='seguidores'),
     path('usuarios/<str:username>/seguindo/', SeguindoUsuarioView.as_view(), name='seguindo'),
+
+    # Comentários sociais
+    path('itinerarios/<int:itinerario_id>/comentarios/', ComentariosItinerarioView.as_view(), name='comentarios'),
+
+    # Hashtag feed
+    path('hashtag/<str:nome>/', HashtagFeedView.as_view(), name='hashtag-feed'),
 
     # Mensagens
     path('mensagens/', ConversasView.as_view(), name='conversas'),

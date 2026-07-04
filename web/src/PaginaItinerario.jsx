@@ -27,13 +27,20 @@ function PaginaItinerario() {
   const [erro, setErro] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [salvoMsg, setSalvoMsg] = useState(null);
+  const [comentarios, setComentarios] = useState([]);
+  const [textoComentario, setTextoComentario] = useState('');
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
 
   useEffect(() => {
     async function buscar() {
       setCarregando(true);
       try {
-        const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
-        setIt(res.data);
+        const [itRes, comRes] = await Promise.all([
+          api.get(`/itineraries/itinerarios/${id}/detalhe/`),
+          api.get(`/social/itinerarios/${id}/comentarios/`).catch(() => ({ data: [] })),
+        ]);
+        setIt(itRes.data);
+        setComentarios(comRes.data);
       } catch (err) {
         setErro(err.response?.status === 404
           ? 'Itinerário não encontrado ou não disponível.'
@@ -59,6 +66,24 @@ function PaginaItinerario() {
   function usarComoBase() {
     // Redireciona para criar itinerário passando o ID para carregar como base
     navigate(`/criar?base=${id}`);
+  }
+
+  async function postarComentario() {
+    if (!textoComentario.trim() || enviandoComentario) return;
+    setEnviandoComentario(true);
+    try {
+      const res = await api.post(`/social/itinerarios/${id}/comentarios/`, { texto: textoComentario });
+      setComentarios((prev) => [...prev, res.data]);
+      setTextoComentario('');
+    } catch (_) {}
+    finally { setEnviandoComentario(false); }
+  }
+
+  async function apagarComentario(comentarioId) {
+    try {
+      await api.delete(`/social/itinerarios/${id}/comentarios/?comentario_id=${comentarioId}`);
+      setComentarios((prev) => prev.filter((c) => c.id !== comentarioId));
+    } catch (_) {}
   }
 
   if (carregando) return <p style={{ textAlign: 'center', marginTop: 60 }}>Carregando...</p>;
@@ -210,6 +235,85 @@ function PaginaItinerario() {
           </div>
         ))}
       </div>
+      {/* Comentários sociais */}
+      {it.status === 'publicado' && (
+        <div style={{ marginTop: 40, borderTop: '1px solid #eee', paddingTop: 24 }}>
+          <h2 style={{ fontSize: 17, marginBottom: 20 }}>
+            Comentários {comentarios.length > 0 && <span style={{ color: '#999', fontWeight: 'normal' }}>({comentarios.length})</span>}
+          </h2>
+
+          {/* Input de novo comentário */}
+          {usuarioLogado && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 24, alignItems: 'flex-start' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                {usuarioLogado.username?.[0]?.toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <textarea
+                  value={textoComentario}
+                  onChange={(e) => setTextoComentario(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), postarComentario())}
+                  placeholder="Adicione um comentário..."
+                  rows={2}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: 8,
+                    border: '1px solid #ddd', fontSize: 14, resize: 'vertical',
+                    boxSizing: 'border-box', fontFamily: 'sans-serif',
+                  }}
+                />
+                <button
+                  onClick={postarComentario}
+                  disabled={!textoComentario.trim() || enviandoComentario}
+                  style={{
+                    marginTop: 6, padding: '6px 16px', borderRadius: 6,
+                    border: 'none', background: '#1a73e8', color: '#fff',
+                    fontWeight: 'bold', fontSize: 13, cursor: 'pointer',
+                    opacity: !textoComentario.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {enviandoComentario ? 'Postando...' : 'Comentar'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de comentários */}
+          {comentarios.length === 0 && (
+            <p style={{ color: '#bbb', fontSize: 14 }}>Nenhum comentário ainda. Seja o primeiro!</p>
+          )}
+          {comentarios.map((c) => (
+            <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              {c.autor_foto
+                ? <img src={c.autor_foto} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                    {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+              }
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Link to={`/perfil/${c.autor_nome}`} style={{ fontWeight: 'bold', fontSize: 13, textDecoration: 'none', color: '#333' }}>
+                    {c.autor_nome}
+                  </Link>
+                  <span style={{ fontSize: 11, color: '#bbb' }}>
+                    {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                  </span>
+                  {usuarioLogado?.username === c.autor_nome && (
+                    <button
+                      onClick={() => apagarComentario(c.id)}
+                      style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#ccc', cursor: 'pointer', fontSize: 16, padding: 0 }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#444', lineHeight: 1.4 }}>{c.texto}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

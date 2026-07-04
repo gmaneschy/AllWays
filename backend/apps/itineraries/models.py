@@ -8,6 +8,7 @@ class Itinerario(models.Model):
     autor = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=False)
     titulo = models.CharField(max_length=100)
     itinerario_original = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='forks')
+    hashtags = models.ManyToManyField('social.Hashtag', blank=True, related_name='itinerarios')
 
     TIPO_CHOICES = [
         ('day_trip', 'Day Trip'),
@@ -120,3 +121,37 @@ class ItinerarioBaixado(models.Model):
                 name='baixado_unico_por_usuario'
             )
         ]
+
+# ─── Extração automática de hashtags ──────────────────────────────────────────
+
+import re
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+def extrair_hashtags(texto):
+    """Extrai tokens de hashtag de um texto. Ex: '#viagem incrível #natureza' → ['viagem', 'natureza']"""
+    return [m.lower() for m in re.findall(r'#([a-zA-ZÀ-ÿ0-9_]+)', texto)]
+
+
+def sincronizar_hashtags_itinerario(itinerario):
+    """Lê os comentários de todos os pontos do itinerário, extrai hashtags
+    e sincroniza o M2M — criando Hashtags novas se necessário."""
+    from apps.social.models import Hashtag
+
+    nomes = set()
+    for ponto in itinerario.pontos.all():
+        nomes.update(extrair_hashtags(ponto.comentario))
+
+    hashtags = []
+    for nome in nomes:
+        obj, _ = Hashtag.objects.get_or_create(nome=nome)
+        hashtags.append(obj)
+
+    itinerario.hashtags.set(hashtags)
+
+
+@receiver(post_save, sender='itineraries.PontoItinerario')
+def atualizar_hashtags_ao_salvar_ponto(sender, instance, **kwargs):
+    """Sempre que um PontoItinerario é salvo, ressincroniza as hashtags do itinerário pai."""
+    sincronizar_hashtags_itinerario(instance.itinerario)

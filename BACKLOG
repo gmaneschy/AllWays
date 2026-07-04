@@ -3,19 +3,20 @@ users:
     Verificar validação de username na criação do usuário.
 
 feed:
-    tornar hashtags pesquisáveis (testar)
-    tornar hashtag "seguível" (testar)
+    remover tudo relativo ao follow de hashtags no backend e frontend.
+    tornar hashtags pesquisável (posts aparecerão na página de explorar).
 
 gamification:
 
 places:
 
 itineraries:
-    campo para hashtags (testar)
+    campo para hashtags
 
 social:
     incluir - Qualquer usuário pode comentar no post (itinerário) de outra pessoa — como um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
-
+    incluir - mensagem de áudio
+    incluir - mensagem de imagem
 
 APIs:
 /api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
@@ -24,3 +25,11 @@ APIs:
 /api/itineraries/fotos/
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
+
+Remover tudo relativo ao follow de hashtags no backend e frontend.
+Tornar hashtags pesquisável (posts aparecerão na página de explorar).
+Hashtags feitas nos comentários de PontoItinerario dos posts é o que alimentará as hashtags.
+social:
+    incluir - Qualquer usuário pode comentar no post (itinerário) de outra pessoa — como um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
+    incluir - mensagem de áudio
+    incluir - mensagem de imagem

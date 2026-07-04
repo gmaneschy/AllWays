@@ -9,6 +9,7 @@ import PaginaPerfil from './PaginaPerfil';
 import PaginaMensagens from './PaginaMensagens';
 import PaginaExplorar from './PaginaExplorar';
 import PaginaItinerario from './PaginaItinerario';
+import PaginaHashtag from './PaginaHashtag';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/place/:placeId" element={<PaginaPlace />} />
         <Route path="/perfil/:username" element={<PaginaPerfil />} />
         <Route path="/itinerario/:id" element={<PaginaItinerario />} />
+        <Route path="/hashtag/:nome" element={<PaginaHashtag />} />
         <Route path="/explorar" element={<PaginaExplorar />} />
         <Route
           path="/mensagens"
