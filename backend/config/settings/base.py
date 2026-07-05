@@ -151,3 +151,28 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ─── Celery ───────────────────────────────────────────────────────────────────
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+# Evita que tasks travem o worker para sempre
+CELERY_TASK_SOFT_TIME_LIMIT = 300   # 5 min: lança SoftTimeLimitExceeded
+CELERY_TASK_TIME_LIMIT = 360        # 6 min: mata o processo
+
+# ─── Cache (usado pelo FeedCache para checagem rápida de validade) ─────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+    }
+}
+
+# ─── Parâmetros do algoritmo de recomendação ──────────────────────────────────
+FEED_CACHE_TTL_MINUTES = 30         # Feed recalculado se mais velho que isso
+FEED_MAX_ITEMS = 50                 # Itens retornados por página de feed
+SIMILARITY_MIN_SAVES = 2            # Saves em comum mínimo para considerar usuários similares
+INTEREST_DECAY_DAYS = 30            # Eventos mais velhos que isso têm peso reduzido

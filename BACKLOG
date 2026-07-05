@@ -3,20 +3,22 @@ users:
     Verificar validação de username na criação do usuário.
 
 feed:
-    remover tudo relativo ao follow de hashtags no backend e frontend.
-    tornar hashtags pesquisável (posts aparecerão na página de explorar).
+    algoritmo para detectar o tipo de lugar/hashtag que o usuário mais tem interesse
+    sistema de atualização de feed
+    recomendação de posts novos (segundo interesse do usuário) a cada atualização (posts em PaginaExplorar seguem o mesmo modelo)
+
+
 
 gamification:
+    criar níveis de badge
+    criar lógica de concessão de badge no services.py
+    testar gamificação
 
 places:
 
 itineraries:
-    campo para hashtags
 
 social:
-    incluir - Qualquer usuário pode comentar no post (itinerário) de outra pessoa — como um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
-    incluir - mensagem de áudio
-    incluir - mensagem de imagem
 
 APIs:
 /api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
@@ -26,10 +28,14 @@ APIs:
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
 
-Remover tudo relativo ao follow de hashtags no backend e frontend.
-Tornar hashtags pesquisável (posts aparecerão na página de explorar).
-Hashtags feitas nos comentários de PontoItinerario dos posts é o que alimentará as hashtags.
-social:
-    incluir - Qualquer usuário pode comentar no post (itinerário) de outra pessoa — como um comentário de Instagram embaixo de uma foto. Não vai para Place, não constrói média de nada. É puramente social.
-    incluir - mensagem de áudio
-    incluir - mensagem de imagem
+# Terminal 0 - React
+npm run dev
+
+# Terminal 1 — Django
+python manage.py runserver
+
+# Terminal 2 — Celery worker
+celery -A config worker --loglevel=info --pool=solo
+
+# Terminal 3 — Celery beat (agendador)
+celery -A config beat --loglevel=info
