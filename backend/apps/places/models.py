@@ -1,7 +1,6 @@
 from django.db import models
 from django.db.models import Avg
 
-# Create your models here.
 
 class Place(models.Model):
     place_id = models.CharField(max_length=255, unique=True)
@@ -10,6 +9,28 @@ class Place(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     foto_referencia_google = models.CharField(max_length=300, null=True, blank=True)
+
+    # ─── Dados geográficos estruturados (usados na gamificação) ──────────
+    cidade = models.CharField(max_length=100, blank=True)
+    regiao = models.CharField(max_length=100, blank=True)        # estado/província/cantão/etc.
+    regiao_codigo = models.CharField(max_length=10, blank=True)   # ex: 'CE' (parte do ISO 3166-2 'BR-CE')
+    pais = models.CharField(max_length=100, blank=True)
+    pais_codigo = models.CharField(max_length=2, blank=True)       # ISO 3166-1 alpha-2
+    continente = models.CharField(max_length=20, blank=True)
+
+    CATEGORIA_CULTURAL = 'cultural'
+    CATEGORIA_RELIGIOSO = 'religioso'
+    CATEGORIA_GASTRONOMICO = 'gastronomico'
+    CATEGORIA_OUTRO = 'outro'
+    CATEGORIA_CHOICES = [
+        (CATEGORIA_CULTURAL, 'Cultural'),
+        (CATEGORIA_RELIGIOSO, 'Religioso'),
+        (CATEGORIA_GASTRONOMICO, 'Gastronômico'),
+        (CATEGORIA_OUTRO, 'Outro'),
+    ]
+    categoria_gamificacao = models.CharField(
+        max_length=20, choices=CATEGORIA_CHOICES, default=CATEGORIA_OUTRO
+    )
 
     @property
     def seguranca_media(self):

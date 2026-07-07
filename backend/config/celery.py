@@ -29,6 +29,11 @@ app.conf.beat_schedule = {
         'task': 'apps.feed.tasks.invalidar_feeds_stale',
         'schedule': crontab(minute='*/30'),
     },
+    # Avalia concessão de badge
+    'avaliar-badges-diariamente': {
+        'task': 'apps.gamification.tasks.avaliar_badges_todos_usuarios_task',
+        'schedule': crontab(hour=4, minute=0),  # diário, de madrugada — mais leve que a hora do feed
+    },
 }
 
 app.conf.timezone = 'UTC'
