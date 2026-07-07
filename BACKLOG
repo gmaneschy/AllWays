@@ -1,6 +1,9 @@
 Apps:
 users:
     Verificar validação de username na criação do usuário.
+    Na criação de usuário, deve haver um campo para o nome de exibição e para o nome do usuário (como um @ em primary key)
+    Pesquisa na página de Explorar deve considerar, no caso de pesquisa de usuários, tanto o nome de exibição quanto o nome de usuário.
+    Na criação de usuário também deve haver um campo para o gênero e data de nascimento.
     Edição de perfil:
         Foto de perfil
         Bio
@@ -19,17 +22,12 @@ places:
 
 itineraries:
     testar vídeo no itinerário
+    sistema de likes em posts
+    sistema de compartilhamento de posts (entre usuários ou copiar link)
 
 social:
     testar vídeo na mensagem
-
-APIs:
-/api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
-/api/places/autocomplete/?q=
-/api/social/comments/
-/api/itineraries/fotos/
-/api/itineraries/itinerarios/
-/api/feed/principal/ sem autenticação de usuário, incluir.
+    sistema de likes em comentários (comentários de posts e em comentários de lugares)
 
 # Terminal 0 - React
 npm run dev
@@ -45,193 +43,29 @@ celery -A config beat --loglevel=info
 
 
 Checklist:
-Badges: níveis + lógica de concessão - Quase OK - Falta integração com frontend
-Edição de perfil (foto, bio, badge)  - Pendente
-Vídeo no PontoItinerario             - Pendente
-Vídeo nas mensagens                  - Pendente
+Badges: níveis + lógica de concessão                  - Quase OK - Falta integração com frontend
+Correção no cadastro de usuário                       - Pendente
+Correção na pesquisa de usuário                       - Pendente
+Edição de perfil (nome de exibição foto, bio, badge)  - Pendente
+Sistema de likes em posts                             - Pendente
+Sistema de likes em comentários de posts              - Pendente
+Sistema de likes em comentários de lugares            - Pendente
+Sistema de likes em mensagens                         - Pendente
+Sistema de compartilhamento de posts                  - Pendente (entre usuários ou copiar link)
+Aba de notificações no frontend                       - Pendente
+Vídeo no PontoItinerario                              - Pendente
+Vídeo nas mensagens                                   - Pendente
 
 
-Lógica de gamificação
-Regras:
-    Estabelecimentos (PontoItinerario) visitados que são repetidos, que já foram visitados anteriormente, não acumulam na consideração da concessão da badge.
+Configurações:
+    Usuário:
+        Alterar Senha
+        Autenticação de dois fatores (futuro)
+        Privacidade de conta (perfil público ou privado)
 
-Viajante Local:
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade de locais dentro de uma única cidade.
-    (Na exibição detalhada do dinstintivo, mostrar cidade pelo qual conquistou a badge.)
-    (Como o usuário pode conquistar o mesmo distintivo por várias cidades, cidade acumulam dentro da badge)
-    Níveis:
-        Bronze:
-            visitou 25 locais dentro de uma mesma cidade
-        Prata:
-            visitou 50 locais dentro de uma mesma cidade
-        Ouro:
-            visitou 100 locais dentro de uma mesma cidade
-
-
-Viajante Regional:
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade de cidades dentro de um mesmo estado.
-    (Como nem todos os países chamam o estado exatamente como "Estado", usar equivalente próximo. Ex.: Cantão, Oblast, Prefeitura, Departamento, Província, Condado etc)
-    Níveis:
-        Bronze:
-            visitou (20%) cidades dentro de uma mesma estado
-        Prata:
-            visitou (40%) cidades dentro de uma mesma estado
-        Ouro:
-            visitou (60%) cidades dentro de uma mesma estadoA
-
-
-Viajante Nacional:
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade de estados (ou definição correlata) dentro de um mesmo país.
-    Níveis:
-        Bronze:
-            visitou (20%) estados dentro de um mesmo país
-        Prata:
-            visitou (40%) estados dentro de um mesmo país
-        Ouro:
-            visitou (60%) estados dentro de um mesmo país
-
-Viajante Continental:
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade países dentro de um mesmo continente.
-    (Considera-se: quantidade de países do continente)
-    Níveis:
-        Bronze:
-            visitou (20%) países dentro de um mesmo continente
-        Prata:
-            visitou (40%) países dentro de um mesmo continente
-        Ouro:
-            visitou (60%) países dentro de um mesmo continente
-        Diamante:
-            visitou todos (100%) os países de um mesmo continente
-
-
-Viajante Intercontinental (Entre Continentes):
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade continentes.
-    (Considera-se: Américas, Europa, África, Ásia, Oceania)
-    Níveis:
-        Bronze:
-            visitou 2 continentes
-        Prata:
-            visitou 3 continentes
-        Ouro:
-            visitou 4 continentes
-        Diamante:
-            visitou 5 continentes
-
-
-Viajante Global:
-    Definição: distintivo concedido aos usuários que visitam uma certa quantidade países (no total).
-    (Considera-se: todos os países, mesmo os não reconhecidos pela ONU ou outros países)
-    Níveis:
-        Bronze:
-            visitou (20%) países
-        Prata:
-            visitou (40%) países
-        Ouro:
-            visitou (60%) países
-        Diamante:
-            Visitou todos (100%) os países do mundo
-
-
-Selos especiais:
-O Peregrino:
-    Definição: distintivo concedido ao usuário que percorreu uma certa quantidade de quilômetros.
-    (Considera distância percorrida no meio de deslocamento nos pontos itinerários)
-    Níveis:
-        Bronze:
-            percorreu 10 quilômetros a pé
-        Prata:
-            percorreu 20 quilômetros a pé
-        Ouro:
-            percorreu 40 quilômetros a pé
-
-I Drive:
-    Definição: distintivo concedido ao usuário que percorreu uma certa quantidade de quilômetros de carro ou táxi/app de transporte. (Ajustar meio de transporte para Carro/Moto)
-    (Considera distância percorrida no meio de deslocamento nos pontos itinerários)
-    Níveis:
-        Bronze:
-            percorreu 30 quilômetros de carro/moto ou táxi/app de transporte
-        Prata:
-            percorreu 60 quilômetros de carro/moto ou táxi/app de transporte
-        Ouro:
-            percorreu 100 quilômetros de carro/moto ou táxi/app de transporte
-
-Regular Life:
-    Definição: distintivo concedido ao usuário que percorreu uma certa quantidade de quilômetros usando transporte público.
-    (Considera distância percorrida no meio de deslocamento nos pontos itinerários)
-    Níveis:
-        Bronze:
-            percorreu 25 quilômetros de transporte público
-        Prata:
-            percorreu 50 quilômetros de transporte público
-        Ouro:
-            percorreu 75 quilômetros de transporte público
-
-Duas Rodas e Um Destino:
-    Definição: distintivo concedido ao usuário que percorreu uma certa quantidade de quilômetros usando bicicleta.
-    (Considera distância percorrida no meio de deslocamento nos pontos itinerários)
-    Níveis:
-        Bronze:
-            percorreu 20 quilômetros de bicicleta
-        Prata:
-            percorreu 30 quilômetros de bicicleta
-        Ouro:
-            percorreu 50 quilômetros de bicicleta
-
-Numa Fria:
-    Definição: distintivo concedido ao usuário que percorreu visitou o Ártico, a Antártida ou os 2.
-    Níveis:
-        Ouro:
-            Visitou 1 dos 2 polos
-        Diamante:
-            Visitou 2 dos 2 polos
-
-Viajante Cultural (a definir):
-    Definição: distintivo concedido ao usuário que visitou uma certa quantidade de pontos culturais.
-    (Considera-se: museu, galeria de arte, sala de concerto, teatro, biblioteca, cinema, ponto histórico)
-    Níveis:
-        Bronze:
-            visitou x pontos culturais
-        Prata:
-            visitou x pontos culturais
-        Ouro:
-            visitou x pontos culturais
-
-Viajante Religioso (a definir):
-    Definição: distintivo concedido ao usuário que visitou uma certa quantidade de templos religiosos.
-    (Considera-se: igreja, catedral, mosteiro, sinagoga, templo, mesquita)
-    Níveis:
-        Bronze:
-            visitou x templos religiosos
-        Prata:
-            visitou x templos religiosos
-        Ouro:
-            visitou x templos religiosos
-
-Viajante Gastronômico (a definir):
-    Definição: distintivo concedido ao usuário que visitou uma certa quantidade de pontos gastronômicos.
-    (Considera-se: restaurante, cafeteria, bar, vinhedo)
-    Níveis:
-        Bronze:
-            visitou x pontos gastronômicos
-        Prata:
-            visitou x pontos gastronômicos
-        Ouro:
-            visitou x pontos gastronômicos
-
-
-
-Checklist:
-Viajante Local              -
-Viajante Regional           -
-Viajante Nacional           -
-Viajante Continental        -
-Viajante Intercontinental   -
-Viajante Global             -
-O Peregrino                 -
-I Drive                     -
-Regular Life                -
-Duas Rodas e Um Destino     -
-Numa Fria                   -
-Viajante Cultural           -
-Viajante Religioso          -
-Viajante Gastronômico       -
+    Notificações:
+        Usuário seguiu o outro
+        Usuário comentou em post
+        Usuário respondeu seu comentário
+        Usuário mandou mensagem
+        Usuário fez novo post

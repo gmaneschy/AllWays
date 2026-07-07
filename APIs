@@ -1,0 +1,7 @@
+APIs:
+/api/places/ sem autenticação de usuário, incluir. ({"detail": "Method \"GET\" not allowed."})
+/api/places/autocomplete/?q=
+/api/social/comments/
+/api/itineraries/fotos/
+/api/itineraries/itinerarios/
+/api/feed/principal/ sem autenticação de usuário, incluir.
