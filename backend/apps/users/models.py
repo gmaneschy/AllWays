@@ -6,7 +6,14 @@ from django.db import models
 class User(AbstractUser):
     foto_perfil = models.ImageField(upload_to='perfil/', null=True, blank=True)
     bio = models.CharField(max_length=200, blank=True)
-    badge_destaque = models.ForeignKey('gamification.BadgeUsuario', on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios_com_destaque')
+    badge_destaque = models.ForeignKey(
+        'gamification.BadgeUsuario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='usuarios_com_destaque'
+    )
+    exibir_badges = models.BooleanField(
+        default=True,
+        help_text="Se desativado, oculta a badge de destaque no feed, posts e comentários (públicos)."
+    )
 
     class Meta:
         db_table = 'users'

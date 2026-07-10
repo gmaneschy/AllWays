@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/itineraries/', include('apps.itineraries.urls')),
     path('api/feed/', include('apps.feed.urls')),
     path('api/users/', include('apps.users.urls')),
+    path('api/gamification/', include('apps.gamification.urls')),
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

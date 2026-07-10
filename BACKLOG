@@ -16,7 +16,6 @@ feed:
 gamification:
     Integrar badge de usuário com exibição no frontend (ao lado do nome no perfil, no post, no comentário do post e do lugar)
     Integrar badge de itinerário com a tela de criação e suas respectivas representações
-    testar gamificação
 
 places:
 
@@ -53,8 +52,8 @@ Sistema de likes em comentários de lugares            - Pendente
 Sistema de likes em mensagens                         - Pendente
 Sistema de compartilhamento de posts                  - Pendente (entre usuários ou copiar link)
 Aba de notificações no frontend                       - Pendente
-Vídeo no PontoItinerario                              - Pendente
-Vídeo nas mensagens                                   - Pendente
+Vídeo no PontoItinerario                              - Pendente (passar BD para PostgreSQL)
+Vídeo nas mensagens                                   - Pendente (passar BD para PostgreSQL)
 
 
 Configurações:
@@ -69,3 +68,6 @@ Configurações:
         Usuário respondeu seu comentário
         Usuário mandou mensagem
         Usuário fez novo post
+
+    Exibição:
+        Exibir badges de outros usuários

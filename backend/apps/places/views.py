@@ -3,11 +3,11 @@ from django.db.models import Case, When, Value, IntegerField
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from apps.gamification.serializers import serializar_badge_destaque
 from .models import Place
 from .serializers import PlaceSerializer, PlaceDetailSerializer
 from . import services
 
-# Create your views here.
 
 class AutocompletePlaceView(APIView):
     """GET /api/places/autocomplete/?q=catedral
@@ -17,7 +17,6 @@ class AutocompletePlaceView(APIView):
         texto = request.query_params.get('q', '')
         if len(texto) < 3:
             return Response([])
-
         sugestoes = services.buscar_sugestoes(texto)
         return Response(sugestoes)
 
@@ -29,20 +28,15 @@ class CriarOuBuscarPlaceView(APIView):
     def post(self, request):
         place_id = request.data.get('place_id')
         if not place_id:
-            return Response(
-                {'erro': 'place_id é obrigatório'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'erro': 'place_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
 
         place_existente = Place.objects.filter(place_id=place_id).first()
         if place_existente:
-            serializer = PlaceSerializer(place_existente)
-            return Response(serializer.data)
+            return Response(PlaceSerializer(place_existente).data)
 
         detalhes = services.buscar_detalhes(place_id)
         place = Place.objects.create(**detalhes)
-        serializer = PlaceSerializer(place)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(PlaceSerializer(place).data, status=status.HTTP_201_CREATED)
 
 
 class PlaceDetailView(APIView):
@@ -61,10 +55,7 @@ class PlaceDetailView(APIView):
             itinerario__status='publicado'
         ).select_related('itinerario__autor').prefetch_related('fotos')
 
-        # Comentários: só pontos com texto preenchido
         pontos_com_comentario = pontos_publicados.exclude(comentario='')
-
-        # Fotos: todos os pontos com pelo menos 1 foto, independente de comentário
         pontos_com_foto = pontos_publicados.exclude(fotos__isnull=True).distinct()
 
         if request.user.is_authenticated:
@@ -86,6 +77,7 @@ class PlaceDetailView(APIView):
         comentarios_data = [
             {
                 'autor_nome': ponto.itinerario.autor.username if ponto.itinerario.autor else 'Usuário removido',
+                'autor_badge_destaque': serializar_badge_destaque(ponto.itinerario.autor, context={'request': request}),
                 'itinerario_id': ponto.itinerario.id,
                 'itinerario_titulo': ponto.itinerario.titulo,
                 'texto': ponto.comentario,

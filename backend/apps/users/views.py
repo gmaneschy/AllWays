@@ -1,33 +1,60 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from apps.itineraries.models import ItinerarioSalvo, ItinerarioBaixado, Itinerario
 from .models import User
 from .serializers import (
-    CadastroSerializer, MeSerializer,
-    PerfilPublicoSerializer, PerfilProprioSerializer
+    CadastroSerializer, MeSerializer, ConfiguracoesSerializer,
+    PerfilPublicoSerializer, PerfilProprioSerializer,
+    SelecionarBadgeDestaqueSerializer,
 )
 
-# Create your views here.
 
 class CadastroView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = CadastroSerializer
     permission_classes = [permissions.AllowAny]
 
+
 class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = MeSerializer(request.user)
+        serializer = MeSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
 
+class ConfiguracoesView(APIView):
+    """GET/PATCH /api/users/me/configuracoes/
+    Preferências de conta. Hoje só 'exibir_badges', mas o endpoint fica
+    genérico pra receber outras configurações futuras sem quebrar o contrato."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(ConfiguracoesSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = ConfiguracoesSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class SelecionarBadgeDestaqueView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        serializer = SelecionarBadgeDestaqueSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.badge_destaque_id = serializer.validated_data['badge_id']
+        request.user.save(update_fields=['badge_destaque'])
+
+        return Response(MeSerializer(request.user, context={'request': request}).data)
+
+
 class PerfilView(APIView):
-    """GET /api/users/<username>/
-    Retorna perfil público ou próprio dependendo de quem está logado."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, username):
@@ -42,7 +69,6 @@ class PerfilView(APIView):
 
 
 class SalvarItinerarioView(APIView):
-    """POST /api/itineraries/<id>/salvar/ — toggle: salva ou dessalva."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
@@ -50,25 +76,17 @@ class SalvarItinerarioView(APIView):
         salvo, criado = ItinerarioSalvo.objects.get_or_create(
             usuario=request.user, itinerario=itinerario
         )
-
         if not criado:
             salvo.delete()
             return Response({'salvo': False})
-
         return Response({'salvo': True}, status=status.HTTP_201_CREATED)
 
 
 class BaixarItinerarioView(APIView):
-    """POST /api/itineraries/<id>/baixar/ — registra o download."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
         itinerario = get_object_or_404(Itinerario, pk=pk, status='publicado')
-        ItinerarioBaixado.objects.get_or_create(
-            usuario=request.user, itinerario=itinerario
-        )
-        # Salva automaticamente ao baixar (hierarquia: todo baixado é salvo)
-        ItinerarioSalvo.objects.get_or_create(
-            usuario=request.user, itinerario=itinerario
-        )
+        ItinerarioBaixado.objects.get_or_create(usuario=request.user, itinerario=itinerario)
+        ItinerarioSalvo.objects.get_or_create(usuario=request.user, itinerario=itinerario)
         return Response({'baixado': True})

@@ -168,11 +168,11 @@ Viajante Gastronômico (a definir):
 
 
 Checklist:
-Viajante Local              -
+Viajante Local              - OK
 Viajante Regional           -
 Viajante Nacional           -
 Viajante Continental        -
-Viajante Intercontinental   -
+Viajante Intercontinental   - OK
 Viajante Global             -
 O Peregrino                 -
 I Drive                     -

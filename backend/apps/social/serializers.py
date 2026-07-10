@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from apps.users.models import User
 from apps.places.models import Place
+from apps.gamification.serializers import serializar_badge_destaque
 from .models import Follow, Hashtag, Comment, Message
 
 
@@ -23,9 +24,6 @@ class UsuarioResumoSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    """Alvo informado via 'tipo' (usuario|local) + 'alvo_id'.
-    Follow de hashtag foi removido."""
-
     tipo = serializers.ChoiceField(choices=['usuario', 'local'], write_only=True)
     alvo_id = serializers.IntegerField(write_only=True)
 
@@ -59,10 +57,14 @@ class FollowSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     autor_nome = serializers.CharField(source='autor.username', read_only=True)
     autor_foto = serializers.SerializerMethodField()
+    autor_badge_destaque = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'autor', 'autor_nome', 'autor_foto', 'itinerario', 'texto', 'criado_em']
+        fields = [
+            'id', 'autor', 'autor_nome', 'autor_foto', 'autor_badge_destaque',
+            'itinerario', 'texto', 'criado_em',
+        ]
         read_only_fields = ['autor', 'criado_em']
 
     def get_autor_foto(self, obj):
@@ -70,6 +72,9 @@ class CommentSerializer(serializers.ModelSerializer):
         if obj.autor and obj.autor.foto_perfil:
             return request.build_absolute_uri(obj.autor.foto_perfil.url) if request else obj.autor.foto_perfil.url
         return None
+
+    def get_autor_badge_destaque(self, obj):
+        return serializar_badge_destaque(obj.autor, context=self.context)
 
 
 class MessageSerializer(serializers.ModelSerializer):

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { getUsuarioLogado } from './api';
+import BadgeDestaque from './BadgeDestaque';
+import BadgesItinerarioTags from './BadgesItinerarioTags';
 
 const LABEL_MOVIMENTACAO = { vazio: 'Vazio', populado: 'Populado', cheio: 'Cheio' };
 const LABEL_DESLOCAMENTO = {
@@ -100,6 +102,9 @@ function PaginaItinerario() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: '0 0 6px' }}>{it.titulo}</h1>
+            <div style={{ marginBottom: 8 }}>
+              <BadgesItinerarioTags badges={it.badges} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {it.autor_foto
                 ? <img src={it.autor_foto} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
@@ -110,6 +115,7 @@ function PaginaItinerario() {
               <Link to={`/perfil/${it.autor_username}`} style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>
                 {it.autor_username}
               </Link>
+              <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
               <span style={{ fontSize: 12, color: '#bbb' }}>·</span>
               <span style={{ fontSize: 12, color: '#bbb' }}>
                 {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
@@ -296,6 +302,7 @@ function PaginaItinerario() {
                   <Link to={`/perfil/${c.autor_nome}`} style={{ fontWeight: 'bold', fontSize: 13, textDecoration: 'none', color: '#333' }}>
                     {c.autor_nome}
                   </Link>
+                  <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
                   <span style={{ fontSize: 11, color: '#bbb' }}>
                     {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                   </span>

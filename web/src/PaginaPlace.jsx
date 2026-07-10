@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api, { estaLogado } from './api';
+import BadgeDestaque from './BadgeDestaque';
 
 function PaginaPlace() {
   const { placeId } = useParams();
@@ -118,7 +119,10 @@ function PaginaPlace() {
 
       {comentarios.map((c, i) => (
         <div key={i} style={{ borderBottom: '1px solid #eee', padding: '16px 0' }}>
-          <strong>{c.autor_nome}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <strong>{c.autor_nome}</strong>
+            <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
+          </div>
           <p style={{ fontSize: 13, color: '#888', margin: '2px 0 8px' }}>
             do itinerário "{c.itinerario_titulo}"
           </p>

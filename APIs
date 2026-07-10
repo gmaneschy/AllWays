@@ -5,3 +5,5 @@ APIs:
 /api/itineraries/fotos/
 /api/itineraries/itinerarios/
 /api/feed/principal/ sem autenticação de usuário, incluir.
+/api/gamification/badges-itinerario/
+/api/gamification/minhas-conquistas/

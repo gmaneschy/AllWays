@@ -1,5 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
+from apps.gamification.models import BadgeItinerario, ItinerarioBadge
+from apps.gamification.serializers import BadgeItinerarioSerializer, BadgeUsuarioSerializer
 from .models import Itinerario, PontoItinerario, FotoPontoItinerario
 from . import services as itinerario_services
 
@@ -31,17 +33,30 @@ class PontoItinerarioSerializer(serializers.ModelSerializer):
 
 
 class ItinerarioSerializer(serializers.ModelSerializer):
+    """Usado na criação/edição (CriarItinerario.jsx). O campo 'badges' recebe
+    uma lista de IDs de BadgeItinerario (múltiplos permitidos, ex: econômico + relaxante)."""
     pontos = PontoItinerarioSerializer(many=True)
     autor_nome = serializers.CharField(source='autor.username', read_only=True)
+    badges = serializers.PrimaryKeyRelatedField(
+        queryset=BadgeItinerario.objects.all(), many=True, required=False, write_only=True,
+    )
+    badges_detalhe = serializers.SerializerMethodField()
 
     class Meta:
         model = Itinerario
         fields = [
             'id', 'autor', 'autor_nome', 'titulo', 'tipo', 'status',
             'data_inicio', 'data_fim', 'publicado_em',
-            'itinerario_original', 'pontos',
+            'itinerario_original', 'pontos', 'badges', 'badges_detalhe',
         ]
         read_only_fields = ['autor', 'publicado_em']
+
+    def get_badges_detalhe(self, obj):
+        if obj.pk is None:
+            return []
+        ids = obj.badges.values_list('badge_id', flat=True)
+        badges = BadgeItinerario.objects.filter(id__in=ids)
+        return BadgeItinerarioSerializer(badges, many=True, context=self.context).data
 
     def validate_pontos(self, value):
         if len(value) == 0:
@@ -55,6 +70,7 @@ class ItinerarioSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         pontos_data = validated_data.pop('pontos')
+        badges_data = validated_data.pop('badges', [])
 
         if validated_data.get('status') == 'publicado':
             validated_data['publicado_em'] = timezone.now()
@@ -64,8 +80,32 @@ class ItinerarioSerializer(serializers.ModelSerializer):
         for ponto_data in pontos_data:
             PontoItinerario.objects.create(itinerario=itinerario, **ponto_data)
 
+        for badge in badges_data:
+            ItinerarioBadge.objects.get_or_create(itinerario=itinerario, badge=badge)
+
         itinerario_services.calcular_distancias_itinerario(itinerario)
         return itinerario
+
+    def update(self, instance, validated_data):
+        """Pontos não são editados por aqui (endpoint próprio já existe pra isso,
+        via PontoItinerario). Badges são substituídos por completo a cada update —
+        mais simples e previsível do lado do frontend do que um diff incremental."""
+        badges_data = validated_data.pop('badges', None)
+        validated_data.pop('pontos', None)
+
+        if validated_data.get('status') == 'publicado' and instance.publicado_em is None:
+            validated_data['publicado_em'] = timezone.now()
+
+        for campo, valor in validated_data.items():
+            setattr(instance, campo, valor)
+        instance.save()
+
+        if badges_data is not None:
+            ItinerarioBadge.objects.filter(itinerario=instance).delete()
+            for badge in badges_data:
+                ItinerarioBadge.objects.get_or_create(itinerario=instance, badge=badge)
+
+        return instance
 
 
 class FotoPontoItinerarioSerializer(serializers.ModelSerializer):
@@ -73,6 +113,7 @@ class FotoPontoItinerarioSerializer(serializers.ModelSerializer):
         model = FotoPontoItinerario
         fields = ['id', 'ponto', 'imagem', 'enviada_em']
         read_only_fields = ['enviada_em']
+
 
 class FotoPontoDetalheSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
@@ -103,9 +144,14 @@ class PontoDetalheSerializer(serializers.ModelSerializer):
 
 
 class ItinerarioDetalheSerializer(serializers.ModelSerializer):
+    """Usado na página do post (PaginaItinerario.jsx), feed e explorar —
+    já traz a badge de destaque do autor e as badges do itinerário juntas,
+    pra exibir tudo ao lado do nome/card sem requisição extra."""
     pontos = PontoDetalheSerializer(many=True, read_only=True)
     autor_username = serializers.CharField(source='autor.username', read_only=True)
     autor_foto = serializers.SerializerMethodField()
+    autor_badge_destaque = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
     salvo_por_mim = serializers.SerializerMethodField()
 
     class Meta:
@@ -113,7 +159,7 @@ class ItinerarioDetalheSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'titulo', 'tipo', 'status', 'data_inicio', 'data_fim',
             'publicado_em', 'autor', 'autor_username', 'autor_foto',
-            'salvo_por_mim', 'pontos',
+            'autor_badge_destaque', 'badges', 'salvo_por_mim', 'pontos',
         ]
 
     def get_autor_foto(self, obj):
@@ -121,6 +167,16 @@ class ItinerarioDetalheSerializer(serializers.ModelSerializer):
         if obj.autor and obj.autor.foto_perfil:
             return request.build_absolute_uri(obj.autor.foto_perfil.url) if request else obj.autor.foto_perfil.url
         return None
+
+    def get_badges(self, obj):
+        from apps.gamification.serializers import BadgeItinerarioSerializer
+        ids = obj.badges.values_list('badge_id', flat=True)
+        badges = BadgeItinerario.objects.filter(id__in=ids)
+        return BadgeItinerarioSerializer(badges, many=True, context=self.context).data
+
+    def get_autor_badge_destaque(self, obj):
+        from apps.gamification.serializers import serializar_badge_destaque
+        return serializar_badge_destaque(obj.autor, context=self.context)
 
     def get_salvo_por_mim(self, obj):
         request = self.context.get('request')
