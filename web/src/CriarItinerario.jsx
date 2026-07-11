@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from './api';
+import { getBadgesItinerarioDisponiveis } from './api';
 import BuscaLocal from './BuscaLocal';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
@@ -48,11 +49,14 @@ function CriarItinerario() {
   const [itinerariosSalvos, setItinerariosSalvos] = useState([]);
   const [mostraCarregar, setMostraCarregar] = useState(false);
   const [carregandoSalvos, setCarregandoSalvos] = useState(false);
+  const [badgesDisponiveis, setBadgesDisponiveis] = useState([]);
+  const [badgesSelecionadas, setBadgesSelecionadas] = useState([]);
 
   // Se veio de "Usar como base" na PaginaItinerario, carrega automaticamente
   useEffect(() => {
     const baseId = searchParams.get('base');
     if (baseId) carregarItinerario(baseId);
+    getBadgesItinerarioDisponiveis().then(setBadgesDisponiveis).catch(() => {});
   }, []);
 
   function payloadAtual(statusEnvio) {
@@ -62,6 +66,7 @@ function CriarItinerario() {
       status: statusEnvio,
       data_inicio: dataInicio || null,
       data_fim: tipo === 'multi_day' ? (dataFim || null) : null,
+      badges: badgesSelecionadas,
       pontos: pontos
         .filter((p) => p.local) // ignora pontos sem local no rascunho
         .map((p, index) => ({
@@ -115,6 +120,7 @@ function CriarItinerario() {
       setTipo(it.tipo);
       setDataInicio(''); // data não é copiada conforme especificado
       setDataFim('');
+      setBadgesSelecionadas((it.badges || []).map((b) => b.id));
       setPontos(
         (it.pontos || []).map((p) => ({
           local: p.local_id ? { id: p.local_id, nome: p.local_nome } : null,
@@ -184,6 +190,12 @@ function CriarItinerario() {
     });
   }
 
+  function alternarBadge(badgeId) {
+    setBadgesSelecionadas((prev) =>
+      prev.includes(badgeId) ? prev.filter((id) => id !== badgeId) : [...prev, badgeId]
+    );
+  }
+
   async function publicar() {
     setErro(null);
     setResultado(null);
@@ -221,6 +233,7 @@ function CriarItinerario() {
       setTitulo('');
       setDataInicio('');
       setDataFim('');
+      setBadgesSelecionadas([]);
       setPontos([pontoVazio()]);
 
       if (uploadsComFalha.length > 0) {
@@ -317,6 +330,33 @@ function CriarItinerario() {
           />
         </>
       )}
+
+      <label style={{ display: 'block', marginBottom: 6 }}>Categorias do itinerário</label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        {badgesDisponiveis.map((b) => {
+          const selecionada = badgesSelecionadas.includes(b.id);
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => alternarBadge(b.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 16, cursor: 'pointer', fontSize: 13,
+                border: selecionada ? '2px solid #1a73e8' : '1px solid #ddd',
+                background: selecionada ? '#f0f5ff' : '#fff',
+                color: selecionada ? '#1a73e8' : '#555',
+              }}
+            >
+              {b.icone && <img src={b.icone} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
+              {b.nome}
+            </button>
+          );
+        })}
+        {badgesDisponiveis.length === 0 && (
+          <span style={{ fontSize: 13, color: '#999' }}>Nenhuma categoria cadastrada ainda.</span>
+        )}
+      </div>
 
       <h2>Pontos</h2>
 

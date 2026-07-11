@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario
+from apps.gamification.models import BadgeItinerario
+from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
 from .models import Follow, Hashtag, Message, Comment
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
@@ -17,9 +19,6 @@ from .serializers import (
 # ─── Follow ───────────────────────────────────────────────────────────────────
 
 class FollowToggleView(APIView):
-    """POST /api/social/follow/
-    Body: {"tipo": "usuario"|"local", "alvo_id": <int>}
-    Toggle: cria se não existir, remove se já existir."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -42,7 +41,6 @@ class FollowToggleView(APIView):
 
 
 class SeguidoresUsuarioView(generics.ListAPIView):
-    """GET /api/social/usuarios/<username>/seguidores/"""
     serializer_class = UsuarioResumoSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -52,7 +50,6 @@ class SeguidoresUsuarioView(generics.ListAPIView):
 
 
 class SeguindoUsuarioView(generics.ListAPIView):
-    """GET /api/social/usuarios/<username>/seguindo/"""
     serializer_class = UsuarioResumoSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -62,7 +59,6 @@ class SeguindoUsuarioView(generics.ListAPIView):
 
 
 class StatusFollowView(APIView):
-    """GET /api/social/follow/status/?tipo=usuario|local&alvo_id=5"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -84,8 +80,6 @@ class StatusFollowView(APIView):
 # ─── Comentários sociais ──────────────────────────────────────────────────────
 
 class ComentariosItinerarioView(APIView):
-    """GET  /api/social/itinerarios/<id>/comentarios/ — lista comentários
-    POST /api/social/itinerarios/<id>/comentarios/ — posta comentário"""
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get(self, request, itinerario_id):
@@ -105,7 +99,6 @@ class ComentariosItinerarioView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, itinerario_id):
-        """DELETE /api/social/itinerarios/<id>/comentarios/?comentario_id=<id>"""
         comentario_id = request.query_params.get('comentario_id')
         comentario = get_object_or_404(Comment, pk=comentario_id, itinerario_id=itinerario_id)
         if comentario.autor != request.user:
@@ -134,6 +127,9 @@ class HashtagFeedView(APIView):
         resultado = []
         for it in itinerarios:
             primeiro_ponto = it.pontos.first()
+            badges_ids = it.badges.values_list('badge_id', flat=True)
+            badges_itinerario = BadgeItinerario.objects.filter(id__in=badges_ids)
+
             resultado.append({
                 'id': it.id,
                 'titulo': it.titulo,
@@ -143,7 +139,9 @@ class HashtagFeedView(APIView):
                     'username': it.autor.username if it.autor else None,
                     'foto_perfil': request.build_absolute_uri(it.autor.foto_perfil.url)
                                    if it.autor and it.autor.foto_perfil else None,
+                    'badge_destaque': serializar_badge_destaque(it.autor, context={'request': request}),
                 },
+                'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
                 'lugar_principal': {
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,
@@ -160,7 +158,6 @@ class HashtagFeedView(APIView):
 # ─── Mensagens ────────────────────────────────────────────────────────────────
 
 class ConversasView(APIView):
-    """GET /api/social/mensagens/ — lista de conversas com última mensagem."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -181,7 +178,6 @@ class ConversasView(APIView):
                 .order_by('-enviada_em')
                 .first()
             )
-            # Preview da última mensagem varia por tipo
             if ultima.tipo == 'imagem':
                 preview = '📷 Imagem'
             elif ultima.tipo == 'audio':
@@ -209,7 +205,6 @@ class ConversasView(APIView):
 
 
 class MensagensConversaView(APIView):
-    """GET/POST /api/social/mensagens/<username>/"""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -249,7 +244,6 @@ class MensagensConversaView(APIView):
 
 
 class UsuariosParaMensagemView(APIView):
-    """GET /api/social/mensagens/destinatarios/?q=termo"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -287,7 +281,6 @@ class UsuariosParaMensagemView(APIView):
 # ─── Busca unificada ──────────────────────────────────────────────────────────
 
 class BuscaView(APIView):
-    """GET /api/social/busca/?q=termo"""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
@@ -361,6 +354,9 @@ class ExplorarView(APIView):
         resultado = []
         for it in itinerarios:
             primeiro_ponto = it.pontos.first()
+            badges_ids = it.badges.values_list('badge_id', flat=True)
+            badges_itinerario = BadgeItinerario.objects.filter(id__in=badges_ids)
+
             resultado.append({
                 'id': it.id,
                 'titulo': it.titulo,
@@ -370,7 +366,9 @@ class ExplorarView(APIView):
                     'username': it.autor.username if it.autor else None,
                     'foto_perfil': request.build_absolute_uri(it.autor.foto_perfil.url)
                                    if it.autor and it.autor.foto_perfil else None,
+                    'badge_destaque': serializar_badge_destaque(it.autor, context={'request': request}),
                 },
+                'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
                 'lugar_principal': {
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,

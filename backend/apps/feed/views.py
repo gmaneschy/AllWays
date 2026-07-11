@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from django.shortcuts import get_object_or_404
 from apps.itineraries.models import Itinerario
+from apps.gamification.models import BadgeItinerario
+from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
 from apps.social.views import ExplorarView  # reutiliza o feed público
 from . import services
 from .models import FeedEvent
@@ -22,11 +24,16 @@ class FeedPrincipalView(APIView):
 
         resultado = []
         for it in itinerarios:
+            badges_ids = it.badges.values_list('badge_id', flat=True)
+            badges_itinerario = BadgeItinerario.objects.filter(id__in=badges_ids)
+
             resultado.append({
                 'id': it.id,
                 'titulo': it.titulo,
                 'tipo': it.tipo,
                 'autor_nome': it.autor.username if it.autor else None,
+                'autor_badge_destaque': serializar_badge_destaque(it.autor, context={'request': request}),
+                'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
                 'data_inicio': it.data_inicio,
                 'data_fim': it.data_fim,
                 'pontos': [
@@ -71,7 +78,6 @@ class FeedEventView(APIView):
 
         it = get_object_or_404(Itinerario, pk=itinerario_id, status='publicado')
 
-        # Dispara assíncrono para não bloquear o request
         from .tasks import registrar_evento_feed
         registrar_evento_feed.delay(request.user.id, it.id, tipo)
 

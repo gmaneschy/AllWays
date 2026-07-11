@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from './api';
+import BadgeDestaque from './BadgeDestaque';
+import BadgesItinerarioTags from './BadgesItinerarioTags';
 
 const TIPO_LABEL = {
   day_trip: 'Day Trip',
@@ -61,11 +63,18 @@ function Feed() {
             <span style={{ fontSize: 12, color: '#888' }}>{TIPO_LABEL[it.tipo]}</span>
           </div>
 
-          <p style={{ color: '#666', margin: '4px 0 12px' }}>
+          <p style={{ color: '#666', margin: '4px 0 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             por <strong>{it.autor_nome}</strong>
-            {it.data_inicio && ` · ${formatarData(it.data_inicio)}`}
-            {it.data_fim && it.data_fim !== it.data_inicio && ` a ${formatarData(it.data_fim)}`}
+            <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
+            {it.data_inicio && <span>· {formatarData(it.data_inicio)}</span>}
+            {it.data_fim && it.data_fim !== it.data_inicio && <span>a {formatarData(it.data_fim)}</span>}
           </p>
+
+          {it.badges?.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
+            </div>
+          )}
 
           <ol style={{ paddingLeft: 20, margin: 0 }}>
             {it.pontos.map((ponto) => (

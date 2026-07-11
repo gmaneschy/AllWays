@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import BadgeDestaque from './BadgeDestaque';
+import BadgesItinerarioTags from './BadgesItinerarioTags';
 import api from './api';
 
 function useDebounce(valor, delay) {
@@ -94,6 +96,12 @@ function CardItinerario({ it }) {
           </span>
         </div>
 
+        {it.badges?.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           {it.autor.foto_perfil
             ? <img src={it.autor.foto_perfil} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
@@ -109,6 +117,7 @@ function CardItinerario({ it }) {
           >
             {it.autor.username}
           </Link>
+          <BadgeDestaque badge={it.autor.badge_destaque} size={14} />
           <span style={{ fontSize: 12, color: '#bbb', marginLeft: 'auto' }}>
             {it.publicado_em
               ? new Date(it.publicado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
