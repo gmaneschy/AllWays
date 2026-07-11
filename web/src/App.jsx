@@ -5,6 +5,7 @@ import CriarItinerario from './CriarItinerario';
 import PaginaPlace from './PaginaPlace';
 import Login from './Login';
 import RotaProtegida from './RotaProtegida';
+import RotaPublica from './RotaPublica';
 import PaginaPerfil from './PaginaPerfil';
 import PaginaMensagens from './PaginaMensagens';
 import PaginaExplorar from './PaginaExplorar';
@@ -16,8 +17,22 @@ function App() {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Feed />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <RotaProtegida>
+              <Feed />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <RotaPublica>
+              <Login />
+            </RotaPublica>
+          }
+        />
         <Route
           path="/criar"
           element={
@@ -26,11 +41,46 @@ function App() {
             </RotaProtegida>
           }
         />
-        <Route path="/place/:placeId" element={<PaginaPlace />} />
-        <Route path="/perfil/:username" element={<PaginaPerfil />} />
-        <Route path="/itinerario/:id" element={<PaginaItinerario />} />
-        <Route path="/hashtag/:nome" element={<PaginaHashtag />} />
-        <Route path="/explorar" element={<PaginaExplorar />} />
+        <Route
+          path="/place/:placeId"
+          element={
+            <RotaProtegida>
+              <PaginaPlace />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/perfil/:username"
+          element={
+            <RotaProtegida>
+              <PaginaPerfil />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/itinerario/:id"
+          element={
+            <RotaProtegida>
+              <PaginaItinerario />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/hashtag/:nome"
+          element={
+            <RotaProtegida>
+              <PaginaHashtag />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/explorar"
+          element={
+            <RotaProtegida>
+              <PaginaExplorar />
+            </RotaProtegida>
+          }
+        />
         <Route
           path="/mensagens"
           element={

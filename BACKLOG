@@ -9,13 +9,9 @@ users:
         Bio
         Badge
 
-    Na tela de login, página de Feed e Explorar estão disponíveis. Porém, não deveriam. Somente a tela de login deve aparecer se usuário não estiver logado.
-
 feed:
 
 gamification:
-    Integrar badge de usuário com exibição no frontend (ao lado do nome no perfil, no post, no comentário do post e do lugar)
-    Integrar badge de itinerário com a tela de criação e suas respectivas representações
 
 places:
 
@@ -28,21 +24,9 @@ social:
     testar vídeo na mensagem
     sistema de likes em comentários (comentários de posts e em comentários de lugares)
 
-# Terminal 0 - React
-npm run dev
-
-# Terminal 1 — Django
-python manage.py runserver
-
-# Terminal 2 — Celery worker
-celery -A config worker --loglevel=info --pool=solo
-
-# Terminal 3 — Celery beat (agendador)
-celery -A config beat --loglevel=info
-
 
 Checklist:
-Badges: níveis + lógica de concessão                  - Quase OK - Falta integração com frontend
+Badges: níveis + lógica de concessão                  - OK
 Correção no cadastro de usuário                       - Pendente
 Correção na pesquisa de usuário                       - Pendente
 Edição de perfil (nome de exibição foto, bio, badge)  - Pendente
@@ -71,3 +55,52 @@ Configurações:
 
     Exibição:
         Exibir badges de outros usuários
+
+
+
+
+
+1. Correção de rota (login gate) — Feed/Explorar visíveis sem login
+Não está na sua checklist numerada, mas é o item mais barato e mais urgente: é uma falha de proteção de rota no frontend (provavelmente falta um guard/redirect baseado no estado de auth do api.js). Resolve em minutos e evita que você continue testando/demonstrando o app com esse buraco aberto.
+2. Correção no cadastro de usuário
+Isso vem antes de tudo porque User é a base de FK para praticamente todo o resto (badges, itinerários, social, feed). Envolve:
+
+Validação de username (formato, unicidade, case-sensitivity)
+Separar nome_exibicao (display name) de username (o "@", provavelmente unique=True, usado como identificador público)
+Campos genero e data_nascimento
+Mudar isso depois de outras features usarem o User seria retrabalho — melhor fechar o modelo agora.
+
+3. Correção na pesquisa de usuário
+Depende diretamente do item 2 (precisa dos campos nome_exibicao e username já existindo e populados) — pesquisa deve fazer OR nos dois campos (icontains em ambos, provavelmente com Q objects).
+4. Edição de perfil (foto, bio, badge)
+Badge já está praticamente pronto (badge_destaque + serializar_badge_destaque() já existem — aqui é só expor no serializer de edição). Foto e bio são novos campos simples no User. Faz sentido fechar isso logo após o item 2/3 porque é a mesma área do código (serializers de users).
+5. Sistema de likes (unificado)
+Em vez de tratar como 4 itens separados (posts, comentários de posts, comentários de lugares, mensagens), vale a pena projetar um único model de Curtida genérico (via GenericForeignKey do Django, ou um content_type + object_id) reutilizável nos 4 contextos. Isso evita 4 implementações duplicadas e 4 migrations separadas. Eu recomendo modelar isso como uma única tarefa técnica, não 4.
+6. Sistema de compartilhamento de posts
+Pode ser construído logo em seguida, reaproveitando o mesmo padrão de "ação social" (like/share como eventos), possivelmente até alimentando o mesmo pipeline que os likes para o feed algorithm (você já tem FeedEvent — compartilhamento provavelmente deveria gerar um FeedEvent também).
+7. Aba de notificações (backend + frontend)
+Faz sentido vir depois de likes e compartilhamento, porque notificações tipicamente são geradas a partir desses eventos (curtida, comentário, compartilhamento, novo seguidor). Construir a aba antes teria pouco o que notificar.
+8. Migração SQLite → PostgreSQL
+Infra pesada, e você já anotou que é pré-requisito para testar vídeo. Eu deixaria isso como uma tarefa isolada e dedicada — não algo pra fazer "de passagem". Bom momento: depois que a maior parte das features novas (likes, share, notificações) já estiver estável em SQLite, pra minimizar re-teste de migrations complexas.
+9. Vídeo no PontoItinerario + vídeo nas mensagens
+Só depois da migração (item 8), já que dependem dela. Testar os dois juntos faz sentido, pois provavelmente compartilham a mesma lógica de upload/storage (django-storages + Pillow, mas agora pra vídeo).
+
+
+
+
+
+
+
+
+
+# Terminal 0 - React
+npm run dev
+
+# Terminal 1 — Django
+python manage.py runserver
+
+# Terminal 2 — Celery worker
+celery -A config worker --loglevel=info --pool=solo
+
+# Terminal 3 — Celery beat (agendador)
+celery -A config beat --loglevel=info
