@@ -9,6 +9,9 @@ function Login() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nomeExibicao, setNomeExibicao] = useState('');
+  const [genero, setGenero] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState(null);
 
@@ -19,7 +22,12 @@ function Login() {
 
     try {
       if (modo === 'cadastro') {
-        await cadastrar(username, email, password);
+        await cadastrar({
+          username, email, password,
+          nome_exibicao: nomeExibicao,
+          genero,
+          data_nascimento: dataNascimento,
+        });
         await login(username, password);
       } else {
         await login(username, password);
@@ -49,11 +57,43 @@ function Login() {
 
         {modo === 'cadastro' && (
           <>
+            <label>Nome de exibição</label>
+            <input
+              type="text"
+              value={nomeExibicao}
+              onChange={(e) => setNomeExibicao(e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, marginBottom: 12 }}
+            />
+
             <label>E-mail</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, marginBottom: 12 }}
+            />
+
+            <label>Gênero</label>
+            <select
+              value={genero}
+              onChange={(e) => setGenero(e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, marginBottom: 12 }}
+            >
+              <option value="" disabled>Selecione...</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+              <option value="O">Outro</option>
+              <option value="N">Prefiro não informar</option>
+            </select>
+
+            <label>Data de nascimento</label>
+            <input
+              type="date"
+              value={dataNascimento}
+              onChange={(e) => setDataNascimento(e.target.value)}
               required
               style={{ width: '100%', padding: 8, marginBottom: 12 }}
             />

@@ -265,8 +265,13 @@ function PaginaPerfil() {
         }
 
         <div style={{ flex: 1 }}>
+          {perfil.nome_exibicao && (
+            <div style={{ fontSize: 14, color: '#666', marginBottom: 2 }}>
+              {perfil.nome_exibicao}
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>{perfil.username}</h1>
+            <h1 style={{ margin: 0 }}>@{perfil.username}</h1>
             <BadgeDestaque badge={perfil.badge_destaque} size={22} />
             {!ehProprioPerfil && perfil.voce_segue !== null && (
               <button

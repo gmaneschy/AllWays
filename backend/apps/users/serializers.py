@@ -1,3 +1,6 @@
+import re
+from datetime import date
+
 from rest_framework import serializers
 from apps.itineraries.models import Itinerario, ItinerarioSalvo, ItinerarioBaixado
 from apps.gamification.models import UsuarioBadge
@@ -7,12 +10,53 @@ from apps.gamification.serializers import (
 from .models import User
 
 
+USERNAME_REGEX = re.compile(r'^[a-z][a-z0-9_.]{2,19}$')
+IDADE_MINIMA = 13
+
+
 class CadastroSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=8)
+    # Declarados explicitamente como obrigatórios: o model tem 'default' (só
+    # para evitar prompt do makemigrations ao recriar o banco), mas no
+    # cadastro real esses dados sempre devem vir preenchidos pelo usuário.
+    username = serializers.CharField(max_length=20)
+    nome_exibicao = serializers.CharField(max_length=50)
+    genero = serializers.ChoiceField(choices=User.Genero.choices)
+    data_nascimento = serializers.DateField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = [
+            'id', 'username', 'nome_exibicao', 'email', 'password',
+            'genero', 'data_nascimento',
+        ]
+
+    def validate_username(self, value):
+        value = value.strip().lower()
+        if not USERNAME_REGEX.match(value):
+            raise serializers.ValidationError(
+                'Use de 3 a 20 caracteres: comece com uma letra e use apenas '
+                'letras minúsculas, números, "." ou "_".'
+            )
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Este nome de usuário já está em uso.')
+        return value
+
+    def validate_nome_exibicao(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Informe um nome de exibição.')
+        return value
+
+    def validate_data_nascimento(self, value):
+        if value > date.today():
+            raise serializers.ValidationError('Data de nascimento não pode estar no futuro.')
+        idade = (date.today() - value).days // 365
+        if idade < IDADE_MINIMA:
+            raise serializers.ValidationError(
+                f'É necessário ter ao menos {IDADE_MINIMA} anos para se cadastrar.'
+            )
+        return value
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
@@ -26,7 +70,10 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'bio', 'foto_perfil', 'badge_destaque', 'exibir_badges']
+        fields = [
+            'id', 'username', 'nome_exibicao', 'email', 'bio', 'foto_perfil',
+            'genero', 'data_nascimento', 'badge_destaque', 'exibir_badges',
+        ]
 
 
 class ConfiguracoesSerializer(serializers.ModelSerializer):
@@ -80,7 +127,7 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'bio', 'foto_perfil', 'badge_destaque',
+            'id', 'username', 'nome_exibicao', 'bio', 'foto_perfil', 'badge_destaque',
             'total_seguidores', 'total_seguindo_usuarios', 'total_seguindo_lugares',
             'itinerarios_publicados', 'badges', 'voce_segue',
         ]

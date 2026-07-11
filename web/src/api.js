@@ -55,8 +55,10 @@ export async function login(username, password) {
   return meResposta.data;
 }
 
-export async function cadastrar(username, email, password) {
-  const resposta = await axios.post(`${API_BASE}/users/cadastro/`, { username, email, password });
+export async function cadastrar({ username, email, password, nome_exibicao, genero, data_nascimento }) {
+  const resposta = await axios.post(`${API_BASE}/users/cadastro/`, {
+    username, email, password, nome_exibicao, genero, data_nascimento,
+  });
   return resposta.data;
 }
 
