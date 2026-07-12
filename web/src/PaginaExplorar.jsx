@@ -257,7 +257,10 @@ function PaginaExplorar() {
                             {u.username[0].toUpperCase()}
                           </div>
                       }
-                      <span style={{ fontSize: 14 }}>{u.username}</span>
+                      <div style={{ fontSize: 14 }}>
+                        <div style={{ fontWeight: 'bold' }}>{u.nome_exibicao || u.username}</div>
+                        <div style={{ fontSize: 12, color: '#999' }}>@{u.username}</div>
+                      </div>
                     </Link>
                   )}
                 />

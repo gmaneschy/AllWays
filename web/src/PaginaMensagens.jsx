@@ -49,8 +49,11 @@ function SeletorDestinatario({ onSelecionar }) {
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
             <Avatar usuario={u} tamanho={32} />
             <div>
-              <span style={{ fontSize: 14 }}>{u.username}</span>
-              {u.seguido && <span style={{ fontSize: 11, color: '#1a73e8', marginLeft: 6 }}>seguindo</span>}
+              <div style={{ fontSize: 14 }}>
+                {u.nome_exibicao || u.username}
+                {u.seguido && <span style={{ fontSize: 11, color: '#1a73e8', marginLeft: 6 }}>seguindo</span>}
+              </div>
+              <div style={{ fontSize: 12, color: '#999' }}>@{u.username}</div>
             </div>
           </div>
         ))}

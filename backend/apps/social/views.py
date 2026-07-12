@@ -257,7 +257,12 @@ class UsuariosParaMensagemView(APIView):
 
         qs = User.objects.exclude(pk=user.pk)
         if q:
-            qs = qs.filter(username__icontains=q)
+            if q.startswith('@'):
+                termo = q[1:].strip()
+                filtro = Q(username__icontains=termo) if termo else Q(pk__isnull=True)
+            else:
+                filtro = Q(username__icontains=q) | Q(nome_exibicao__icontains=q)
+            qs = qs.filter(filtro)
 
         qs = qs.annotate(
             prioridade=Case(
@@ -271,6 +276,7 @@ class UsuariosParaMensagemView(APIView):
             {
                 'id': u.id,
                 'username': u.username,
+                'nome_exibicao': u.nome_exibicao,
                 'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None,
                 'seguido': u.pk in seguidos_ids,
             }
@@ -288,7 +294,16 @@ class BuscaView(APIView):
         if not q:
             return Response({'usuarios': [], 'lugares': [], 'hashtags': []})
 
-        usuarios = User.objects.filter(username__icontains=q)[:8]
+        # Se a busca começa com "@", o usuário claramente quer buscar pelo
+        # handle exato — restringe a match só em username. Caso contrário,
+        # busca tanto no username quanto no nome de exibição.
+        if q.startswith('@'):
+            termo = q[1:].strip()
+            filtro_usuario = Q(username__icontains=termo) if termo else Q(pk__isnull=True)
+        else:
+            filtro_usuario = Q(username__icontains=q) | Q(nome_exibicao__icontains=q)
+
+        usuarios = User.objects.filter(filtro_usuario)[:8]
         hashtags = Hashtag.objects.filter(nome__icontains=q)[:8]
 
         lugares_banco = Place.objects.filter(nome__icontains=q)[:5]
@@ -323,7 +338,7 @@ class BuscaView(APIView):
 
         return Response({
             'usuarios': [
-                {'id': u.id, 'username': u.username,
+                {'id': u.id, 'username': u.username, 'nome_exibicao': u.nome_exibicao,
                  'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None}
                 for u in usuarios
             ],

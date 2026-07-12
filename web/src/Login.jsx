@@ -9,6 +9,7 @@ function Login() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [nomeExibicao, setNomeExibicao] = useState('');
   const [genero, setGenero] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -18,6 +19,12 @@ function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setErro(null);
+
+    if (modo === 'cadastro' && password !== confirmarSenha) {
+      setErro('As senhas não coincidem.');
+      return;
+    }
+
     setEnviando(true);
 
     try {
@@ -106,8 +113,21 @@ function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ width: '100%', padding: 8, marginBottom: 20 }}
+          style={{ width: '100%', padding: 8, marginBottom: modo === 'cadastro' ? 12 : 20 }}
         />
+
+        {modo === 'cadastro' && (
+          <>
+            <label>Confirmar senha</label>
+            <input
+              type="password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, marginBottom: 20 }}
+            />
+          </>
+        )}
 
         <button type="submit" disabled={enviando} style={{ width: '100%', padding: 10, fontSize: 16 }}>
           {enviando ? 'Aguarde...' : modo === 'login' ? 'Entrar' : 'Criar conta'}
