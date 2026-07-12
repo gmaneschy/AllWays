@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.itineraries.models import ItinerarioSalvo, ItinerarioBaixado, Itinerario
@@ -7,7 +8,7 @@ from .models import User
 from .serializers import (
     CadastroSerializer, MeSerializer, ConfiguracoesSerializer,
     PerfilPublicoSerializer, PerfilProprioSerializer,
-    SelecionarBadgeDestaqueSerializer,
+    SelecionarBadgeDestaqueSerializer, EditarPerfilSerializer,
 )
 
 
@@ -23,6 +24,20 @@ class MeView(APIView):
     def get(self, request):
         serializer = MeSerializer(request.user, context={'request': request})
         return Response(serializer.data)
+
+
+class EditarPerfilView(APIView):
+    """PATCH /api/users/me/perfil/
+    Edição de nome_exibicao (respeitando cooldown de 15 dias), bio e
+    foto_perfil. Badge tem endpoint próprio."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def patch(self, request):
+        serializer = EditarPerfilSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(MeSerializer(request.user, context={'request': request}).data)
 
 
 class ConfiguracoesView(APIView):

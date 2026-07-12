@@ -39,6 +39,10 @@ class User(AbstractUser):
         default='',
         help_text="Nome de exibição (pode ter espaços, acentos e maiúsculas).",
     )
+    nome_exibicao_alterado_em = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Data/hora da última troca de nome de exibição (controla o cooldown de 15 dias).",
+    )
     genero = models.CharField(max_length=1, choices=Genero.choices, default=Genero.NAO_INFORMAR)
     data_nascimento = models.DateField(default=date(2000, 1, 1))
     foto_perfil = models.ImageField(upload_to='perfil/', null=True, blank=True)

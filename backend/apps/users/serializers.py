@@ -1,6 +1,8 @@
+import math
 import re
-from datetime import date
+from datetime import date, timedelta
 
+from django.utils import timezone
 from rest_framework import serializers
 from apps.itineraries.models import Itinerario, ItinerarioSalvo, ItinerarioBaixado
 from apps.gamification.models import UsuarioBadge
@@ -12,6 +14,19 @@ from .models import User
 
 USERNAME_REGEX = re.compile(r'^[a-z][a-z0-9_.]{2,19}$')
 IDADE_MINIMA = 13
+COOLDOWN_DIAS_NOME_EXIBICAO = 15
+
+
+def dias_restantes_cooldown_nome(usuario):
+    """Quantos dias faltam até o usuário poder trocar o nome_exibicao de novo.
+    0 significa 'livre para trocar agora' (nunca trocou, ou o prazo já passou)."""
+    if not usuario.nome_exibicao_alterado_em:
+        return 0
+    decorrido = timezone.now() - usuario.nome_exibicao_alterado_em
+    restante = timedelta(days=COOLDOWN_DIAS_NOME_EXIBICAO) - decorrido
+    if restante.total_seconds() <= 0:
+        return 0
+    return math.ceil(restante.total_seconds() / 86400)
 
 
 class CadastroSerializer(serializers.ModelSerializer):
@@ -67,13 +82,50 @@ class MeSerializer(serializers.ModelSerializer):
     e o estado do toggle, independente de 'exibir_badges' (é a tela de gestão,
     não a exibição pública)."""
     badge_destaque = BadgeUsuarioSerializer(read_only=True)
+    dias_para_trocar_nome_exibicao = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'nome_exibicao', 'email', 'bio', 'foto_perfil',
             'genero', 'data_nascimento', 'badge_destaque', 'exibir_badges',
+            'dias_para_trocar_nome_exibicao',
         ]
+
+    def get_dias_para_trocar_nome_exibicao(self, obj):
+        return dias_restantes_cooldown_nome(obj)
+
+
+class EditarPerfilSerializer(serializers.ModelSerializer):
+    """PATCH em /users/me/perfil/. Cobre nome_exibicao (com cooldown de
+    15 dias), bio e foto_perfil — todos parciais: só valida/atualiza o que
+    vier no payload. foto_perfil já é opcional/nullable no model, então o
+    DRF a trata como not required automaticamente."""
+
+    class Meta:
+        model = User
+        fields = ['nome_exibicao', 'bio', 'foto_perfil']
+
+    def validate_nome_exibicao(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Informe um nome de exibição.')
+
+        usuario = self.instance
+        if usuario and value != usuario.nome_exibicao:
+            dias_restantes = dias_restantes_cooldown_nome(usuario)
+            if dias_restantes > 0:
+                raise serializers.ValidationError(
+                    f'Você poderá trocar o nome de exibição novamente em '
+                    f'{dias_restantes} dia{"s" if dias_restantes != 1 else ""}.'
+                )
+        return value
+
+    def update(self, instance, validated_data):
+        novo_nome = validated_data.get('nome_exibicao', instance.nome_exibicao)
+        if novo_nome != instance.nome_exibicao:
+            instance.nome_exibicao_alterado_em = timezone.now()
+        return super().update(instance, validated_data)
 
 
 class ConfiguracoesSerializer(serializers.ModelSerializer):

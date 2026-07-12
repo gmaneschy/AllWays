@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes } from './api';
+import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes, editarPerfil, getMe } from './api';
 import BadgeDestaque from './BadgeDestaque';
 
 function ModalListaUsuarios({ titulo, usuarios, onFechar }) {
@@ -123,6 +123,121 @@ function ModalSelecaoBadge({ conquistas, idAtual, selecionando, onSelecionar, on
   );
 }
 
+/** Modal de edição de nome_exibicao + bio. 'me' vem de GET /users/me/ (inclui
+ * dias_para_trocar_nome_exibicao, calculado no backend). Bio nunca tem cooldown;
+ * nome_exibicao só é bloqueado se o valor digitado for DIFERENTE do atual. */
+function ModalEditarPerfil({ me, salvando, erro, onSalvar, onFechar }) {
+  const [nomeExibicao, setNomeExibicao] = useState(me.nome_exibicao || '');
+  const [bio, setBio] = useState(me.bio || '');
+  const [fotoFile, setFotoFile] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(me.foto_perfil || null);
+
+  const cooldownAtivo = me.dias_para_trocar_nome_exibicao > 0;
+  const nomeMudou = nomeExibicao.trim() !== me.nome_exibicao;
+  const bloqueado = cooldownAtivo && nomeMudou;
+
+  function handleFotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    setFotoPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  }
+
+  function handleSalvar() {
+    if (bloqueado || salvando) return;
+    if (fotoFile) {
+      const form = new FormData();
+      form.append('nome_exibicao', nomeExibicao.trim());
+      form.append('bio', bio);
+      form.append('foto_perfil', fotoFile);
+      onSalvar(form);
+    } else {
+      onSalvar({ nome_exibicao: nomeExibicao.trim(), bio });
+    }
+  }
+
+  return (
+    <div
+      onClick={onFechar}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 12, padding: 20, width: 360 }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <strong>Editar perfil</strong>
+          <button onClick={onFechar} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <label style={{ cursor: 'pointer', position: 'relative' }}>
+            {fotoPreview
+              ? <img src={fotoPreview} alt="Foto de perfil"
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+              : <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#ddd',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+                  {(nomeExibicao || me.username)[0]?.toUpperCase()}
+                </div>
+            }
+            <div style={{
+              position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%',
+              background: '#1a73e8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, border: '2px solid #fff',
+            }}>
+              ✎
+            </div>
+            <input type="file" accept="image/*" onChange={handleFotoChange} style={{ display: 'none' }} />
+          </label>
+        </div>
+
+        <label style={{ fontSize: 13, color: '#555' }}>Nome de exibição</label>
+        <input
+          value={nomeExibicao}
+          onChange={(e) => setNomeExibicao(e.target.value)}
+          maxLength={50}
+          style={{ width: '100%', padding: 8, marginTop: 4, marginBottom: 4, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box' }}
+        />
+        {cooldownAtivo && (
+          <p style={{ fontSize: 12, color: nomeMudou ? '#e53935' : '#999', margin: '0 0 12px' }}>
+            {nomeMudou
+              ? `Você poderá trocar o nome de exibição novamente em ${me.dias_para_trocar_nome_exibicao} dia${me.dias_para_trocar_nome_exibicao !== 1 ? 's' : ''}.`
+              : `Próxima troca disponível em ${me.dias_para_trocar_nome_exibicao} dia${me.dias_para_trocar_nome_exibicao !== 1 ? 's' : ''}.`}
+          </p>
+        )}
+        {!cooldownAtivo && <div style={{ marginBottom: 12 }} />}
+
+        <label style={{ fontSize: 13, color: '#555' }}>Bio</label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          maxLength={200}
+          rows={3}
+          style={{ width: '100%', padding: 8, marginTop: 4, marginBottom: 4, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box', resize: 'vertical', font: 'inherit' }}
+        />
+        <p style={{ fontSize: 11, color: '#bbb', margin: '0 0 12px', textAlign: 'right' }}>{bio.length}/200</p>
+
+        {erro && <p style={{ color: 'red', fontSize: 13, margin: '0 0 12px' }}>{erro}</p>}
+
+        <button
+          onClick={handleSalvar}
+          disabled={salvando || bloqueado || !nomeExibicao.trim()}
+          style={{
+            width: '100%', padding: 10, borderRadius: 6, border: 'none', fontWeight: 'bold', cursor: 'pointer',
+            background: '#1a73e8', color: '#fff', opacity: (salvando || bloqueado || !nomeExibicao.trim()) ? 0.5 : 1,
+          }}
+        >
+          {salvando ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PaginaPerfil() {
   const { username } = useParams();
   const usuarioLogado = getUsuarioLogado();
@@ -143,6 +258,12 @@ function PaginaPerfil() {
   // Configurações (toggle exibir_badges) — só relevante no próprio perfil
   const [configuracoes, setConfiguracoes] = useState(null);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
+
+  // Edição de perfil (nome de exibição + bio)
+  const [modalEditarAberto, setModalEditarAberto] = useState(false);
+  const [meEdicao, setMeEdicao] = useState(null);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [erroEdicao, setErroEdicao] = useState(null);
 
   async function buscarPerfil() {
     setCarregando(true);
@@ -236,6 +357,41 @@ function PaginaPerfil() {
     }
   }
 
+  async function abrirModalEditar() {
+    setErroEdicao(null);
+    setModalEditarAberto(true);
+    try {
+      // Busca fresca: dias_para_trocar_nome_exibicao precisa vir calculado
+      // na hora, não do localStorage (que pode estar desatualizado).
+      const me = await getMe();
+      setMeEdicao(me);
+    } catch (_) {
+      setErroEdicao('Não foi possível carregar seus dados agora.');
+    }
+  }
+
+  async function handleSalvarPerfil(payload) {
+    setSalvandoPerfil(true);
+    setErroEdicao(null);
+    try {
+      const atualizado = await editarPerfil(payload);
+      setPerfil((prev) => ({
+        ...prev,
+        nome_exibicao: atualizado.nome_exibicao,
+        bio: atualizado.bio,
+        foto_perfil: atualizado.foto_perfil,
+      }));
+      setModalEditarAberto(false);
+    } catch (err) {
+      const dados = err.response?.data;
+      const mensagem = dados?.nome_exibicao?.[0] || dados?.bio?.[0] || dados?.foto_perfil?.[0]
+        || 'Não foi possível salvar as alterações.';
+      setErroEdicao(mensagem);
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  }
+
   if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando...</p>;
   if (erro && !perfil) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
   if (!perfil) return null;
@@ -315,6 +471,16 @@ function PaginaPerfil() {
       {/* Painel de gerenciamento — só o dono do perfil vê */}
       {ehProprioPerfil && (
         <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 14, marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 'bold' }}>Seu perfil</span>
+            <button
+              onClick={abrirModalEditar}
+              style={{ fontSize: 13, padding: '5px 12px', borderRadius: 6, border: '1px solid #ddd', background: '#999999', cursor: 'pointer' }}
+            >
+              Editar perfil
+            </button>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: configuracoes ? 10 : 0 }}>
             <span style={{ fontSize: 14, fontWeight: 'bold' }}>Suas badges</span>
             <button
@@ -396,6 +562,16 @@ function PaginaPerfil() {
           selecionando={selecionandoBadge}
           onSelecionar={handleSelecionarBadge}
           onFechar={() => setModalBadgeAberto(false)}
+        />
+      )}
+
+      {modalEditarAberto && meEdicao && (
+        <ModalEditarPerfil
+          me={meEdicao}
+          salvando={salvandoPerfil}
+          erro={erroEdicao}
+          onSalvar={handleSalvarPerfil}
+          onFechar={() => setModalEditarAberto(false)}
         />
       )}
     </div>

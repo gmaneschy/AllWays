@@ -91,6 +91,23 @@ export async function selecionarBadgeDestaque(badgeId) {
   return data;
 }
 
+export async function editarPerfil(payload) {
+  // Se vier FormData (há uma foto sendo enviada), precisa do header multipart;
+  // se for objeto plano ({ nome_exibicao, bio }), o axios já lida como JSON.
+  const config = payload instanceof FormData
+    ? { headers: { 'Content-Type': 'multipart/form-data' } }
+    : {};
+  const { data } = await api.patch('/users/me/perfil/', payload, config);
+  // Mesma lógica do selecionarBadgeDestaque: MeSerializer é a fonte de verdade
+  localStorage.setItem('user', JSON.stringify(data));
+  return data;
+}
+
+export async function getMe() {
+  const { data } = await api.get('/users/me/');
+  return data;
+}
+
 export async function getConfiguracoes() {
   const { data } = await api.get('/users/me/configuracoes/');
   return data;

@@ -1,11 +1,5 @@
 Apps:
 users:
-    Pesquisa na página de Explorar deve considerar, no caso de pesquisa de usuários, tanto o nome de exibição quanto o nome de usuário.
-    Na criação de usuário também deve haver um campo para o gênero e data de nascimento.
-    Edição de perfil:
-        Foto de perfil
-        Bio
-
 
 feed:
 
@@ -26,8 +20,8 @@ social:
 Checklist:
 Badges: níveis + lógica de concessão                  - OK
 Correção no cadastro de usuário                       - OK
-Correção na pesquisa de usuário                       - Pendente
-Edição de perfil (nome de exibição foto, bio)         - Pendente
+Correção na pesquisa de usuário                       - OK
+Edição de perfil (nome de exibição foto, bio)         - OK
 Sistema de likes em posts                             - Pendente
 Sistema de likes em comentários de posts              - Pendente
 Sistema de likes em comentários de lugares            - Pendente
@@ -55,10 +49,6 @@ Configurações:
         Exibir badges de outros usuários
 
 
-3. Correção na pesquisa de usuário
-Depende diretamente do item 2 (precisa dos campos nome_exibicao e username já existindo e populados) — pesquisa deve fazer OR nos dois campos (icontains em ambos, provavelmente com Q objects).
-4. Edição de perfil (foto, bio, badge)
-Badge já está praticamente pronto (badge_destaque + serializar_badge_destaque() já existem — aqui é só expor no serializer de edição). Foto e bio são novos campos simples no User. Faz sentido fechar isso logo após o item 2/3 porque é a mesma área do código (serializers de users).
 5. Sistema de likes (unificado)
 Em vez de tratar como 4 itens separados (posts, comentários de posts, comentários de lugares, mensagens), vale a pena projetar um único model de Curtida genérico (via GenericForeignKey do Django, ou um content_type + object_id) reutilizável nos 4 contextos. Isso evita 4 implementações duplicadas e 4 migrations separadas. Eu recomendo modelar isso como uma única tarefa técnica, não 4.
 6. Sistema de compartilhamento de posts
@@ -69,9 +59,6 @@ Faz sentido vir depois de likes e compartilhamento, porque notificações tipica
 Infra pesada, e você já anotou que é pré-requisito para testar vídeo. Eu deixaria isso como uma tarefa isolada e dedicada — não algo pra fazer "de passagem". Bom momento: depois que a maior parte das features novas (likes, share, notificações) já estiver estável em SQLite, pra minimizar re-teste de migrations complexas.
 9. Vídeo no PontoItinerario + vídeo nas mensagens
 Só depois da migração (item 8), já que dependem dela. Testar os dois juntos faz sentido, pois provavelmente compartilham a mesma lógica de upload/storage (django-storages + Pillow, mas agora pra vídeo).
-
-
-
 
 
 
