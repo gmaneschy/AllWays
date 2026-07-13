@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 from django.db.models import Q, F
@@ -110,3 +112,36 @@ class Hashtag(models.Model):
 
     def __str__(self):
         return f"#{self.nome}"
+
+
+class Curtida(models.Model):
+    """Curtida genérica, reaproveitada nos 4 contextos: post (Itinerario),
+    comentário de post (Comment), comentário de lugar (PontoItinerario.comentario,
+    exibido só na página do Place) e mensagem (Message).
+
+    Usa o framework de ContentType do Django em vez de 4 tabelas quase-idênticas.
+    A view que cria Curtida SEMPRE valida contra uma whitelist de (app_label, model)
+    — o cliente nunca escolhe o ContentType livremente."""
+
+    usuario = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='curtidas'
+    )
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    alvo = GenericForeignKey('content_type', 'object_id')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario', 'content_type', 'object_id'],
+                name='curtida_unica_por_usuario_e_alvo',
+            )
+        ]
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.usuario.username} curtiu {self.alvo}"

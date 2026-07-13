@@ -1,19 +1,69 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Case, When, Value, IntegerField
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.users.models import User
 from apps.places.models import Place
-from apps.itineraries.models import Itinerario
+from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
-from .models import Follow, Hashtag, Message, Comment
+from .models import Follow, Hashtag, Message, Comment, Curtida
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
     MessageSerializer, CommentSerializer,
 )
+
+
+# ─── Curtidas ───────────────────────────────────────────────────────────────
+# Um único model genérico (Curtida) cobre os 4 contextos curtíveis. O cliente
+# nunca escolhe o ContentType livremente — só os 4 "tipos" abaixo são aceitos.
+
+ALVOS_CURTIVEIS = {
+    'post': Itinerario,                    # único que alimenta o Celery/feed
+    'comentario_post': Comment,
+    'comentario_lugar': PontoItinerario,   # comentário do Place, na prática
+    'mensagem': Message,
+}
+
+
+class CurtidaToggleView(APIView):
+    """POST /api/social/curtida/   body: {"tipo": "post"|"comentario_post"|"comentario_lugar"|"mensagem", "id": <int>}
+    Toggle: curtir se ainda não curtiu, descurtir se já tinha curtido.
+    Só 'post' (Itinerario) dispara o FeedEvent que alimenta a recomendação —
+    curtida em comentário ou mensagem é puramente social/UI."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        tipo = request.data.get('tipo')
+        alvo_id = request.data.get('id')
+
+        Model = ALVOS_CURTIVEIS.get(tipo)
+        if Model is None:
+            return Response(
+                {'erro': f'Tipo inválido. Use: {", ".join(ALVOS_CURTIVEIS)}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        alvo = get_object_or_404(Model, pk=alvo_id)
+        content_type = ContentType.objects.get_for_model(Model)
+
+        curtida, criada = Curtida.objects.get_or_create(
+            usuario=request.user, content_type=content_type, object_id=alvo.pk
+        )
+        if not criada:
+            curtida.delete()
+            curtido = False
+        else:
+            curtido = True
+            if tipo == 'post':
+                from apps.feed.tasks import registrar_evento_feed
+                registrar_evento_feed.delay(request.user.id, alvo.id, 'like')
+
+        total = Curtida.objects.filter(content_type=content_type, object_id=alvo.pk).count()
+        return Response({'curtido': curtido, 'total_curtidas': total})
 
 
 # ─── Follow ───────────────────────────────────────────────────────────────────

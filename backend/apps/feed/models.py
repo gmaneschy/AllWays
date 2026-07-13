@@ -10,6 +10,7 @@ class FeedEvent(models.Model):
     TIPO_CHOICES = [
         ('view', 'Visualizou'),
         ('comment_read', 'Leu comentários'),
+        ('like', 'Curtiu'),
         ('save', 'Salvou'),
         ('use_as_base', 'Usou como base'),
         ('comment_post', 'Comentou'),
@@ -30,6 +31,7 @@ class FeedEvent(models.Model):
     PESO = {
         'view': 1,
         'comment_read': 2,
+        'like': 3,
         'save': 5,
         'use_as_base': 8,
         'comment_post': 4,

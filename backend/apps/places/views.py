@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.gamification.serializers import serializar_badge_destaque
+from apps.social.services import resumo_curtida
 from .models import Place
 from .serializers import PlaceSerializer, PlaceDetailSerializer
 from . import services
@@ -76,12 +77,14 @@ class PlaceDetailView(APIView):
 
         comentarios_data = [
             {
+                'ponto_id': ponto.id,
                 'autor_nome': ponto.itinerario.autor.username if ponto.itinerario.autor else 'Usuário removido',
                 'autor_badge_destaque': serializar_badge_destaque(ponto.itinerario.autor, context={'request': request}),
                 'itinerario_id': ponto.itinerario.id,
                 'itinerario_titulo': ponto.itinerario.titulo,
                 'texto': ponto.comentario,
                 'fotos': [request.build_absolute_uri(f.imagem.url) for f in ponto.fotos.all()],
+                **resumo_curtida(ponto, request.user),
             }
             for ponto in pontos_com_comentario
         ]
