@@ -153,13 +153,16 @@ class ItinerarioDetalheSerializer(serializers.ModelSerializer):
     autor_badge_destaque = serializers.SerializerMethodField()
     badges = serializers.SerializerMethodField()
     salvo_por_mim = serializers.SerializerMethodField()
+    total_curtidas = serializers.SerializerMethodField()
+    curtido = serializers.SerializerMethodField()
 
     class Meta:
         model = Itinerario
         fields = [
             'id', 'titulo', 'tipo', 'status', 'data_inicio', 'data_fim',
             'publicado_em', 'autor', 'autor_username', 'autor_foto',
-            'autor_badge_destaque', 'badges', 'salvo_por_mim', 'pontos',
+            'autor_badge_destaque', 'badges', 'salvo_por_mim',
+            'total_curtidas', 'curtido', 'pontos',
         ]
 
     def get_autor_foto(self, obj):
@@ -183,3 +186,17 @@ class ItinerarioDetalheSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return obj.salvos_por.filter(usuario=request.user).exists()
+
+    def _resumo_curtida(self, obj):
+        if not hasattr(obj, '_resumo_curtida_cache'):
+            from apps.social.services import resumo_curtida
+            request = self.context.get('request')
+            usuario = request.user if request else None
+            obj._resumo_curtida_cache = resumo_curtida(obj, usuario)
+        return obj._resumo_curtida_cache
+
+    def get_total_curtidas(self, obj):
+        return self._resumo_curtida(obj)['total_curtidas']
+
+    def get_curtido(self, obj):
+        return self._resumo_curtida(obj)['curtido']

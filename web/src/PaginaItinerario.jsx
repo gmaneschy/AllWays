@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api, { getUsuarioLogado } from './api';
+import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 
@@ -65,6 +65,21 @@ function PaginaItinerario() {
     } catch (_) {} finally { setSalvando(false); }
   }
 
+  async function handleCurtir() {
+    const anterior = { curtido: it.curtido, total_curtidas: it.total_curtidas };
+    const otimista = {
+      curtido: !it.curtido,
+      total_curtidas: it.total_curtidas + (it.curtido ? -1 : 1),
+    };
+    setIt((prev) => ({ ...prev, ...otimista }));
+    try {
+      const resultado = await curtir('post', it.id);
+      setIt((prev) => ({ ...prev, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }));
+    } catch (_) {
+      setIt((prev) => ({ ...prev, ...anterior }));
+    }
+  }
+
   function usarComoBase() {
     // Redireciona para criar itinerário passando o ID para carregar como base
     navigate(`/criar?base=${id}`);
@@ -86,6 +101,28 @@ function PaginaItinerario() {
       await api.delete(`/social/itinerarios/${id}/comentarios/?comentario_id=${comentarioId}`);
       setComentarios((prev) => prev.filter((c) => c.id !== comentarioId));
     } catch (_) {}
+  }
+
+  async function handleCurtirComentario(comentarioId) {
+    const alvo = comentarios.find((c) => c.id === comentarioId);
+    if (!alvo) return;
+
+    const otimista = {
+      curtido: !alvo.curtido,
+      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
+    };
+    setComentarios((prev) => prev.map((c) => (c.id === comentarioId ? { ...c, ...otimista } : c)));
+
+    try {
+      const resultado = await curtir('comentario_post', comentarioId);
+      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
+        ? { ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+        : c)));
+    } catch (_) {
+      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
+        ? { ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+        : c)));
+    }
   }
 
   if (carregando) return <p style={{ textAlign: 'center', marginTop: 60 }}>Carregando...</p>;
@@ -138,7 +175,19 @@ function PaginaItinerario() {
 
           {/* Ações */}
           {usuarioLogado && (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={handleCurtir}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                  border: '1px solid #ddd', background: '#fff',
+                  color: it.curtido ? '#e53935' : '#666', fontSize: 13,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{it.curtido ? '❤️' : '🤍'}</span>
+                {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
+              </button>
               {!ehAutor && (
                 <>
                   <button
@@ -316,6 +365,17 @@ function PaginaItinerario() {
                   )}
                 </div>
                 <p style={{ margin: '4px 0 0', fontSize: 14, color: '#444', lineHeight: 1.4 }}>{c.texto}</p>
+                <button
+                  onClick={() => handleCurtirComentario(c.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4, marginTop: 6,
+                    border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                    fontSize: 12, color: c.curtido ? '#e53935' : '#999',
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
+                  {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
+                </button>
               </div>
             </div>
           ))}

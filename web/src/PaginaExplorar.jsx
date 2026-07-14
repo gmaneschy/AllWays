@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
-import api from './api';
+import api, { curtir } from './api';
 
 function useDebounce(valor, delay) {
   const [debouncado, setDebouncado] = useState(valor);
@@ -65,7 +65,13 @@ function SecaoBusca({ titulo, itens, renderItem }) {
   );
 }
 
-function CardItinerario({ it }) {
+function CardItinerario({ it, onCurtir }) {
+  function handleClickCurtir(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    onCurtir(it.id);
+  }
+
   return (
     <Link
       to={`/itinerario/${it.id}`}
@@ -101,6 +107,18 @@ function CardItinerario({ it }) {
             <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
           </div>
         )}
+
+        <button
+          onClick={handleClickCurtir}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
+            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+            fontSize: 13, color: it.curtido ? '#e53935' : '#888',
+          }}
+        >
+          <span style={{ fontSize: 16 }}>{it.curtido ? '❤️' : '🤍'}</span>
+          {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
+        </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           {it.autor.foto_perfil
@@ -170,6 +188,28 @@ function PaginaExplorar() {
     }
     buscarFeed();
   }, []);
+
+  async function handleCurtir(id) {
+    const alvo = feed.find((it) => it.id === id);
+    if (!alvo) return;
+
+    const otimista = {
+      curtido: !alvo.curtido,
+      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
+    };
+    setFeed((prev) => prev.map((it) => (it.id === id ? { ...it, ...otimista } : it)));
+
+    try {
+      const resultado = await curtir('post', id);
+      setFeed((prev) => prev.map((it) => (it.id === id
+        ? { ...it, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+        : it)));
+    } catch (_) {
+      setFeed((prev) => prev.map((it) => (it.id === id
+        ? { ...it, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+        : it)));
+    }
+  }
 
   // Busca ao digitar (debounced)
   useEffect(() => {
@@ -308,7 +348,7 @@ function PaginaExplorar() {
           {!carregandoFeed && feed.length === 0 && (
             <p style={{ color: '#999' }}>Nenhum itinerário publicado ainda.</p>
           )}
-          {feed.map((it) => <CardItinerario key={it.id} it={it} />)}
+          {feed.map((it) => <CardItinerario key={it.id} it={it} onCurtir={handleCurtir} />)}
         </>
       )}
     </div>

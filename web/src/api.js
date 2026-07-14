@@ -77,6 +77,14 @@ export function estaLogado() {
   return !!localStorage.getItem('access_token');
 }
 
+// ─── Curtidas ───────────────────────────────────────────────────────────
+
+export async function curtir(tipo, id) {
+  // tipo: 'post' | 'comentario_post' | 'comentario_lugar' | 'mensagem'
+  const { data } = await api.post('/social/curtida/', { tipo, id });
+  return data; // { curtido, total_curtidas }
+}
+
 // ─── Gamificação ────────────────────────────────────────────────────────
 
 export async function getMinhasConquistas() {

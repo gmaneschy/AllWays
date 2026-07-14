@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api, { estaLogado } from './api';
+import api, { estaLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 
 function PaginaPlace() {
@@ -48,6 +48,37 @@ function PaginaPlace() {
       setSeguindo(res.data.seguindo);
     } catch (_) {} finally {
       setEnviandoFollow(false);
+    }
+  }
+
+  async function handleCurtirComentario(pontoId) {
+    const alvo = dados.comentarios.find((c) => c.ponto_id === pontoId);
+    if (!alvo) return;
+
+    const otimista = {
+      curtido: !alvo.curtido,
+      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
+    };
+    setDados((prev) => ({
+      ...prev,
+      comentarios: prev.comentarios.map((c) => (c.ponto_id === pontoId ? { ...c, ...otimista } : c)),
+    }));
+
+    try {
+      const resultado = await curtir('comentario_lugar', pontoId);
+      setDados((prev) => ({
+        ...prev,
+        comentarios: prev.comentarios.map((c) => (c.ponto_id === pontoId
+          ? { ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+          : c)),
+      }));
+    } catch (_) {
+      setDados((prev) => ({
+        ...prev,
+        comentarios: prev.comentarios.map((c) => (c.ponto_id === pontoId
+          ? { ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+          : c)),
+      }));
     }
   }
 
@@ -117,8 +148,8 @@ function PaginaPlace() {
       <h2>Comentários de quem visitou</h2>
       {comentarios.length === 0 && <p style={{ color: '#999' }}>Ainda não há comentários para este local.</p>}
 
-      {comentarios.map((c, i) => (
-        <div key={i} style={{ borderBottom: '1px solid #eee', padding: '16px 0' }}>
+      {comentarios.map((c) => (
+        <div key={c.ponto_id} style={{ borderBottom: '1px solid #eee', padding: '16px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <strong>{c.autor_nome}</strong>
             <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
@@ -139,6 +170,20 @@ function PaginaPlace() {
                 />
               ))}
             </div>
+          )}
+
+          {logado && (
+            <button
+              onClick={() => handleCurtirComentario(c.ponto_id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4, marginTop: 8,
+                border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                fontSize: 12, color: c.curtido ? '#e53935' : '#999',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
+              {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
+            </button>
           )}
         </div>
       ))}

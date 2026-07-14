@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from './api';
+import api, { curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 
@@ -42,6 +42,30 @@ function Feed() {
     buscar();
   }, []);
 
+  async function handleCurtir(id) {
+    const alvo = itinerarios.find((it) => it.id === id);
+    if (!alvo) return;
+
+    const otimista = {
+      curtido: !alvo.curtido,
+      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
+    };
+    setItinerarios((prev) => prev.map((it) => (it.id === id ? { ...it, ...otimista } : it)));
+
+    try {
+      const resultado = await curtir('post', id);
+      // Sincroniza com a fonte de verdade do servidor (ex: se outra aba já mudou o total)
+      setItinerarios((prev) => prev.map((it) => (it.id === id
+        ? { ...it, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+        : it)));
+    } catch (_) {
+      // Reverte em caso de erro de rede
+      setItinerarios((prev) => prev.map((it) => (it.id === id
+        ? { ...it, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+        : it)));
+    }
+  }
+
   if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando feed...</p>;
   if (erro) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
 
@@ -75,6 +99,18 @@ function Feed() {
               <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
             </div>
           )}
+
+          <button
+            onClick={() => handleCurtir(it.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12,
+              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 14, color: it.curtido ? '#e53935' : '#888',
+            }}
+          >
+            <span style={{ fontSize: 18 }}>{it.curtido ? '❤️' : '🤍'}</span>
+            {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
+          </button>
 
           <ol style={{ paddingLeft: 20, margin: 0 }}>
             {it.pontos.map((ponto) => (

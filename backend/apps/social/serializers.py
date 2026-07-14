@@ -58,12 +58,14 @@ class CommentSerializer(serializers.ModelSerializer):
     autor_nome = serializers.CharField(source='autor.username', read_only=True)
     autor_foto = serializers.SerializerMethodField()
     autor_badge_destaque = serializers.SerializerMethodField()
+    total_curtidas = serializers.SerializerMethodField()
+    curtido = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = [
             'id', 'autor', 'autor_nome', 'autor_foto', 'autor_badge_destaque',
-            'itinerario', 'texto', 'criado_em',
+            'itinerario', 'texto', 'criado_em', 'total_curtidas', 'curtido',
         ]
         read_only_fields = ['autor', 'criado_em']
 
@@ -76,11 +78,27 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_autor_badge_destaque(self, obj):
         return serializar_badge_destaque(obj.autor, context=self.context)
 
+    def _resumo_curtida(self, obj):
+        if not hasattr(obj, '_resumo_curtida_cache'):
+            from .services import resumo_curtida
+            request = self.context.get('request')
+            usuario = request.user if request else None
+            obj._resumo_curtida_cache = resumo_curtida(obj, usuario)
+        return obj._resumo_curtida_cache
+
+    def get_total_curtidas(self, obj):
+        return self._resumo_curtida(obj)['total_curtidas']
+
+    def get_curtido(self, obj):
+        return self._resumo_curtida(obj)['curtido']
+
 
 class MessageSerializer(serializers.ModelSerializer):
     remetente_nome = serializers.CharField(source='remetente.username', read_only=True)
     remetente_foto = serializers.SerializerMethodField()
     destinatario_nome = serializers.CharField(source='destinatario.username', read_only=True)
+    total_curtidas = serializers.SerializerMethodField()
+    curtido = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
@@ -88,6 +106,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'id', 'remetente', 'remetente_nome', 'remetente_foto',
             'destinatario', 'destinatario_nome',
             'tipo', 'texto', 'imagem', 'audio', 'enviada_em',
+            'total_curtidas', 'curtido',
         ]
         read_only_fields = ['remetente', 'enviada_em']
 
@@ -96,6 +115,20 @@ class MessageSerializer(serializers.ModelSerializer):
         if obj.remetente and obj.remetente.foto_perfil:
             return request.build_absolute_uri(obj.remetente.foto_perfil.url) if request else obj.remetente.foto_perfil.url
         return None
+
+    def _resumo_curtida(self, obj):
+        if not hasattr(obj, '_resumo_curtida_cache'):
+            from .services import resumo_curtida
+            request = self.context.get('request')
+            usuario = request.user if request else None
+            obj._resumo_curtida_cache = resumo_curtida(obj, usuario)
+        return obj._resumo_curtida_cache
+
+    def get_total_curtidas(self, obj):
+        return self._resumo_curtida(obj)['total_curtidas']
+
+    def get_curtido(self, obj):
+        return self._resumo_curtida(obj)['curtido']
 
     def validate(self, data):
         tipo = data.get('tipo', 'texto')

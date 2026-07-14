@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from apps.itineraries.models import Itinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
+from apps.social.services import resumo_curtida
 from apps.social.views import ExplorarView  # reutiliza o feed público
 from . import services
 from .models import FeedEvent
@@ -36,6 +37,7 @@ class FeedPrincipalView(APIView):
                 'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
                 'data_inicio': it.data_inicio,
                 'data_fim': it.data_fim,
+                **resumo_curtida(it, request.user),
                 'pontos': [
                     {
                         'id': ponto.id,

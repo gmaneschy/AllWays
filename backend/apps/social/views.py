@@ -11,6 +11,7 @@ from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
 from .models import Follow, Hashtag, Message, Comment, Curtida
+from .services import resumo_curtida
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
     MessageSerializer, CommentSerializer,
@@ -438,6 +439,7 @@ class ExplorarView(APIView):
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,
                 'total_pontos': it.pontos.count(),
+                **resumo_curtida(it, request.user),
             })
 
         return Response(resultado)

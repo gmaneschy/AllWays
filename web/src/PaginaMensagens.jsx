@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import api, { getUsuarioLogado } from './api';
+import api, { getUsuarioLogado, curtir } from './api';
 
 function Avatar({ usuario, tamanho = 40 }) {
   if (usuario?.foto_perfil) {
@@ -62,44 +62,67 @@ function SeletorDestinatario({ onSelecionar }) {
   );
 }
 
-function BolhaMensagem({ m, minha }) {
+function BotaoCurtirMensagem({ m, minha, onCurtir }) {
+  return (
+    <button
+      onClick={() => onCurtir(m.id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 3, marginTop: 2,
+        border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+        fontSize: 11, color: m.curtido ? '#e53935' : '#aaa',
+        alignSelf: minha ? 'flex-end' : 'flex-start',
+      }}
+    >
+      <span style={{ fontSize: 12 }}>{m.curtido ? '❤️' : '🤍'}</span>
+      {m.total_curtidas > 0 && <span>{m.total_curtidas}</span>}
+    </button>
+  );
+}
+
+function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'imagem') {
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%' }}>
+      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
         <img src={m.imagem} alt="imagem"
           style={{ borderRadius: 12, maxWidth: '100%', maxHeight: 280, display: 'block', cursor: 'pointer' }}
           onClick={() => window.open(m.imagem, '_blank')} />
         <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
           {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </div>
+        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
     );
   }
 
   if (m.tipo === 'audio') {
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%',
-          background: minha ? '#1a73e8' : '#f0f0f0', borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-          padding: '8px 14px' }}>
-        <audio controls src={m.audio} style={{ height: 36, maxWidth: 240 }} />
-        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right', color: minha ? '#fff' : '#333' }}>
-          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            background: minha ? '#1a73e8' : '#f0f0f0', borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+            padding: '8px 14px' }}>
+          <audio controls src={m.audio} style={{ height: 36, maxWidth: 240 }} />
+          <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right', color: minha ? '#fff' : '#333' }}>
+            {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
         </div>
+        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
     );
   }
 
   return (
-    <div style={{
-      alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%',
-      background: minha ? '#1a73e8' : '#f0f0f0', color: minha ? '#fff' : '#333',
-      borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-      padding: '8px 14px', fontSize: 14,
-    }}>
-      {m.texto}
-      <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
-        {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+    <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        background: minha ? '#1a73e8' : '#f0f0f0', color: minha ? '#fff' : '#333',
+        borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+        padding: '8px 14px', fontSize: 14,
+      }}>
+        {m.texto}
+        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
+          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
       </div>
+      <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
     </div>
   );
 }
@@ -179,6 +202,28 @@ function PaginaMensagens() {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
       setMensagens(res.data);
     } catch (_) {} finally { setCarregandoMensagens(false); }
+  }
+
+  async function handleCurtirMensagem(mensagemId) {
+    const alvo = mensagens.find((m) => m.id === mensagemId);
+    if (!alvo) return;
+
+    const otimista = {
+      curtido: !alvo.curtido,
+      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
+    };
+    setMensagens((prev) => prev.map((m) => (m.id === mensagemId ? { ...m, ...otimista } : m)));
+
+    try {
+      const resultado = await curtir('mensagem', mensagemId);
+      setMensagens((prev) => prev.map((m) => (m.id === mensagemId
+        ? { ...m, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+        : m)));
+    } catch (_) {
+      setMensagens((prev) => prev.map((m) => (m.id === mensagemId
+        ? { ...m, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+        : m)));
+    }
   }
 
   useEffect(() => { fimRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [mensagens]);
@@ -317,7 +362,7 @@ function PaginaMensagens() {
             )}
             {mensagens.map((m) => {
               const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-              return <BolhaMensagem key={m.id} m={m} minha={minha} />;
+              return <BolhaMensagem key={m.id} m={m} minha={minha} onCurtir={handleCurtirMensagem} />;
             })}
             <div ref={fimRef} />
           </div>

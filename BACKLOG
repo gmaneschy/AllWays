@@ -22,10 +22,10 @@ Badges: níveis + lógica de concessão                  - OK
 Correção no cadastro de usuário                       - OK
 Correção na pesquisa de usuário                       - OK
 Edição de perfil (nome de exibição foto, bio)         - OK
-Sistema de likes em posts                             - Pendente
-Sistema de likes em comentários de posts              - Pendente
-Sistema de likes em comentários de lugares            - Pendente
-Sistema de likes em mensagens                         - Pendente
+Sistema de likes em posts                             - OK
+Sistema de likes em comentários de posts              - OK
+Sistema de likes em comentários de lugares            - OK
+Sistema de likes em mensagens                         - OK
 Sistema de compartilhamento de posts                  - Pendente (entre usuários ou copiar link)
 Aba de notificações no frontend                       - Pendente
 Vídeo no PontoItinerario                              - Pendente (passar BD para PostgreSQL)
