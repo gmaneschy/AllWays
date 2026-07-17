@@ -21,6 +21,71 @@ function Estrelas({ valor, max = 5 }) {
   );
 }
 
+function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApagar, onResponder }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: isResposta ? 12 : 16, marginLeft: isResposta ? 42 : 0 }}>
+      {c.autor_foto
+        ? <img src={c.autor_foto} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+            {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
+          </div>
+      }
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link to={`/perfil/${c.autor_nome}`} style={{ fontWeight: 'bold', fontSize: 13, textDecoration: 'none', color: '#333' }}>
+            {c.autor_nome}
+          </Link>
+          <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
+          <span style={{ fontSize: 11, color: '#bbb' }}>
+            {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+          </span>
+          {usuarioLogado?.username === c.autor_nome && (
+            <button
+              onClick={() => onApagar(c.id)}
+              style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#ccc', cursor: 'pointer', fontSize: 16, padding: 0 }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#444', lineHeight: 1.4 }}>
+          {isResposta && c.responder_para_username && (
+            <Link
+              to={`/perfil/${c.responder_para_username}`}
+              style={{ fontWeight: 'bold', color: '#1a73e8', textDecoration: 'none', marginRight: 4 }}
+            >
+              @{c.responder_para_username}
+            </Link>
+          )}
+          {c.texto}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+          <button
+            onClick={() => onCurtir(c.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+              fontSize: 12, color: c.curtido ? '#e53935' : '#999',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
+            {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
+          </button>
+          {usuarioLogado && (
+            <button
+              onClick={() => onResponder(raizId, { id: c.autor, username: c.autor_nome })}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, color: '#999' }}
+            >
+              Responder
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PaginaItinerario() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -33,6 +98,8 @@ function PaginaItinerario() {
   const [comentarios, setComentarios] = useState([]);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [textoResposta, setTextoResposta] = useState({}); // { [raizId]: rascunho }
+  const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
   const [compartilhando, setCompartilhando] = useState(false);
 
   useEffect(() => {
@@ -87,6 +154,35 @@ function PaginaItinerario() {
     navigate(`/criar?base=${id}`);
   }
 
+  // ─── Helpers pra navegar a árvore de comentários (raiz + respostas, 1 nível) ───
+
+  function atualizarComentarioNaArvore(lista, comentarioId, updateFn) {
+    return lista.map((c) => {
+      if (c.id === comentarioId) return updateFn(c);
+      if (c.respostas?.length) {
+        return { ...c, respostas: atualizarComentarioNaArvore(c.respostas, comentarioId, updateFn) };
+      }
+      return c;
+    });
+  }
+
+  function encontrarComentarioNaArvore(lista, comentarioId) {
+    for (const c of lista) {
+      if (c.id === comentarioId) return c;
+      if (c.respostas?.length) {
+        const achado = encontrarComentarioNaArvore(c.respostas, comentarioId);
+        if (achado) return achado;
+      }
+    }
+    return null;
+  }
+
+  function removerComentarioNaArvore(lista, comentarioId) {
+    return lista
+      .filter((c) => c.id !== comentarioId)
+      .map((c) => (c.respostas?.length ? { ...c, respostas: removerComentarioNaArvore(c.respostas, comentarioId) } : c));
+  }
+
   async function postarComentario() {
     if (!textoComentario.trim() || enviandoComentario) return;
     setEnviandoComentario(true);
@@ -98,32 +194,54 @@ function PaginaItinerario() {
     finally { setEnviandoComentario(false); }
   }
 
+  function abrirResposta(raizId, usuarioAlvo) {
+    setRespondendoA({ raizId, usuario: usuarioAlvo });
+    setTextoResposta((prev) => ({ ...prev, [raizId]: prev[raizId] || '' }));
+  }
+
+  async function postarResposta(raizId) {
+    const texto = (textoResposta[raizId] || '').trim();
+    if (!texto || !respondendoA || respondendoA.raizId !== raizId) return;
+    try {
+      const res = await api.post(`/social/itinerarios/${id}/comentarios/`, {
+        texto,
+        parent: raizId,
+        responder_para: respondendoA.usuario?.id,
+      });
+      setComentarios((prev) => prev.map((c) => (c.id === raizId
+        ? { ...c, respostas: [...(c.respostas || []), res.data] }
+        : c)));
+      setTextoResposta((prev) => ({ ...prev, [raizId]: '' }));
+      setRespondendoA(null);
+    } catch (_) {}
+  }
+
   async function apagarComentario(comentarioId) {
     try {
       await api.delete(`/social/itinerarios/${id}/comentarios/?comentario_id=${comentarioId}`);
-      setComentarios((prev) => prev.filter((c) => c.id !== comentarioId));
+      setComentarios((prev) => removerComentarioNaArvore(prev, comentarioId));
     } catch (_) {}
   }
 
   async function handleCurtirComentario(comentarioId) {
-    const alvo = comentarios.find((c) => c.id === comentarioId);
+    const alvo = encontrarComentarioNaArvore(comentarios, comentarioId);
     if (!alvo) return;
 
     const otimista = {
       curtido: !alvo.curtido,
       total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
     };
-    setComentarios((prev) => prev.map((c) => (c.id === comentarioId ? { ...c, ...otimista } : c)));
+    setComentarios((prev) => atualizarComentarioNaArvore(prev, comentarioId, (c) => ({ ...c, ...otimista })));
 
     try {
       const resultado = await curtir('comentario_post', comentarioId);
-      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
-        ? { ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
-        : c)));
+      setComentarios((prev) => atualizarComentarioNaArvore(prev, comentarioId, (c) => ({
+        ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas,
+      })));
     } catch (_) {
-      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
-        ? { ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
-        : c)));
+      setComentarios((prev) => atualizarComentarioNaArvore(prev, comentarioId, (c) => ({
+        ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas,
+      })));
     }
   }
 
@@ -355,45 +473,62 @@ function PaginaItinerario() {
             <p style={{ color: '#bbb', fontSize: 14 }}>Nenhum comentário ainda. Seja o primeiro!</p>
           )}
           {comentarios.map((c) => (
-            <div key={c.id} style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              {c.autor_foto
-                ? <img src={c.autor_foto} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                    {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
-                  </div>
-              }
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Link to={`/perfil/${c.autor_nome}`} style={{ fontWeight: 'bold', fontSize: 13, textDecoration: 'none', color: '#333' }}>
-                    {c.autor_nome}
-                  </Link>
-                  <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
-                  <span style={{ fontSize: 11, color: '#bbb' }}>
-                    {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                  </span>
-                  {usuarioLogado?.username === c.autor_nome && (
-                    <button
-                      onClick={() => apagarComentario(c.id)}
-                      style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#ccc', cursor: 'pointer', fontSize: 16, padding: 0 }}
-                    >
-                      ×
-                    </button>
-                  )}
+            <div key={c.id}>
+              <LinhaComentario
+                c={c}
+                raizId={c.id}
+                isResposta={false}
+                usuarioLogado={usuarioLogado}
+                onCurtir={handleCurtirComentario}
+                onApagar={apagarComentario}
+                onResponder={abrirResposta}
+              />
+
+              {c.respostas?.map((r) => (
+                <LinhaComentario
+                  key={r.id}
+                  c={r}
+                  raizId={c.id}
+                  isResposta
+                  usuarioLogado={usuarioLogado}
+                  onCurtir={handleCurtirComentario}
+                  onApagar={apagarComentario}
+                  onResponder={abrirResposta}
+                />
+              ))}
+
+              {respondendoA?.raizId === c.id && (
+                <div style={{ display: 'flex', gap: 8, marginLeft: 42, marginBottom: 16, alignItems: 'flex-start' }}>
+                  <input
+                    autoFocus
+                    value={textoResposta[c.id] || ''}
+                    onChange={(e) => setTextoResposta((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta(c.id))}
+                    placeholder={`Respondendo a @${respondendoA.usuario?.username}...`}
+                    style={{
+                      flex: 1, padding: '6px 10px', borderRadius: 8,
+                      border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box',
+                    }}
+                  />
+                  <button
+                    onClick={() => postarResposta(c.id)}
+                    disabled={!textoResposta[c.id]?.trim()}
+                    style={{
+                      padding: '6px 12px', borderRadius: 6, border: 'none',
+                      background: '#1a73e8', color: '#fff', fontSize: 12, fontWeight: 'bold',
+                      cursor: 'pointer', opacity: !textoResposta[c.id]?.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    Enviar
+                  </button>
+                  <button
+                    onClick={() => setRespondendoA(null)}
+                    style={{ border: 'none', background: 'none', color: '#999', cursor: 'pointer', fontSize: 12 }}
+                  >
+                    Cancelar
+                  </button>
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#444', lineHeight: 1.4 }}>{c.texto}</p>
-                <button
-                  onClick={() => handleCurtirComentario(c.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4, marginTop: 6,
-                    border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-                    fontSize: 12, color: c.curtido ? '#e53935' : '#999',
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
-                  {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
-                </button>
-              </div>
+              )}
             </div>
           ))}
         </div>

@@ -10,11 +10,11 @@ from apps.places.models import Place
 from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
-from .models import Follow, Hashtag, Message, Comment, Curtida
+from .models import Follow, Hashtag, Message, Comment, Curtida, Notification
 from .services import resumo_curtida
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
-    MessageSerializer, CommentSerializer,
+    MessageSerializer, CommentSerializer, NotificationSerializer,
 )
 
 
@@ -135,16 +135,34 @@ class ComentariosItinerarioView(APIView):
 
     def get(self, request, itinerario_id):
         it = get_object_or_404(Itinerario, pk=itinerario_id, status='publicado')
-        comentarios = it.comentarios.select_related('autor').order_by('criado_em')
+        # Só as raízes — as respostas vêm aninhadas via CommentSerializer.get_respostas.
+        comentarios = (
+            it.comentarios.filter(parent__isnull=True)
+            .select_related('autor')
+            .prefetch_related('respostas__autor', 'respostas__responder_para')
+            .order_by('criado_em')
+        )
         serializer = CommentSerializer(comentarios, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, itinerario_id):
         it = get_object_or_404(Itinerario, pk=itinerario_id, status='publicado')
-        serializer = CommentSerializer(
-            data={'itinerario': it.id, 'texto': request.data.get('texto', '')},
-            context={'request': request},
-        )
+        dados = {'itinerario': it.id, 'texto': request.data.get('texto', '')}
+
+        parent_id = request.data.get('parent')
+        if parent_id:
+            parent = get_object_or_404(Comment, pk=parent_id, itinerario_id=it.id)
+            if parent.parent_id:
+                return Response(
+                    {'erro': 'Respostas devem apontar para o comentário raiz da thread.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            dados['parent'] = parent.id
+            # Se o cliente não mandou explicitamente quem está sendo respondido
+            # (@menção dentro da thread), assume o autor do comentário raiz.
+            dados['responder_para'] = request.data.get('responder_para') or parent.autor_id
+
+        serializer = CommentSerializer(data=dados, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save(autor=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -449,3 +467,49 @@ class ExplorarView(APIView):
             })
 
         return Response(resultado)
+
+# ─── Notificações ────────────────────────────────────────────────────────────
+# Notification nunca é criada via request direto — só via signal + Celery task
+# (social/signals.py + social/tasks.py). Aqui só existe leitura e "marcar como lida".
+
+class NotificacoesView(generics.ListAPIView):
+    """GET /api/social/notificacoes/ — mais recentes primeiro."""
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None  # frontend espera array plano, como os outros ListAPIView do projeto
+
+    def get_queryset(self):
+        return (
+            Notification.objects.filter(destinatario=self.request.user)
+            .select_related('ator', 'content_type')
+            .order_by('-criado_em')[:100]
+        )
+
+
+class NotificacoesNaoLidasView(APIView):
+    """GET /api/social/notificacoes/nao-lidas/ — contador pro badge do sino."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        total = Notification.objects.filter(destinatario=request.user, lida=False).count()
+        return Response({'total': total})
+
+
+class MarcarNotificacaoLidaView(APIView):
+    """PATCH /api/social/notificacoes/<id>/lida/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        notificacao = get_object_or_404(Notification, pk=pk, destinatario=request.user)
+        notificacao.lida = True
+        notificacao.save(update_fields=['lida'])
+        return Response(NotificationSerializer(notificacao, context={'request': request}).data)
+
+
+class MarcarTodasNotificacoesLidasView(APIView):
+    """PATCH /api/social/notificacoes/marcar-todas-lidas/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        Notification.objects.filter(destinatario=request.user, lida=False).update(lida=True)
+        return Response({'ok': True})

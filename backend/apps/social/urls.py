@@ -4,6 +4,8 @@ from .views import (
     ComentariosItinerarioView, HashtagFeedView,
     ConversasView, MensagensConversaView, UsuariosParaMensagemView,
     BuscaView, ExplorarView, CurtidaToggleView,
+    NotificacoesView, NotificacoesNaoLidasView,
+    MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView,
 )
 
 urlpatterns = [
@@ -30,4 +32,10 @@ urlpatterns = [
     # Busca e explorar
     path('busca/', BuscaView.as_view(), name='busca'),
     path('explorar/', ExplorarView.as_view(), name='explorar'),
+
+    # Notificações
+    path('notificacoes/', NotificacoesView.as_view(), name='notificacoes'),
+    path('notificacoes/nao-lidas/', NotificacoesNaoLidasView.as_view(), name='notificacoes-nao-lidas'),
+    path('notificacoes/marcar-todas-lidas/', MarcarTodasNotificacoesLidasView.as_view(), name='notificacoes-marcar-todas'),
+    path('notificacoes/<int:pk>/lida/', MarcarNotificacaoLidaView.as_view(), name='notificacao-marcar-lida'),
 ]

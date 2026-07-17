@@ -11,6 +11,7 @@ import PaginaMensagens from './PaginaMensagens';
 import PaginaExplorar from './PaginaExplorar';
 import PaginaItinerario from './PaginaItinerario';
 import PaginaHashtag from './PaginaHashtag';
+import PaginaNotificacoes from './PaginaNotificacoes';
 
 function App() {
   return (
@@ -86,6 +87,14 @@ function App() {
           element={
             <RotaProtegida>
               <PaginaMensagens />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/notificacoes"
+          element={
+            <RotaProtegida>
+              <PaginaNotificacoes />
             </RotaProtegida>
           }
         />

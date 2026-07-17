@@ -141,4 +141,26 @@ export async function getBadgesItinerarioDisponiveis() {
   return data;
 }
 
+// ─── Notificações ───────────────────────────────────────────────────────
+
+export async function getNotificacoes() {
+  const { data } = await api.get('/social/notificacoes/');
+  return data;
+}
+
+export async function getNotificacoesNaoLidas() {
+  const { data } = await api.get('/social/notificacoes/nao-lidas/');
+  return data; // { total }
+}
+
+export async function marcarNotificacaoLida(id) {
+  const { data } = await api.patch(`/social/notificacoes/${id}/lida/`);
+  return data;
+}
+
+export async function marcarTodasNotificacoesLidas() {
+  const { data } = await api.patch('/social/notificacoes/marcar-todas-lidas/');
+  return data;
+}
+
 export default api;

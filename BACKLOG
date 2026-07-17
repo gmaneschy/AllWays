@@ -9,7 +9,6 @@ places:
 
 itineraries:
     testar vídeo no itinerário
-    sistema de compartilhamento de posts (entre usuários ou copiar link)
 
 social:
     testar vídeo na mensagem
@@ -24,8 +23,8 @@ Sistema de likes em posts                             - OK
 Sistema de likes em comentários de posts              - OK
 Sistema de likes em comentários de lugares            - OK
 Sistema de likes em mensagens                         - OK
-Sistema de compartilhamento de posts                  - Pendente (entre usuários ou copiar link)
-Aba de notificações no frontend                       - Pendente
+Sistema de compartilhamento de posts                  - OK
+Aba de notificações no frontend                       - OK
 Vídeo no PontoItinerario                              - Pendente (passar BD para PostgreSQL)
 Vídeo nas mensagens                                   - Pendente (passar BD para PostgreSQL)
 
@@ -37,18 +36,16 @@ Configurações:
         Privacidade de conta (perfil público ou privado)
 
     Notificações:
-        Usuário seguiu o outro
-        Usuário comentou em post
-        Usuário respondeu seu comentário
-        Usuário mandou mensagem
-        Usuário fez novo post
+        "Usuário X seguiu você"
+        "Usuário X comentou no seu post"
+        "Usuário X respondeu seu comentário"
+        "Usuário X enviou uma mensagem"
+        "Usuário X fez novo post"
 
     Exibição:
         Exibir badges de outros usuários
 
 
-7. Aba de notificações (backend + frontend)
-Faz sentido vir depois de likes e compartilhamento, porque notificações tipicamente são geradas a partir desses eventos (curtida, comentário, compartilhamento, novo seguidor). Construir a aba antes teria pouco o que notificar.
 8. Migração SQLite → PostgreSQL
 Infra pesada, e você já anotou que é pré-requisito para testar vídeo. Eu deixaria isso como uma tarefa isolada e dedicada — não algo pra fazer "de passagem". Bom momento: depois que a maior parte das features novas (likes, share, notificações) já estiver estável em SQLite, pra minimizar re-teste de migrations complexas.
 9. Vídeo no PontoItinerario + vídeo nas mensagens
@@ -68,5 +65,3 @@ celery -A config worker --loglevel=info --pool=solo
 
 # Terminal 3 — Celery beat (agendador)
 celery -A config beat --loglevel=info
-
-Sigamos para o compartilhamento de posts. Na janela de mensagens, o preview do itinerário deve levar ao site/itinerario/itinerariocompartilhado. O problema é que essa rota só existe ligada ao PaginaExplorar. Ela precisa ligada ao Feed, ao Perfil e ao preview nas mensagens. De que arquivos precisa?

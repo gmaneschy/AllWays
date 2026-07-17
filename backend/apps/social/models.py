@@ -102,7 +102,16 @@ class Message(models.Model):
 
 
 class Comment(models.Model):
-    """Comentário social em um itinerário — puramente social, não agrega dados."""
+    """Comentário social em um itinerário — puramente social, não agrega dados.
+
+    Threading estilo Instagram, 1 nível só:
+    - `parent` sempre aponta pro comentário RAIZ da thread (nunca pra uma resposta).
+      É o que agrupa visualmente "comentário + suas respostas".
+    - `responder_para` é o usuário especificamente mencionado por essa resposta
+      (pode ser o autor do comentário raiz, OU alguém que respondeu depois dele
+      dentro da mesma thread — daí o "@fulano @beltrano" na prática do Instagram).
+      É esse campo, não o autor do `parent`, que decide quem recebe a notificação
+      de "respondeu seu comentário"."""
     autor = models.ForeignKey(
         'users.User', on_delete=models.SET_NULL, null=True, blank=False
     )
@@ -112,6 +121,22 @@ class Comment(models.Model):
     )
     texto = models.TextField()
     criado_em = models.DateTimeField(auto_now_add=True)
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='respostas',
+    )
+    responder_para = models.ForeignKey(
+        'users.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='comentarios_mencionado_em',
+    )
+
+    def clean(self):
+        if self.parent_id and self.parent.parent_id:
+            raise DjangoValidationError(
+                "Respostas não podem ter mais de um nível — aponte `parent` "
+                "sempre para o comentário raiz da thread, e use `responder_para` "
+                "para indicar quem está sendo respondido dentro dela."
+            )
 
 
 class Hashtag(models.Model):
@@ -152,3 +177,50 @@ class Curtida(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} curtiu {self.alvo}"
+
+
+class Notification(models.Model):
+    """Notificação genérica — mesmo framework de ContentType da Curtida.
+    `alvo` é pra onde o clique na notificação deve levar:
+    - follow            → perfil de `ator`
+    - comentario        → o Itinerario comentado
+    - resposta_comentario → o Comment respondido (ou o Itinerario, se preferir linkar pra thread)
+    - mensagem          → a Message (frontend resolve pra conversa com `ator`)
+    - curtida           → o que foi curtido (Itinerario, Comment, PontoItinerario ou Message)
+
+    Assim como na Curtida, a view que cria Notification SEMPRE valida contra uma
+    whitelist de (app_label, model) — nunca aceita ContentType livre do cliente
+    (mas aqui isso nem é exposto: Notification só é criada via signal/task,
+    nunca por request direto do usuário)."""
+
+    TIPO_CHOICES = [
+        ('follow', 'Novo seguidor'),
+        ('comentario', 'Comentário no seu post'),
+        ('resposta_comentario', 'Resposta ao seu comentário'),
+        ('mensagem', 'Nova mensagem'),
+        ('curtida', 'Curtida'),
+    ]
+
+    destinatario = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='notificacoes'
+    )
+    ator = models.ForeignKey(
+        'users.User', on_delete=models.SET_NULL, null=True,
+        related_name='notificacoes_geradas'
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    alvo = GenericForeignKey('content_type', 'object_id')
+    lida = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['destinatario', 'lida', '-criado_em']),
+        ]
+
+    def __str__(self):
+        return f"[{self.tipo}] para {self.destinatario.username}"

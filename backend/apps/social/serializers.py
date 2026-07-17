@@ -4,7 +4,7 @@ from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario
 from apps.gamification.serializers import serializar_badge_destaque
-from .models import Follow, Hashtag, Comment, Message
+from .models import Follow, Hashtag, Comment, Message, Notification
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -61,12 +61,15 @@ class CommentSerializer(serializers.ModelSerializer):
     autor_badge_destaque = serializers.SerializerMethodField()
     total_curtidas = serializers.SerializerMethodField()
     curtido = serializers.SerializerMethodField()
+    responder_para_username = serializers.CharField(source='responder_para.username', read_only=True, default=None)
+    respostas = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = [
             'id', 'autor', 'autor_nome', 'autor_foto', 'autor_badge_destaque',
             'itinerario', 'texto', 'criado_em', 'total_curtidas', 'curtido',
+            'parent', 'responder_para', 'responder_para_username', 'respostas',
         ]
         read_only_fields = ['autor', 'criado_em']
 
@@ -78,6 +81,22 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_autor_badge_destaque(self, obj):
         return serializar_badge_destaque(obj.autor, context=self.context)
+
+    def get_respostas(self, obj):
+        # Só o comentário raiz carrega respostas aninhadas — uma resposta nunca
+        # tem `respostas` própria (thread de 1 nível só), então isso já vem vazio
+        # naturalmente pra elas, sem precisar de um serializer separado.
+        if obj.parent_id:
+            return []
+        return CommentSerializer(obj.respostas.all(), many=True, context=self.context).data
+
+    def validate(self, data):
+        parent = data.get('parent')
+        if parent and parent.parent_id:
+            raise serializers.ValidationError(
+                "Respostas devem apontar `parent` para o comentário raiz da thread, não para outra resposta."
+            )
+        return data
 
     def _resumo_curtida(self, obj):
         if not hasattr(obj, '_resumo_curtida_cache'):
@@ -170,3 +189,62 @@ class MessageSerializer(serializers.ModelSerializer):
         if tipo == 'itinerario' and not data.get('itinerario'):
             raise serializers.ValidationError("Mensagem de itinerário requer um itinerario_id válido e publicado.")
         return data
+
+class NotificationSerializer(serializers.ModelSerializer):
+    ator_username = serializers.CharField(source='ator.username', read_only=True)
+    ator_foto = serializers.SerializerMethodField()
+    mensagem = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = ['id', 'tipo', 'ator', 'ator_username', 'ator_foto', 'mensagem', 'link', 'lida', 'criado_em']
+        read_only_fields = fields
+
+    def get_ator_foto(self, obj):
+        request = self.context.get('request')
+        if obj.ator and obj.ator.foto_perfil:
+            return request.build_absolute_uri(obj.ator.foto_perfil.url) if request else obj.ator.foto_perfil.url
+        return None
+
+    def get_mensagem(self, obj):
+        nome = obj.ator.username if obj.ator else 'Alguém'
+        return {
+            'follow': f'{nome} começou a seguir você',
+            'comentario': f'{nome} comentou no seu itinerário',
+            'resposta_comentario': f'{nome} respondeu seu comentário',
+            'mensagem': f'{nome} enviou uma mensagem',
+            'curtida': f'{nome} curtiu algo seu',
+        }.get(obj.tipo, '')
+
+    def get_link(self, obj):
+        # Import local pra evitar import circular no topo do módulo.
+        from apps.itineraries.models import Itinerario, PontoItinerario
+        alvo = obj.alvo
+
+        if obj.tipo == 'follow':
+            return f'/perfil/{obj.ator.username}' if obj.ator else None
+
+        if obj.tipo == 'comentario':
+            # alvo é o Itinerario (é o que o signal de comentário de 1º nível manda).
+            return f'/itinerario/{alvo.id}' if alvo else None
+
+        if obj.tipo == 'resposta_comentario':
+            # alvo é o Comment respondido.
+            return f'/itinerario/{alvo.itinerario_id}' if alvo else None
+
+        if obj.tipo == 'mensagem':
+            return f'/mensagens?usuario={obj.ator.username}' if obj.ator else None
+
+        if obj.tipo == 'curtida':
+            if isinstance(alvo, Itinerario):
+                return f'/itinerario/{alvo.id}'
+            if isinstance(alvo, Comment):
+                return f'/itinerario/{alvo.itinerario_id}'
+            if isinstance(alvo, PontoItinerario):
+                return f'/place/{alvo.local_id}'
+            if isinstance(alvo, Message):
+                return f'/mensagens?usuario={obj.ator.username}' if obj.ator else None
+            return None
+
+        return None
