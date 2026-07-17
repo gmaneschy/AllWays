@@ -85,6 +85,16 @@ export async function curtir(tipo, id) {
   return data; // { curtido, total_curtidas }
 }
 
+// ─── Compartilhamento de itinerário via mensagem ───────────────────────────
+
+export async function compartilharItinerario(username, itinerarioId) {
+  const { data } = await api.post(`/social/mensagens/${username}/`, {
+    tipo: 'itinerario',
+    itinerario_id: itinerarioId,
+  });
+  return data;
+}
+
 // ─── Gamificação ────────────────────────────────────────────────────────
 
 export async function getMinhasConquistas() {

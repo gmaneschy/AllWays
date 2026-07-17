@@ -70,6 +70,7 @@ class Message(models.Model):
         ('texto', 'Texto'),
         ('imagem', 'Imagem'),
         ('audio', 'Áudio'),
+        ('itinerario', 'Itinerário'),
     ]
     remetente = models.ForeignKey(
         'users.User', on_delete=models.SET_NULL, null=True,
@@ -83,6 +84,10 @@ class Message(models.Model):
     texto = models.TextField(blank=True)
     imagem = models.ImageField(upload_to='mensagens/imagens/', null=True, blank=True)
     audio = models.FileField(upload_to='mensagens/audios/', null=True, blank=True)
+    itinerario = models.ForeignKey(
+        'itineraries.Itinerario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='mensagens_compartilhado'
+    )
     enviada_em = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
@@ -92,6 +97,8 @@ class Message(models.Model):
             raise DjangoValidationError("Mensagem de imagem requer um arquivo de imagem.")
         if self.tipo == 'audio' and not self.audio:
             raise DjangoValidationError("Mensagem de áudio requer um arquivo de áudio.")
+        if self.tipo == 'itinerario' and not self.itinerario_id:
+            raise DjangoValidationError("Mensagem de itinerário requer um itinerário vinculado.")
 
 
 class Comment(models.Model):

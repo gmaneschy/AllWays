@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir } from './api';
 
 function Avatar({ usuario, tamanho = 40 }) {
@@ -80,6 +80,41 @@ function BotaoCurtirMensagem({ m, minha, onCurtir }) {
 }
 
 function BolhaMensagem({ m, minha, onCurtir }) {
+  if (m.tipo === 'itinerario') {
+    const preview = m.itinerario;
+    return (
+      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+        {preview?.disponivel ? (
+          <Link to={`/itinerario/${preview.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{
+              border: '1px solid #eee', borderRadius: 12, padding: 12,
+              background: minha ? '#f0f5ff' : '#fafafa', cursor: 'pointer',
+            }}>
+              <div style={{ fontSize: 11, color: '#1a73e8', fontWeight: 'bold', marginBottom: 4 }}>
+                📍 Itinerário compartilhado
+              </div>
+              <div style={{ fontWeight: 'bold', fontSize: 14 }}>{preview.titulo}</div>
+              {preview.lugar_principal && (
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                  {preview.lugar_principal.nome}
+                  {preview.total_pontos > 1 ? ` + ${preview.total_pontos - 1} lugar${preview.total_pontos > 2 ? 'es' : ''}` : ''}
+                </div>
+              )}
+            </div>
+          </Link>
+        ) : (
+          <div style={{ border: '1px dashed #ddd', borderRadius: 12, padding: 12, color: '#aaa', fontSize: 13 }}>
+            📍 Itinerário indisponível
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
+          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+      </div>
+    );
+  }
+
   if (m.tipo === 'imagem') {
     return (
       <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>

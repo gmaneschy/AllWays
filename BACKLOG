@@ -9,12 +9,10 @@ places:
 
 itineraries:
     testar vídeo no itinerário
-    sistema de likes em posts
     sistema de compartilhamento de posts (entre usuários ou copiar link)
 
 social:
     testar vídeo na mensagem
-    sistema de likes em comentários (comentários de posts e em comentários de lugares)
 
 
 Checklist:
@@ -49,10 +47,6 @@ Configurações:
         Exibir badges de outros usuários
 
 
-5. Sistema de likes (unificado)
-Em vez de tratar como 4 itens separados (posts, comentários de posts, comentários de lugares, mensagens), vale a pena projetar um único model de Curtida genérico (via GenericForeignKey do Django, ou um content_type + object_id) reutilizável nos 4 contextos. Isso evita 4 implementações duplicadas e 4 migrations separadas. Eu recomendo modelar isso como uma única tarefa técnica, não 4.
-6. Sistema de compartilhamento de posts
-Pode ser construído logo em seguida, reaproveitando o mesmo padrão de "ação social" (like/share como eventos), possivelmente até alimentando o mesmo pipeline que os likes para o feed algorithm (você já tem FeedEvent — compartilhamento provavelmente deveria gerar um FeedEvent também).
 7. Aba de notificações (backend + frontend)
 Faz sentido vir depois de likes e compartilhamento, porque notificações tipicamente são geradas a partir desses eventos (curtida, comentário, compartilhamento, novo seguidor). Construir a aba antes teria pouco o que notificar.
 8. Migração SQLite → PostgreSQL
@@ -74,3 +68,5 @@ celery -A config worker --loglevel=info --pool=solo
 
 # Terminal 3 — Celery beat (agendador)
 celery -A config beat --loglevel=info
+
+Sigamos para o compartilhamento de posts. Na janela de mensagens, o preview do itinerário deve levar ao site/itinerario/itinerariocompartilhado. O problema é que essa rota só existe ligada ao PaginaExplorar. Ela precisa ligada ao Feed, ao Perfil e ao preview nas mensagens. De que arquivos precisa?

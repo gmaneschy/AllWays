@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes, editarPerfil, getMe } from './api';
 import BadgeDestaque from './BadgeDestaque';
+import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 
 function ModalListaUsuarios({ titulo, usuarios, onFechar }) {
   return (
@@ -247,6 +248,7 @@ function PaginaPerfil() {
   const [aba, setAba] = useState('publicados');
   const [enviandoFollow, setEnviandoFollow] = useState(false);
   const [modalAberto, setModalAberto] = useState(null); // 'seguidores' | 'seguindo' | null
+  const [compartilhando, setCompartilhando] = useState(null); // itinerário sendo compartilhado
   const [listaModal, setListaModal] = useState([]);
 
   // Badge de destaque
@@ -539,7 +541,18 @@ function PaginaPerfil() {
       {itinerariosAba.map((it) => (
         <div key={it.id} style={{ border: '1px solid #ddd', borderRadius: 8,
             padding: 16, marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>{it.titulo}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Link to={`/itinerario/${it.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <h3 style={{ margin: 0 }}>{it.titulo}</h3>
+            </Link>
+            <button
+              onClick={() => setCompartilhando(it)}
+              title="Compartilhar"
+              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, padding: 0 }}
+            >
+              📤
+            </button>
+          </div>
           <p style={{ fontSize: 13, color: '#888', margin: '4px 0 0' }}>
             {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
             {it.data_inicio && ` · ${it.data_inicio}`}
@@ -572,6 +585,14 @@ function PaginaPerfil() {
           erro={erroEdicao}
           onSalvar={handleSalvarPerfil}
           onFechar={() => setModalEditarAberto(false)}
+        />
+      )}
+
+      {compartilhando && (
+        <ModalCompartilharItinerario
+          itinerarioId={compartilhando.id}
+          itinerarioTitulo={compartilhando.titulo}
+          onFechar={() => setCompartilhando(null)}
         />
       )}
     </div>

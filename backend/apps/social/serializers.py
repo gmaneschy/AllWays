@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from apps.users.models import User
 from apps.places.models import Place
+from apps.itineraries.models import Itinerario
 from apps.gamification.serializers import serializar_badge_destaque
 from .models import Follow, Hashtag, Comment, Message
 
@@ -100,12 +101,22 @@ class MessageSerializer(serializers.ModelSerializer):
     total_curtidas = serializers.SerializerMethodField()
     curtido = serializers.SerializerMethodField()
 
+    # Escrita: cliente manda só o id; restrito a itinerários publicados —
+    # não dá pra compartilhar rascunho de ninguém (nem o próprio).
+    itinerario_id = serializers.PrimaryKeyRelatedField(
+        source='itinerario', queryset=Itinerario.objects.filter(status='publicado'),
+        write_only=True, required=False,
+    )
+    # Leitura: preview compacto pro balão de chat. 'disponivel: False' cobre tanto
+    # o caso do SET_NULL (itinerário apagado) quanto o autor ter voltado pra rascunho.
+    itinerario = serializers.SerializerMethodField()
+
     class Meta:
         model = Message
         fields = [
             'id', 'remetente', 'remetente_nome', 'remetente_foto',
             'destinatario', 'destinatario_nome',
-            'tipo', 'texto', 'imagem', 'audio', 'enviada_em',
+            'tipo', 'texto', 'imagem', 'audio', 'itinerario_id', 'itinerario', 'enviada_em',
             'total_curtidas', 'curtido',
         ]
         read_only_fields = ['remetente', 'enviada_em']
@@ -115,6 +126,24 @@ class MessageSerializer(serializers.ModelSerializer):
         if obj.remetente and obj.remetente.foto_perfil:
             return request.build_absolute_uri(obj.remetente.foto_perfil.url) if request else obj.remetente.foto_perfil.url
         return None
+
+    def get_itinerario(self, obj):
+        if obj.tipo != 'itinerario':
+            return None
+        it = obj.itinerario
+        if it is None or it.status != 'publicado':
+            return {'disponivel': False}
+
+        primeiro_ponto = it.pontos.first()
+        return {
+            'disponivel': True,
+            'id': it.id,
+            'titulo': it.titulo,
+            'tipo': it.tipo,
+            'lugar_principal': {'nome': primeiro_ponto.local.nome} if primeiro_ponto else None,
+            'total_pontos': it.pontos.count(),
+            'autor_username': it.autor.username if it.autor else None,
+        }
 
     def _resumo_curtida(self, obj):
         if not hasattr(obj, '_resumo_curtida_cache'):
@@ -138,4 +167,6 @@ class MessageSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Mensagem de imagem requer um arquivo.")
         if tipo == 'audio' and not data.get('audio'):
             raise serializers.ValidationError("Mensagem de áudio requer um arquivo.")
+        if tipo == 'itinerario' and not data.get('itinerario'):
+            raise serializers.ValidationError("Mensagem de itinerário requer um itinerario_id válido e publicado.")
         return data

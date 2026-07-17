@@ -233,6 +233,8 @@ class ConversasView(APIView):
                 preview = '📷 Imagem'
             elif ultima.tipo == 'audio':
                 preview = '🎤 Áudio'
+            elif ultima.tipo == 'itinerario':
+                preview = f'📍 {ultima.itinerario.titulo}' if ultima.itinerario_id else '📍 Itinerário indisponível'
             else:
                 preview = ultima.texto
 
@@ -287,6 +289,10 @@ class MensagensConversaView(APIView):
             data['imagem'] = request.FILES['imagem']
         if tipo == 'audio' and 'audio' in request.FILES:
             data['audio'] = request.FILES['audio']
+        if tipo == 'itinerario':
+            # A validação de "só publicado" acontece no queryset do
+            # PrimaryKeyRelatedField (itinerario_id) do serializer.
+            data['itinerario_id'] = request.data.get('itinerario_id')
 
         serializer = MessageSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)

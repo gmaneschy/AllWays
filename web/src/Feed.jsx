@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api, { curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
+import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 
 const TIPO_LABEL = {
   day_trip: 'Day Trip',
@@ -25,6 +26,7 @@ function Feed() {
   const [itinerarios, setItinerarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  const [compartilhando, setCompartilhando] = useState(null); // itinerário sendo compartilhado
 
   useEffect(() => {
     async function buscar() {
@@ -83,8 +85,19 @@ function Feed() {
           style={{ border: '1px solid #ddd', borderRadius: 8, padding: 20, marginBottom: 20 }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <h2 style={{ margin: 0 }}>{it.titulo}</h2>
-            <span style={{ fontSize: 12, color: '#888' }}>{TIPO_LABEL[it.tipo]}</span>
+            <Link to={`/itinerario/${it.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <h2 style={{ margin: 0 }}>{it.titulo}</h2>
+            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, color: '#888' }}>{TIPO_LABEL[it.tipo]}</span>
+              <button
+                onClick={() => setCompartilhando(it)}
+                title="Compartilhar"
+                style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, padding: 0 }}
+              >
+                📤
+              </button>
+            </div>
           </div>
 
           <p style={{ color: '#666', margin: '4px 0 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -144,6 +157,14 @@ function Feed() {
           </ol>
         </div>
       ))}
+
+      {compartilhando && (
+        <ModalCompartilharItinerario
+          itinerarioId={compartilhando.id}
+          itinerarioTitulo={compartilhando.titulo}
+          onFechar={() => setCompartilhando(null)}
+        />
+      )}
     </div>
   );
 }

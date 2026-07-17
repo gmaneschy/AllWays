@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
+import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 
 const LABEL_MOVIMENTACAO = { vazio: 'Vazio', populado: 'Populado', cheio: 'Cheio' };
 const LABEL_DESLOCAMENTO = {
@@ -32,6 +33,7 @@ function PaginaItinerario() {
   const [comentarios, setComentarios] = useState([]);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [compartilhando, setCompartilhando] = useState(false);
 
   useEffect(() => {
     async function buscar() {
@@ -188,6 +190,21 @@ function PaginaItinerario() {
                 <span style={{ fontSize: 16 }}>{it.curtido ? '❤️' : '🤍'}</span>
                 {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
               </button>
+              {it.status === 'publicado' && (
+                <button
+                  onClick={() => setCompartilhando(true)}
+                  title="Compartilhar"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                    border: '1px solid #ddd', background: '#fff',
+                    color: '#666', fontSize: 13,
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>📤</span>
+                  Compartilhar
+                </button>
+              )}
               {!ehAutor && (
                 <>
                   <button
@@ -380,6 +397,14 @@ function PaginaItinerario() {
             </div>
           ))}
         </div>
+      )}
+
+      {compartilhando && (
+        <ModalCompartilharItinerario
+          itinerarioId={it.id}
+          itinerarioTitulo={it.titulo}
+          onFechar={() => setCompartilhando(false)}
+        />
       )}
     </div>
   );
