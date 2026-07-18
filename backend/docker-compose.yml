@@ -1,0 +1,82 @@
+x-backend-env: &backend-env
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.development
+    # Dentro da rede do compose os serviços se acham pelo nome, não por
+    # localhost — sobrescreve o que estiver no .env (que é pra quando você
+    # roda algo fora do Docker).
+    POSTGRES_HOST: postgres
+    REDIS_URL: redis://redis:6379/0
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-allways}
+      POSTGRES_USER: ${POSTGRES_USER:-allways}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-allways}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-allways} -d ${POSTGRES_DB:-allways}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery_worker:
+    build: .
+    # --pool=solo era necessário no Windows (limitação do prefork lá).
+    # Rodando em container Linux isso deixa de ser obrigatório — pode trocar
+    # por "celery -A config worker --loglevel=info" puro se quiser
+    # concorrência real. Deixei igual ao que você já roda pra não mudar
+    # comportamento no meio da migração.
+    command: celery -A config worker --loglevel=info --pool=solo
+    volumes:
+      - .:/app
+    <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery_beat:
+    build: .
+    command: celery -A config beat --loglevel=info --schedule=/celerybeat-data/celerybeat-schedule
+    volumes:
+      - .:/app
+      - celerybeat_data:/celerybeat-data
+    <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  celerybeat_data:

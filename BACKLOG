@@ -46,22 +46,39 @@ Configurações:
         Exibir badges de outros usuários
 
 
-8. Migração SQLite → PostgreSQL
-Infra pesada, e você já anotou que é pré-requisito para testar vídeo. Eu deixaria isso como uma tarefa isolada e dedicada — não algo pra fazer "de passagem". Bom momento: depois que a maior parte das features novas (likes, share, notificações) já estiver estável em SQLite, pra minimizar re-teste de migrations complexas.
 9. Vídeo no PontoItinerario + vídeo nas mensagens
 Só depois da migração (item 8), já que dependem dela. Testar os dois juntos faz sentido, pois provavelmente compartilham a mesma lógica de upload/storage (django-storages + Pillow, mas agora pra vídeo).
 
 
+Tela admin
+http://localhost:8000/admin/
+http://localhost:8000/admin/login/?next=/admin/
 
-
-# Terminal 0 - React
+# Terminal 1 — React
+cd web
 npm run dev
 
-# Terminal 1 — Django
-python manage.py runserver
+# Terminal 2 — tudo do backend de uma vez só
+cd backend
+docker compose up
 
-# Terminal 2 — Celery worker
-celery -A config worker --loglevel=info --pool=solo
+Comandos django agora vem precedidos de:
+docker compose exec
+Ex: docker compose exec backend python manage.py makemigrations
 
-# Terminal 3 — Celery beat (agendador)
-celery -A config beat --loglevel=info
+
+Inicialização separada --------
+# Terminal 1 — React
+npm run dev
+
+# Terminal 2 — sobe tudo em background
+docker compose up -d
+
+# Terminal 3 — acompanha só o backend
+docker compose logs -f backend
+
+# Terminal 4 — acompanha só o celery
+docker compose logs -f celery_worker celery_beat
+
+No caso de atualização de bibliotecas
+docker compose build

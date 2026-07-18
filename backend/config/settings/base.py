@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
 
     # Third-party
     'corsheaders',
@@ -90,10 +91,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('POSTGRES_DB', 'allways'),
+        'USER': os.environ.get('POSTGRES_USER', 'allways'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'allways'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
+
+# GDAL/GEOS/PROJ: no Linux/Mac o Django encontra as libs sozinho via ctypes
+# (find_library). No Windows isso costuma falhar, então dá pra apontar direto
+# pros arquivos .dll via .env — só tem efeito se as variáveis existirem.
+if os.environ.get('GDAL_LIBRARY_PATH'):
+    GDAL_LIBRARY_PATH = os.environ['GDAL_LIBRARY_PATH']
+if os.environ.get('GEOS_LIBRARY_PATH'):
+    GEOS_LIBRARY_PATH = os.environ['GEOS_LIBRARY_PATH']
 
 AUTH_USER_MODEL = 'users.User'
 MEDIA_ROOT = str(BASE_DIR / 'media')
