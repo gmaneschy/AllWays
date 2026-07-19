@@ -189,3 +189,23 @@ FEED_CACHE_TTL_MINUTES = 30         # Feed recalculado se mais velho que isso
 FEED_MAX_ITEMS = 50                 # Itens retornados por página de feed
 SIMILARITY_MIN_SAVES = 2            # Saves em comum mínimo para considerar usuários similares
 INTEREST_DECAY_DAYS = 30            # Eventos mais velhos que isso têm peso reduzido
+
+# ─── Vídeo (PontoItinerario e Mensagens) ──────────────────────────────────────
+# Validado de forma síncrona (ffprobe) no momento do upload, antes de criar o
+# registro no banco. A compressão em si roda depois, via Celery (ver
+# apps.itineraries.tasks.comprimir_video_ponto_task e
+# apps.social.tasks.comprimir_video_mensagem_task) — não bloqueia o request.
+VIDEO_DURACAO_MAXIMA_SEGUNDOS = 120    # 2 min: suficiente pra um clipe de ponto ou de mensagem
+VIDEO_TAMANHO_MAXIMO_MB = 500          # teto do arquivo bruto enviado, antes da compressão
+VIDEO_MAIOR_LADO_MAXIMO = 3840         # aceita até 4K (3840x2160, ou 2160x3840 em vídeo vertical)
+
+# Parâmetros de compressão (libx264/AAC via ffmpeg):
+# - Só faz downscale se a altura original passar de VIDEO_ALTURA_ALVO_COMPRESSAO.
+#   4K/1440p viram 1080p (onde mora o grosso da economia de espaço); 1080p ou
+#   menos mantém a resolução original e só recodifica com CRF mais eficiente.
+# - CRF 23 é o padrão do libx264 pra qualidade "visualmente sem perda" — número
+#   menor = mais qualidade e mais espaço.
+VIDEO_ALTURA_ALVO_COMPRESSAO = 1080
+VIDEO_CRF = 23
+VIDEO_PRESET = 'medium'                # trade-off velocidade de encode x taxa de compressão
+VIDEO_BITRATE_AUDIO = '128k'

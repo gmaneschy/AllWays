@@ -1,3 +1,7 @@
+import os
+import tempfile
+
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Case, When, Value, IntegerField
 from django.contrib.contenttypes.models import ContentType
@@ -5,6 +9,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from core.video import probe_video, validar_video
 from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario, PontoItinerario
@@ -251,6 +257,8 @@ class ConversasView(APIView):
                 preview = '📷 Imagem'
             elif ultima.tipo == 'audio':
                 preview = '🎤 Áudio'
+            elif ultima.tipo == 'video':
+                preview = '🎬 Vídeo'
             elif ultima.tipo == 'itinerario':
                 preview = f'📍 {ultima.itinerario.titulo}' if ultima.itinerario_id else '📍 Itinerário indisponível'
             else:
@@ -312,9 +320,51 @@ class MensagensConversaView(APIView):
             # PrimaryKeyRelatedField (itinerario_id) do serializer.
             data['itinerario_id'] = request.data.get('itinerario_id')
 
+        duracao_video = None
+        if tipo == 'video' and 'video' in request.FILES:
+            arquivo = request.FILES['video']
+
+            tamanho_maximo_bytes = settings.VIDEO_TAMANHO_MAXIMO_MB * 1024 * 1024
+            if arquivo.size > tamanho_maximo_bytes:
+                return Response(
+                    {'erro': f'O vídeo excede o tamanho máximo de {settings.VIDEO_TAMANHO_MAXIMO_MB}MB.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            sufixo = os.path.splitext(arquivo.name)[1] or '.mp4'
+            with tempfile.NamedTemporaryFile(suffix=sufixo, delete=False) as tmp:
+                for chunk in arquivo.chunks():
+                    tmp.write(chunk)
+                caminho_temp = tmp.name
+
+            try:
+                duracao_video, largura, altura = probe_video(caminho_temp)
+                validar_video(duracao_video, largura, altura)
+            except ValidationError as e:
+                return Response({'erro': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                os.remove(caminho_temp)
+
+            arquivo.seek(0)  # rebobina — já foi consumido pelo .chunks() acima
+            data['video'] = arquivo
+
         serializer = MessageSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(remetente=request.user, destinatario=outro)
+
+        # duracao_segundos e video_status são read_only no serializer (preenchidos
+        # pelo servidor, não pelo cliente), então entram como kwargs do save()
+        # em vez de em `data` — se fossem em `data`, o DRF ignoraria silenciosamente.
+        extras = {}
+        if tipo == 'video':
+            extras['duracao_segundos'] = round(duracao_video)
+            extras['video_status'] = 'processando'
+
+        mensagem = serializer.save(remetente=request.user, destinatario=outro, **extras)
+
+        if tipo == 'video':
+            from .tasks import comprimir_video_mensagem_task
+            comprimir_video_mensagem_task.delay(mensagem.id)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

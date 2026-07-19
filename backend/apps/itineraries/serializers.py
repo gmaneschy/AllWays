@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from apps.gamification.models import BadgeItinerario, ItinerarioBadge
 from apps.gamification.serializers import BadgeItinerarioSerializer, BadgeUsuarioSerializer
-from .models import Itinerario, PontoItinerario, FotoPontoItinerario
+from .models import Itinerario, PontoItinerario, FotoPontoItinerario, VideoPontoItinerario
 from . import services as itinerario_services
 
 
@@ -127,11 +127,43 @@ class FotoPontoDetalheSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.imagem.url) if request else obj.imagem.url
 
 
+class VideoPontoItinerarioSerializer(serializers.ModelSerializer):
+    """Usado na criação (upload). Campos derivados da compressão (thumbnail,
+    duração, status) são preenchidos pela task Celery, não pelo cliente."""
+
+    class Meta:
+        model = VideoPontoItinerario
+        fields = ['id', 'ponto', 'video', 'thumbnail', 'duracao_segundos', 'status', 'enviado_em']
+        read_only_fields = ['thumbnail', 'duracao_segundos', 'status', 'enviado_em']
+
+
+class VideoPontoDetalheSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VideoPontoItinerario
+        fields = ['id', 'url', 'thumbnail_url', 'duracao_segundos', 'status', 'enviado_em']
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        if not obj.video:
+            return None
+        return request.build_absolute_uri(obj.video.url) if request else obj.video.url
+
+    def get_thumbnail_url(self, obj):
+        request = self.context.get('request')
+        if not obj.thumbnail:
+            return None
+        return request.build_absolute_uri(obj.thumbnail.url) if request else obj.thumbnail.url
+
+
 class PontoDetalheSerializer(serializers.ModelSerializer):
     local_nome = serializers.CharField(source='local.nome', read_only=True)
     local_endereco = serializers.CharField(source='local.endereco', read_only=True)
     local_id = serializers.IntegerField(source='local.id', read_only=True)
     fotos = FotoPontoDetalheSerializer(many=True, read_only=True)
+    videos = VideoPontoDetalheSerializer(many=True, read_only=True)
 
     class Meta:
         model = PontoItinerario
@@ -139,7 +171,7 @@ class PontoDetalheSerializer(serializers.ModelSerializer):
             'id', 'ordem', 'local_id', 'local_nome', 'local_endereco',
             'movimentacao', 'seguranca', 'entrada_gratuita', 'preco_medio',
             'distancia_ate_proximo', 'meio_deslocamento', 'horario_estimado',
-            'comentario', 'fotos',
+            'comentario', 'fotos', 'videos',
         ]
 
 

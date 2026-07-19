@@ -119,6 +119,7 @@ class MessageSerializer(serializers.ModelSerializer):
     destinatario_nome = serializers.CharField(source='destinatario.username', read_only=True)
     total_curtidas = serializers.SerializerMethodField()
     curtido = serializers.SerializerMethodField()
+    video_thumbnail_url = serializers.SerializerMethodField()
 
     # Escrita: cliente manda só o id; restrito a itinerários publicados —
     # não dá pra compartilhar rascunho de ninguém (nem o próprio).
@@ -135,10 +136,20 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'remetente', 'remetente_nome', 'remetente_foto',
             'destinatario', 'destinatario_nome',
-            'tipo', 'texto', 'imagem', 'audio', 'itinerario_id', 'itinerario', 'enviada_em',
+            'tipo', 'texto', 'imagem', 'audio',
+            'video', 'video_thumbnail_url', 'video_status', 'duracao_segundos',
+            'itinerario_id', 'itinerario', 'enviada_em',
             'total_curtidas', 'curtido',
         ]
-        read_only_fields = ['remetente', 'enviada_em']
+        # video_status e duracao_segundos são preenchidos pelo servidor
+        # (upload seta duração; a task Celery seta status='pronto'/'erro')
+        read_only_fields = ['remetente', 'enviada_em', 'video_status', 'duracao_segundos']
+
+    def get_video_thumbnail_url(self, obj):
+        request = self.context.get('request')
+        if not obj.video_thumbnail:
+            return None
+        return request.build_absolute_uri(obj.video_thumbnail.url) if request else obj.video_thumbnail.url
 
     def get_remetente_foto(self, obj):
         request = self.context.get('request')
@@ -186,6 +197,8 @@ class MessageSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Mensagem de imagem requer um arquivo.")
         if tipo == 'audio' and not data.get('audio'):
             raise serializers.ValidationError("Mensagem de áudio requer um arquivo.")
+        if tipo == 'video' and not data.get('video'):
+            raise serializers.ValidationError("Mensagem de vídeo requer um arquivo.")
         if tipo == 'itinerario' and not data.get('itinerario'):
             raise serializers.ValidationError("Mensagem de itinerário requer um itinerario_id válido e publicado.")
         return data

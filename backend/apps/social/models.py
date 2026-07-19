@@ -70,7 +70,13 @@ class Message(models.Model):
         ('texto', 'Texto'),
         ('imagem', 'Imagem'),
         ('audio', 'Áudio'),
+        ('video', 'Vídeo'),
         ('itinerario', 'Itinerário'),
+    ]
+    VIDEO_STATUS_CHOICES = [
+        ('processando', 'Processando'),
+        ('pronto', 'Pronto'),
+        ('erro', 'Erro'),
     ]
     remetente = models.ForeignKey(
         'users.User', on_delete=models.SET_NULL, null=True,
@@ -84,6 +90,14 @@ class Message(models.Model):
     texto = models.TextField(blank=True)
     imagem = models.ImageField(upload_to='mensagens/imagens/', null=True, blank=True)
     audio = models.FileField(upload_to='mensagens/audios/', null=True, blank=True)
+    # Vídeo segue o mesmo padrão assíncrono do VideoPontoItinerario: o arquivo
+    # enviado entra com video_status='processando' e a task Celery
+    # (apps.social.tasks.comprimir_video_mensagem_task) troca pelo comprimido
+    # + gera a thumbnail.
+    video = models.FileField(upload_to='mensagens/videos/', null=True, blank=True)
+    video_thumbnail = models.ImageField(upload_to='mensagens/videos/thumbs/', null=True, blank=True)
+    video_status = models.CharField(max_length=12, choices=VIDEO_STATUS_CHOICES, blank=True)
+    duracao_segundos = models.PositiveIntegerField(null=True, blank=True)
     itinerario = models.ForeignKey(
         'itineraries.Itinerario', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='mensagens_compartilhado'
@@ -97,6 +111,8 @@ class Message(models.Model):
             raise DjangoValidationError("Mensagem de imagem requer um arquivo de imagem.")
         if self.tipo == 'audio' and not self.audio:
             raise DjangoValidationError("Mensagem de áudio requer um arquivo de áudio.")
+        if self.tipo == 'video' and not self.video:
+            raise DjangoValidationError("Mensagem de vídeo requer um arquivo de vídeo.")
         if self.tipo == 'itinerario' and not self.itinerario_id:
             raise DjangoValidationError("Mensagem de itinerário requer um itinerário vinculado.")
 

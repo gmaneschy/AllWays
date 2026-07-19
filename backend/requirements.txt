@@ -29,6 +29,9 @@ Pillow==12.2.0
 boto3==1.35
 python-dotenv
 
+# Vídeo (compressão + thumbnail via binário ffmpeg, instalado no Dockerfile)
+ffmpeg-python==0.2.0
+
 # Dados colaborativos
 django-taggit==6.1
 django-mptt==0.16

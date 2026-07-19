@@ -80,6 +80,33 @@ class FotoPontoItinerario(models.Model):
     imagem = models.ImageField(upload_to='itinerarios/fotos/')
     enviada_em = models.DateTimeField(auto_now_add=True)
 
+class VideoPontoItinerario(models.Model):
+    """Vídeo de um ponto do itinerário. O arquivo enviado pelo usuário entra
+    direto no campo `video` com status='processando'; a task Celery
+    (apps.itineraries.tasks.comprimir_video_ponto_task) troca esse arquivo
+    pela versão comprimida, gera a thumbnail e marca status='pronto' — ou
+    'erro', se a compressão falhar (arquivo original já foi validado antes
+    via ffprobe, então erro aqui é caso raro, não erro de usuário)."""
+
+    STATUS_CHOICES = [
+        ('processando', 'Processando'),
+        ('pronto', 'Pronto'),
+        ('erro', 'Erro'),
+    ]
+
+    ponto = models.ForeignKey('itineraries.PontoItinerario', on_delete=models.CASCADE, related_name='videos')
+    video = models.FileField(upload_to='itinerarios/videos/')
+    thumbnail = models.ImageField(upload_to='itinerarios/videos/thumbs/', null=True, blank=True)
+    duracao_segundos = models.PositiveIntegerField(null=True, blank=True)
+    tamanho_bytes = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='processando')
+    erro_detalhe = models.CharField(max_length=500, blank=True)
+    enviado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Vídeo de {self.ponto} ({self.status})"
+
+
 class ItinerarioSalvo(models.Model):
     usuario = models.ForeignKey(
         'users.User', on_delete=models.CASCADE,
