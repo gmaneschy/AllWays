@@ -141,6 +141,45 @@ export async function getBadgesItinerarioDisponiveis() {
   return data;
 }
 
+// ─── Vídeo ──────────────────────────────────────────────────────────────
+// Os limites abaixo espelham settings.VIDEO_DURACAO_MAXIMA_SEGUNDOS /
+// VIDEO_TAMANHO_MAXIMO_MB do backend — servem só pra dar feedback rápido
+// antes do upload (evita mandar um arquivo de 4K que vai ser rejeitado
+// de qualquer forma). Quem valida de verdade é sempre o servidor.
+export const VIDEO_DURACAO_MAXIMA_SEGUNDOS = 120;
+export const VIDEO_TAMANHO_MAXIMO_MB = 500;
+
+export function validarVideoLocal(file) {
+  return new Promise((resolve) => {
+    if (file.size > VIDEO_TAMANHO_MAXIMO_MB * 1024 * 1024) {
+      resolve({ valido: false, erro: `O vídeo excede ${VIDEO_TAMANHO_MAXIMO_MB}MB.` });
+      return;
+    }
+    const videoEl = document.createElement('video');
+    videoEl.preload = 'metadata';
+    videoEl.onloadedmetadata = () => {
+      URL.revokeObjectURL(videoEl.src);
+      if (videoEl.duration > VIDEO_DURACAO_MAXIMA_SEGUNDOS) {
+        resolve({ valido: false, erro: `O vídeo excede ${VIDEO_DURACAO_MAXIMA_SEGUNDOS} segundos de duração.` });
+      } else {
+        resolve({ valido: true, duracao: videoEl.duration });
+      }
+    };
+    videoEl.onerror = () => resolve({ valido: false, erro: 'Não foi possível ler o vídeo selecionado.' });
+    videoEl.src = URL.createObjectURL(file);
+  });
+}
+
+export async function enviarVideoPonto(pontoId, file) {
+  const form = new FormData();
+  form.append('ponto', pontoId);
+  form.append('video', file);
+  const { data } = await api.post('/itineraries/videos/', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
 // ─── Notificações ───────────────────────────────────────────────────────
 
 export async function getNotificacoes() {

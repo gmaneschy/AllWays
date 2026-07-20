@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import api, { getUsuarioLogado, curtir } from './api';
+import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
 
 function Avatar({ usuario, tamanho = 40 }) {
   if (usuario?.foto_perfil) {
@@ -115,6 +115,36 @@ function BolhaMensagem({ m, minha, onCurtir }) {
     );
   }
 
+  if (m.tipo === 'video') {
+    return (
+      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+        {m.video_status === 'pronto' && m.video ? (
+          <video
+            src={m.video}
+            poster={m.video_thumbnail_url || undefined}
+            controls
+            style={{ borderRadius: 12, maxWidth: '100%', maxHeight: 280, display: 'block', background: '#000' }}
+          />
+        ) : m.video_status === 'erro' ? (
+          <div style={{ borderRadius: 12, padding: 12, background: '#fdecea', color: '#c62828', fontSize: 13 }}>
+            Falha ao processar vídeo
+          </div>
+        ) : (
+          <div style={{
+            borderRadius: 12, padding: 12, background: '#f0f0f0', color: '#999', fontSize: 13,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            🎬 Processando vídeo...
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
+          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+      </div>
+    );
+  }
+
   if (m.tipo === 'imagem') {
     return (
       <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
@@ -206,9 +236,10 @@ function PaginaMensagens() {
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const [mostraSeletor, setMostraSeletor] = useState(false);
   const [previewImagem, setPreviewImagem] = useState(null); // {file, url}
+  const [previewVideo, setPreviewVideo] = useState(null); // {file, url}
   const fimRef = useRef(null);
   const inputRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const midiaInputRef = useRef(null);
   const pollingRef = useRef(null);
 
   const { gravando, iniciarGravacao, pararGravacao } = useGravacaoAudio(enviarAudio);
@@ -225,18 +256,18 @@ function PaginaMensagens() {
   useEffect(() => {
     if (!conversaAtiva) return;
     setSearchParams({ com: conversaAtiva });
-    buscarMensagensAtivas();
-    pollingRef.current = setInterval(buscarMensagensAtivas, 5000);
+    buscarMensagensAtivas({ inicial: true });
+    pollingRef.current = setInterval(() => buscarMensagensAtivas({ inicial: false }), 5000);
     return () => clearInterval(pollingRef.current);
   }, [conversaAtiva]);
 
-  async function buscarMensagensAtivas() {
+  async function buscarMensagensAtivas({ inicial = false } = {}) {
     if (!conversaAtiva) return;
-    setCarregandoMensagens(true);
+    if (inicial) setCarregandoMensagens(true);
     try {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
       setMensagens(res.data);
-    } catch (_) {} finally { setCarregandoMensagens(false); }
+    } catch (_) {} finally { if (inicial) setCarregandoMensagens(false); }
   }
 
   async function handleCurtirMensagem(mensagemId) {
@@ -326,11 +357,40 @@ function PaginaMensagens() {
     finally { setEnviando(false); }
   }
 
-  function handleFileSelect(e) {
+  async function enviarVideo(file) {
+    if (!file || !conversaAtiva) return;
+    setEnviando(true);
+    const form = new FormData();
+    form.append('tipo', 'video');
+    form.append('video', file);
+    try {
+      const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMensagens((prev) => [...prev, res.data]);
+      atualizarPreviewConversas('🎬 Vídeo', 'video');
+      buscarConversas();
+    } catch (err) {
+      alert(err.response?.data?.erro || 'Não foi possível enviar o vídeo.');
+    }
+    finally { setEnviando(false); setPreviewVideo(null); }
+  }
+
+  async function handleMidiaSelect(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setPreviewImagem({ file, url: URL.createObjectURL(file) });
     e.target.value = '';
+    if (!file) return;
+
+    if (file.type.startsWith('video/')) {
+      const resultado = await validarVideoLocal(file);
+      if (!resultado.valido) {
+        alert(resultado.erro);
+        return;
+      }
+      setPreviewVideo({ file, url: URL.createObjectURL(file) });
+    } else if (file.type.startsWith('image/')) {
+      setPreviewImagem({ file, url: URL.createObjectURL(file) });
+    } else {
+      alert('Formato não suportado. Envie uma imagem ou um vídeo.');
+    }
   }
 
   const interlocutorAtivo = conversas.find((c) => c.usuario.username === conversaAtiva)?.usuario;
@@ -415,13 +475,26 @@ function PaginaMensagens() {
             </div>
           )}
 
+          {/* Preview de vídeo antes de enviar */}
+          {previewVideo && (
+            <div style={{ padding: '8px 20px', borderTop: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <video src={previewVideo.url} muted style={{ height: 60, borderRadius: 8 }} />
+              <button onClick={() => enviarVideo(previewVideo.file)} disabled={enviando}
+                style={{ padding: '6px 16px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold' }}>
+                {enviando ? 'Enviando...' : 'Enviar vídeo'}
+              </button>
+              <button onClick={() => setPreviewVideo(null)}
+                style={{ border: 'none', background: 'none', color: '#aaa', cursor: 'pointer', fontSize: 20 }}>×</button>
+            </div>
+          )}
+
           {/* Barra de input */}
           <div style={{ padding: '12px 20px', borderTop: '1px solid #eee', display: 'flex', gap: 8, alignItems: 'center' }}>
-            {/* Botão foto */}
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
-            <button onClick={() => fileInputRef.current?.click()} title="Enviar imagem"
+            {/* Botão de mídia (foto ou vídeo) */}
+            <input ref={midiaInputRef} type="file" accept="image/*,video/*" onChange={handleMidiaSelect} style={{ display: 'none' }} />
+            <button onClick={() => midiaInputRef.current?.click()} title="Enviar foto ou vídeo"
               style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, padding: '0 4px', color: '#888' }}>
-              📷
+              📎
             </button>
 
             {/* Botão áudio */}

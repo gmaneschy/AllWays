@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from './api';
-import { getBadgesItinerarioDisponiveis } from './api';
+import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
@@ -31,6 +31,7 @@ function pontoVazio() {
     horario_estimado: '',
     comentario: '',
     arquivos: [], // File[] selecionados para upload, ainda não enviados
+    videos: [], // File[] de vídeo selecionados para upload, ainda não enviados
   };
 }
 
@@ -132,6 +133,7 @@ function CriarItinerario() {
           horario_estimado: p.horario_estimado || '',
           comentario: '', // comentário não é copiado conforme especificado
           arquivos: [],
+          videos: [],
         }))
       );
       setMostraCarregar(false);
@@ -153,14 +155,41 @@ function CriarItinerario() {
     setPontos(novosPontos);
   }
 
-  function adicionarArquivos(index, fileList) {
-    const novosArquivos = Array.from(fileList);
-    const novosPontos = [...pontos];
-    novosPontos[index] = {
-      ...novosPontos[index],
-      arquivos: [...novosPontos[index].arquivos, ...novosArquivos],
-    };
-    setPontos(novosPontos);
+  async function adicionarMidia(index, fileList) {
+    const candidatos = Array.from(fileList);
+    const novasFotos = [];
+    const novosVideos = [];
+    const erros = [];
+
+    for (const file of candidatos) {
+      if (file.type.startsWith('video/')) {
+        const resultado = await validarVideoLocal(file);
+        if (resultado.valido) {
+          novosVideos.push(file);
+        } else {
+          erros.push(`${file.name}: ${resultado.erro}`);
+        }
+      } else if (file.type.startsWith('image/')) {
+        novasFotos.push(file);
+      } else {
+        erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
+      }
+    }
+
+    if (novasFotos.length > 0 || novosVideos.length > 0) {
+      setPontos((prev) => {
+        const novosPontos = [...prev];
+        novosPontos[index] = {
+          ...novosPontos[index],
+          arquivos: [...novosPontos[index].arquivos, ...novasFotos],
+          videos: [...novosPontos[index].videos, ...novosVideos],
+        };
+        return novosPontos;
+      });
+    }
+    if (erros.length > 0) {
+      alert(erros.join('\n'));
+    }
   }
 
   function removerArquivo(indexPonto, indexArquivo) {
@@ -168,6 +197,15 @@ function CriarItinerario() {
     novosPontos[indexPonto] = {
       ...novosPontos[indexPonto],
       arquivos: novosPontos[indexPonto].arquivos.filter((_, i) => i !== indexArquivo),
+    };
+    setPontos(novosPontos);
+  }
+
+  function removerVideo(indexPonto, indexVideo) {
+    const novosPontos = [...pontos];
+    novosPontos[indexPonto] = {
+      ...novosPontos[indexPonto],
+      videos: novosPontos[indexPonto].videos.filter((_, i) => i !== indexVideo),
     };
     setPontos(novosPontos);
   }
@@ -190,6 +228,15 @@ function CriarItinerario() {
     });
   }
 
+  async function enviarVideosDoPonto(pontoId, videos) {
+    // Diferente de fotos (aceita várias no mesmo request), o endpoint de
+    // vídeo processa um arquivo por vez — cada upload dispara sua própria
+    // validação (ffprobe) e task de compressão no backend.
+    for (const video of videos) {
+      await enviarVideoPonto(pontoId, video);
+    }
+  }
+
   function alternarBadge(badgeId) {
     setBadgesSelecionadas((prev) =>
       prev.includes(badgeId) ? prev.filter((id) => id !== badgeId) : [...prev, badgeId]
@@ -210,22 +257,34 @@ function CriarItinerario() {
     try {
       const resposta = await api.post('/itineraries/itinerarios/', payload);
 
-      // Upload das fotos: casamos cada ponto local (por ordem) com o
+      // Upload das fotos e vídeos: casamos cada ponto local (por ordem) com o
       // PontoItinerario real retornado pela API (também ordenado por 'ordem').
       const pontosCriados = resposta.data.pontos;
       const uploadsComFalha = [];
+      const videosComFalha = [];
 
       for (let i = 0; i < pontos.length; i++) {
         const arquivos = pontos[i].arquivos;
-        if (arquivos.length === 0) continue;
+        const videos = pontos[i].videos;
+        if (arquivos.length === 0 && videos.length === 0) continue;
 
         const pontoCriado = pontosCriados.find((pc) => pc.ordem === i + 1);
         if (!pontoCriado) continue;
 
-        try {
-          await enviarFotosDoPonto(pontoCriado.id, arquivos);
-        } catch (err) {
-          uploadsComFalha.push(i + 1);
+        if (arquivos.length > 0) {
+          try {
+            await enviarFotosDoPonto(pontoCriado.id, arquivos);
+          } catch (err) {
+            uploadsComFalha.push(i + 1);
+          }
+        }
+
+        if (videos.length > 0) {
+          try {
+            await enviarVideosDoPonto(pontoCriado.id, videos);
+          } catch (err) {
+            videosComFalha.push(i + 1);
+          }
         }
       }
 
@@ -236,8 +295,15 @@ function CriarItinerario() {
       setBadgesSelecionadas([]);
       setPontos([pontoVazio()]);
 
+      const avisos = [];
       if (uploadsComFalha.length > 0) {
-        setErro(`Itinerário criado, mas as fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas. Tente reenviá-las depois.`);
+        avisos.push(`as fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas`);
+      }
+      if (videosComFalha.length > 0) {
+        avisos.push(`o(s) vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados`);
+      }
+      if (avisos.length > 0) {
+        setErro(`Itinerário criado, mas ${avisos.join(' e ')}. Tente reenviar depois.`);
       }
     } catch (err) {
       setErro(JSON.stringify(err.response?.data || err.message));
@@ -444,18 +510,20 @@ function CriarItinerario() {
             style={{ width: '100%', padding: 6, marginBottom: 8 }}
           />
 
-          <label style={{ display: 'block', marginTop: 8 }}>Fotos deste local</label>
+          <label style={{ display: 'block', marginTop: 8 }}>
+            Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
+          </label>
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
-            onChange={(e) => adicionarArquivos(index, e.target.files)}
+            onChange={(e) => { adicionarMidia(index, e.target.files); e.target.value = ''; }}
             style={{ marginBottom: 8 }}
           />
-          {ponto.arquivos.length > 0 && (
+          {(ponto.arquivos.length > 0 || ponto.videos.length > 0) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
               {ponto.arquivos.map((arquivo, iArq) => (
-                <div key={iArq} style={{ position: 'relative' }}>
+                <div key={`foto-${iArq}`} style={{ position: 'relative' }}>
                   <img
                     src={URL.createObjectURL(arquivo)}
                     alt={`foto ${iArq + 1}`}
@@ -464,6 +532,34 @@ function CriarItinerario() {
                   <button
                     type="button"
                     onClick={() => removerArquivo(index, iArq)}
+                    style={{
+                      position: 'absolute', top: 2, right: 2,
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.6)', color: '#fff',
+                      border: 'none', cursor: 'pointer', fontSize: 11,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {ponto.videos.map((video, iVid) => (
+                <div key={`video-${iVid}`} style={{ position: 'relative' }}>
+                  <video
+                    src={URL.createObjectURL(video)}
+                    muted
+                    style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block', background: '#000' }}
+                  />
+                  <span style={{
+                    position: 'absolute', bottom: 2, left: 2, fontSize: 13,
+                    filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.8))',
+                  }}>
+                    🎬
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removerVideo(index, iVid)}
                     style={{
                       position: 'absolute', top: 2, right: 2,
                       width: 18, height: 18, borderRadius: '50%',

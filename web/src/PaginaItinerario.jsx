@@ -123,6 +123,21 @@ function PaginaItinerario() {
     buscar();
   }, [id]);
 
+  // Enquanto algum vídeo ainda estiver 'processando' (compressão async no
+  // backend), repolla o detalhe do itinerário até todos saírem desse estado.
+  const temVideoProcessando = it?.pontos?.some((p) => p.videos?.some((v) => v.status === 'processando'));
+
+  useEffect(() => {
+    if (!temVideoProcessando) return;
+    const intervalo = setInterval(async () => {
+      try {
+        const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
+        setIt(res.data);
+      } catch (_) {}
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [temVideoProcessando, id]);
+
   async function alternarSalvar() {
     if (salvando) return;
     setSalvando(true);
@@ -411,6 +426,38 @@ function PaginaItinerario() {
                   {ponto.fotos.map((f) => (
                     <img key={f.id} src={f.url} alt=""
                       style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 8 }} />
+                  ))}
+                </div>
+              )}
+
+              {ponto.videos?.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {ponto.videos.map((v) => (
+                    <div key={v.id}>
+                      {v.status === 'pronto' && v.url ? (
+                        <video
+                          src={v.url}
+                          poster={v.thumbnail_url || undefined}
+                          controls
+                          style={{ width: 160, borderRadius: 8, display: 'block', background: '#000' }}
+                        />
+                      ) : v.status === 'erro' ? (
+                        <div style={{
+                          width: 160, height: 90, borderRadius: 8, background: '#fdecea', color: '#c62828',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, textAlign: 'center', padding: 6,
+                        }}>
+                          Falha ao processar vídeo
+                        </div>
+                      ) : (
+                        <div style={{
+                          width: 160, height: 90, borderRadius: 8, background: '#f0f0f0', color: '#999',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                        }}>
+                          🎬 Processando vídeo...
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
