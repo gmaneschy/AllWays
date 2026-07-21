@@ -1,53 +1,29 @@
 Apps:
 users:
-
 feed:
-
 gamification:
-
 places:
-
 itineraries:
-    testar vídeo no itinerário
-
 social:
-    testar vídeo na mensagem
 
 
 Checklist:
-Badges: níveis + lógica de concessão                  - OK
-Correção no cadastro de usuário                       - OK
-Correção na pesquisa de usuário                       - OK
-Edição de perfil (nome de exibição foto, bio)         - OK
-Sistema de likes em posts                             - OK
-Sistema de likes em comentários de posts              - OK
-Sistema de likes em comentários de lugares            - OK
-Sistema de likes em mensagens                         - OK
-Sistema de compartilhamento de posts                  - OK
-Aba de notificações no frontend                       - OK
-Vídeo no PontoItinerario                              - Pendente (passar BD para PostgreSQL)
-Vídeo nas mensagens                                   - Pendente (passar BD para PostgreSQL)
-
-
+Criar tela de configurações:
 Configurações:
     Usuário:
         Alterar Senha
         Autenticação de dois fatores (futuro)
         Privacidade de conta (perfil público ou privado)
 
-    Notificações:
+    Notificações: (toggle)
         "Usuário X seguiu você"
         "Usuário X comentou no seu post"
         "Usuário X respondeu seu comentário"
         "Usuário X enviou uma mensagem"
         "Usuário X fez novo post"
 
-    Exibição:
+    Exibição: (toggle)
         Exibir badges de outros usuários
-
-
-9. Vídeo no PontoItinerario + vídeo nas mensagens
-Só depois da migração (item 8), já que dependem dela. Testar os dois juntos faz sentido, pois provavelmente compartilham a mesma lógica de upload/storage (django-storages + Pillow, mas agora pra vídeo).
 
 
 Tela admin
@@ -66,19 +42,9 @@ Comandos django agora vem precedidos de:
 docker compose exec
 Ex: docker compose exec backend python manage.py makemigrations
 
-
-Inicialização separada --------
-# Terminal 1 — React
-npm run dev
-
-# Terminal 2 — sobe tudo em background
-docker compose up -d
-
-# Terminal 3 — acompanha só o backend
-docker compose logs -f backend
-
-# Terminal 4 — acompanha só o celery
-docker compose logs -f celery_worker celery_beat
-
-No caso de atualização de bibliotecas
-docker compose build
+Criando dados de teste:
+docker compose exec backend python manage.py seed_demo_data
+Ajustando escala:
+docker compose exec backend python manage.py seed_demo_data --usuarios 60 --itinerarios 200 --dias 180
+Para limpar e recriar do zero:
+docker compose exec backend python manage.py seed_demo_data --limpar
