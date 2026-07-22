@@ -48,3 +48,29 @@ Ajustando escala:
 docker compose exec backend python manage.py seed_demo_data --usuarios 60 --itinerarios 200 --dias 180
 Para limpar e recriar do zero:
 docker compose exec backend python manage.py seed_demo_data --limpar
+
+# Terminal 3 - para rodar o Storybook
+run npm run storybook
+CTRL+C to stop.
+
+# Terminal 4 - subir versão (print) do componente para o Chromatic
+npx chromatic --project-token=chpt_6d076130ba669b8
+
+
+Checklist de Componentes:
+BadgesItinerarioTags.jsx
+Login.jsx
+CriarItinerario.jsx
+Feed.jsx
+BuscaLocal.jsx
+BadgeDestaque.jsx
+ModalCompartilharItinerario.jsx
+Navbar.jsx                          - Navbar.stories.jsx
+PaginaExplorar.jsx
+PaginaHashtag.jsx
+PaginaItinerario.jsx
+PaginaMensagens.jsx
+PaginaNotificacoes.jsx
+PaginaPerfil.jsx
+PaginaPlace.jsx
+PainelNotificacoes.jsx
