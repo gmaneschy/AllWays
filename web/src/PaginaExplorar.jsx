@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import BadgeDestaque from './BadgeDestaque';
-import BadgesItinerarioTags from './BadgesItinerarioTags';
+import CardItinerarioResumo from './CardItinerarioResumo';
 import api, { curtir } from './api';
-import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag, IconeLike } from './icons';
+import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag } from './icons';
 import './PaginaExplorar.css';
 
 function useDebounce(valor, delay) {
@@ -60,69 +59,6 @@ function SecaoBusca({ titulo, itens, renderItem }) {
       <div className="secao-busca__titulo">{titulo}</div>
       {itens.map(renderItem)}
     </div>
-  );
-}
-
-function CardItinerario({ it, onCurtir }) {
-  function handleClickCurtir(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    onCurtir(it.id);
-  }
-
-  return (
-    <Link to={`/itinerario/${it.id}`} className="card-itinerario-explorar">
-      <div className="card-itinerario-explorar__topo">
-        <div>
-          <h3 className="card-itinerario-explorar__titulo">{it.titulo}</h3>
-          {it.lugar_principal && (
-            <p className="card-itinerario-explorar__lugar-principal">
-              <IconePin size={13} /> {it.lugar_principal.nome}
-              {it.total_pontos > 1 ? ` + ${it.total_pontos - 1} lugar${it.total_pontos > 2 ? 'es' : ''}` : ''}
-            </p>
-          )}
-        </div>
-        <span className="card-itinerario-explorar__tipo-badge">
-          {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
-        </span>
-      </div>
-
-      {it.badges?.length > 0 && (
-        <div className="card-itinerario-explorar__badges">
-          <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
-        </div>
-      )}
-
-      <button
-        onClick={handleClickCurtir}
-        className={`card-itinerario-explorar__curtir${it.curtido ? ' card-itinerario-explorar__curtir--ativo' : ''}`}
-      >
-        <IconeLike size={16} fill={it.curtido ? 'currentColor' : 'none'} />
-        {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
-      </button>
-
-      <div className="card-itinerario-explorar__rodape">
-        {it.autor.foto_perfil
-          ? <img src={it.autor.foto_perfil} alt="" className="avatar-circulo" style={{ width: 24, height: 24 }} />
-          : <div className="avatar-circulo--vazio" style={{ width: 24, height: 24, fontSize: 10 }}>
-              {it.autor.username?.[0]?.toUpperCase()}
-            </div>
-        }
-        <Link
-          to={`/perfil/${it.autor.username}`}
-          onClick={(e) => e.stopPropagation()}
-          className="card-itinerario-explorar__autor-link"
-        >
-          {it.autor.username}
-        </Link>
-        <BadgeDestaque badge={it.autor.badge_destaque} size={14} />
-        <span className="card-itinerario-explorar__data">
-          {it.publicado_em
-            ? new Date(it.publicado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-            : ''}
-        </span>
-      </div>
-    </Link>
   );
 }
 
@@ -306,7 +242,7 @@ function PaginaExplorar() {
           {!carregandoFeed && feed.length === 0 && (
             <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>
           )}
-          {feed.map((it) => <CardItinerario key={it.id} it={it} onCurtir={handleCurtir} />)}
+          {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} onCurtir={handleCurtir} />)}
         </>
       )}
     </div>

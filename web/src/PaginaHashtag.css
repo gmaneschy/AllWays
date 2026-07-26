@@ -1,0 +1,54 @@
+.pagina-hashtag {
+  max-width: 680px;
+  margin: 40px auto;
+  padding: 0 16px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+}
+
+.pagina-hashtag__carregando,
+.pagina-hashtag__erro {
+  text-align: center;
+  margin-top: 60px;
+  font: var(--fonte-corpo);
+}
+
+.pagina-hashtag__erro {
+  color: var(--cor-perigo);
+}
+
+.pagina-hashtag__header {
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pagina-hashtag__icone {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pagina-hashtag__titulo {
+  margin: 0;
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+}
+
+.pagina-hashtag__contagem {
+  margin: 4px 0 0;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+.pagina-hashtag__vazio {
+  color: var(--texto-muted);
+  font: var(--fonte-corpo);
+}

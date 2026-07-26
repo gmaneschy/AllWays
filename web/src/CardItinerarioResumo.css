@@ -1,0 +1,91 @@
+@import './avatar.css';
+
+.card-itinerario-resumo {
+  display: block;
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease;
+}
+
+.card-itinerario-resumo:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-itinerario-resumo__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.card-itinerario-resumo__titulo {
+  margin: 0 0 4px;
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.card-itinerario-resumo__lugar-principal {
+  margin: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-itinerario-resumo__tipo-badge {
+  font: var(--fonte-micro);
+  background: var(--fundo-chip);
+  border-radius: 4px;
+  padding: 2px 8px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+
+.card-itinerario-resumo__badges {
+  margin-top: 8px;
+}
+
+.card-itinerario-resumo__curtir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+}
+
+.card-itinerario-resumo__curtir--ativo {
+  color: var(--cor-perigo);
+}
+
+.card-itinerario-resumo__rodape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.card-itinerario-resumo__autor-link {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  text-decoration: none;
+}
+
+.card-itinerario-resumo__autor-link:hover {
+  color: var(--cor-primaria);
+}
+
+.card-itinerario-resumo__data {
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+  margin-left: auto;
+}

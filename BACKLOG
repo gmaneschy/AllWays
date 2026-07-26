@@ -57,24 +57,10 @@ CTRL+C to stop.
 npx chromatic --project-token=chpt_6d076130ba669b8
 
 
-Checklist de Componentes + CSS:
-Login.jsx                           - OK
-CriarItinerario.jsx                 - OK
-BadgeDestaque.jsx                   - OK
-BadgesItinerarioTags.jsx            - OK
-ModalCompartilharItinerario.jsx     - OK
-PainelNotificacoes.jsx              - OK
-
-
-Checklist Sem Stories + CSS:
-BuscaLocal.jsx                      - OK
-Navbar.jsx                          - OK
-PaginaNotificacoes.jsx              - OK
-PaginaPerfil.jsx                    - OK
-
-Feed.jsx                            - OK
-PaginaItinerario.jsx                - OK
-PaginaPlace.jsx                     - OK
-PaginaMensagens.jsx                 - OK
-PaginaExplorar.jsx                  - OK
-PaginaHashtag.jsx                   - OK
+Corrigir:
+    Problema de persistência visual de likes em página de hashtag. Ao curtir, like contabiliza, mas ao atualizar a página, coração está desmarcado (embora continue contabilizando). Então, dar like novamente tira o like.
+    Nos comentários de Places (página do lugar), o nome do usuário e o nome do itinerário deviam ser "linkáveis", levando à página do usuário e ao itinerário daquele comentário, respectivamente.
+    Tornar lugares seguidos visíveis no perfil, assim como usuários seguidos e seguidores
+    Usuários seguidos, seguidores e lugares seguidos devem ser linkáveis
+    Usuário no post no feed deve ser linkável
+    Página de mensagens exibe diversos usuários, inclusive usuários não seguidos, na barra de buscar usuário. Só usuários seguidos devem ser exibidos.

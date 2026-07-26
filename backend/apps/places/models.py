@@ -8,7 +8,7 @@ class Place(models.Model):
     endereco = models.CharField(max_length=300, blank=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
-    foto_referencia_google = models.CharField(max_length=300, null=True, blank=True)
+    foto_referencia_google = models.TextField(blank=True, null=True)
 
     # ─── Dados geográficos estruturados (usados na gamificação) ──────────
     cidade = models.CharField(max_length=100, blank=True)
