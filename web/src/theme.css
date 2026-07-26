@@ -1,0 +1,59 @@
+/*
+  theme.css — Design tokens do AllWays
+  Baseado em design-system.md. Importar UMA vez, globalmente,
+  antes do index.css/App.css (ex: no topo do main.jsx).
+*/
+
+:root {
+  /* 1.1 — Cor primária (coral/terracota) */
+  --cor-primaria: #D85A30;
+  --cor-primaria-hover: #F0997B;
+  --cor-primaria-fundo: #FAECE7;
+  --cor-primaria-texto-em-fundo: #712B13;
+
+  /* 1.2 — Perigo / erro */
+  --cor-perigo: #e53935;
+
+  /* Sucesso — não especificado no design-system.md; verde neutro
+     escolhido por convenção até definirmos um token oficial. */
+  --cor-sucesso: #2E7D32;
+
+  /* 1.3 — Neutras (tom quente) */
+  --fundo-pagina: #FDFCF9;
+  --fundo-card: #FFFFFF;
+  --fundo-hover: #F5F2EC;
+  --fundo-chip: #F0EDE6;
+  --borda-padrao: #E8E4DC;
+  --borda-sutil: #F0EDE6;
+  --borda-selecionado: #D85A30;
+
+  /* 1.4 — Texto */
+  --texto-principal: #2C2C2A;
+  --texto-corpo: #3A3A38;
+  --texto-secundario: #888780;
+  --texto-muted: #B4B2A9;
+  --texto-link: var(--cor-primaria);
+
+  /* 1.5 — Avatar vazio */
+  --fundo-avatar-vazio: #E8E4DC;
+
+  /* 3.1 — Tipografia */
+  --fonte-titulo-pagina: bold 24px sans-serif;
+  --fonte-titulo-card: bold 20px sans-serif;
+  --fonte-titulo-secao: 18px sans-serif;
+  --fonte-corpo: 14px sans-serif;
+  --fonte-nome-autor: bold 14px sans-serif;
+  --fonte-meta: 13px sans-serif;
+  --fonte-micro: 11px sans-serif;
+}
+
+/* Utilitário global — gira o ícone de carregamento (IconeCarregando).
+   Aplicar via className="icone-girando" no componente do ícone. */
+.icone-girando {
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

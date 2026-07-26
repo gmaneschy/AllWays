@@ -57,20 +57,24 @@ CTRL+C to stop.
 npx chromatic --project-token=chpt_6d076130ba669b8
 
 
-Checklist de Componentes:
-BadgesItinerarioTags.jsx
-Login.jsx
-CriarItinerario.jsx
-Feed.jsx
-BuscaLocal.jsx
-BadgeDestaque.jsx
-ModalCompartilharItinerario.jsx
-Navbar.jsx                          - Navbar.stories.jsx
-PaginaExplorar.jsx
-PaginaHashtag.jsx
-PaginaItinerario.jsx
-PaginaMensagens.jsx
-PaginaNotificacoes.jsx
-PaginaPerfil.jsx
-PaginaPlace.jsx
-PainelNotificacoes.jsx
+Checklist de Componentes + CSS:
+Login.jsx                           - OK
+CriarItinerario.jsx                 - OK
+BadgeDestaque.jsx                   - OK
+BadgesItinerarioTags.jsx            - OK
+ModalCompartilharItinerario.jsx     - OK
+PainelNotificacoes.jsx              - OK
+
+
+Checklist Sem Stories + CSS:
+BuscaLocal.jsx                      - OK
+Navbar.jsx                          - OK
+PaginaNotificacoes.jsx              - OK
+PaginaPerfil.jsx                    - OK
+
+Feed.jsx                            - OK
+PaginaItinerario.jsx                - OK
+PaginaPlace.jsx                     - OK
+PaginaMensagens.jsx                 - OK
+PaginaExplorar.jsx                  - OK
+PaginaHashtag.jsx                   - OK

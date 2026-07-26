@@ -4,6 +4,20 @@ import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import {
+  IconeLike,
+  IconeCompartilhar,
+  IconeSucesso,
+  IconeAdicionar,
+  IconeHorario,
+  IconeMovimentacao,
+  IconeSeguranca,
+  IconePreco,
+  IconePin,
+  IconeVideo,
+  IconeFechar,
+} from './icons';
+import './PaginaItinerario.css';
 
 const LABEL_MOVIMENTACAO = { vazio: 'Vazio', populado: 'Populado', cheio: 'Cheio' };
 const LABEL_DESLOCAMENTO = {
@@ -15,7 +29,7 @@ function Estrelas({ valor, max = 5 }) {
   return (
     <span>
       {Array.from({ length: max }, (_, i) => (
-        <span key={i} style={{ color: i < valor ? '#f5a623' : '#ddd' }}>★</span>
+        <span key={i} className={`tag-info__estrela${i < valor ? ' tag-info__estrela--preenchida' : ''}`}>★</span>
       ))}
     </span>
   );
@@ -23,59 +37,48 @@ function Estrelas({ valor, max = 5 }) {
 
 function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApagar, onResponder }) {
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: isResposta ? 12 : 16, marginLeft: isResposta ? 42 : 0 }}>
+    <div className={`comentario-linha${isResposta ? ' comentario-linha--resposta' : ''}`}>
       {c.autor_foto
-        ? <img src={c.autor_foto} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+        ? <img src={c.autor_foto} alt="" className="avatar-circulo" style={{ width: 32, height: 32 }} />
+        : <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
             {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
           </div>
       }
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link to={`/perfil/${c.autor_nome}`} style={{ fontWeight: 'bold', fontSize: 13, textDecoration: 'none', color: '#333' }}>
+      <div className="comentario-linha__corpo">
+        <div className="comentario-linha__topo">
+          <Link to={`/perfil/${c.autor_nome}`} className="comentario-linha__autor">
             {c.autor_nome}
           </Link>
           <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
-          <span style={{ fontSize: 11, color: '#bbb' }}>
+          <span className="comentario-linha__data">
             {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
           </span>
           {usuarioLogado?.username === c.autor_nome && (
-            <button
-              onClick={() => onApagar(c.id)}
-              style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#ccc', cursor: 'pointer', fontSize: 16, padding: 0 }}
-            >
-              ×
+            <button onClick={() => onApagar(c.id)} className="comentario-linha__apagar">
+              <IconeFechar size={16} />
             </button>
           )}
         </div>
-        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#444', lineHeight: 1.4 }}>
+        <p className="comentario-linha__texto">
           {isResposta && c.responder_para_username && (
-            <Link
-              to={`/perfil/${c.responder_para_username}`}
-              style={{ fontWeight: 'bold', color: '#1a73e8', textDecoration: 'none', marginRight: 4 }}
-            >
+            <Link to={`/perfil/${c.responder_para_username}`} className="comentario-linha__mencao">
               @{c.responder_para_username}
             </Link>
           )}
           {c.texto}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+        <div className="comentario-linha__acoes">
           <button
             onClick={() => onCurtir(c.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-              fontSize: 12, color: c.curtido ? '#e53935' : '#999',
-            }}
+            className={`comentario-linha__curtir${c.curtido ? ' comentario-linha__curtir--ativo' : ''}`}
           >
-            <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
+            <IconeLike size={14} fill={c.curtido ? 'currentColor' : 'none'} />
             {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
           </button>
           {usuarioLogado && (
             <button
               onClick={() => onResponder(raizId, { id: c.autor, username: c.autor_nome })}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, color: '#999' }}
+              className="comentario-linha__responder"
             >
               Responder
             </button>
@@ -260,81 +263,65 @@ function PaginaItinerario() {
     }
   }
 
-  if (carregando) return <p style={{ textAlign: 'center', marginTop: 60 }}>Carregando...</p>;
-  if (erro) return <p style={{ textAlign: 'center', marginTop: 60, color: 'red' }}>{erro}</p>;
+  if (carregando) return <p className="pagina-itinerario__carregando">Carregando...</p>;
+  if (erro) return <p className="pagina-itinerario__erro">{erro}</p>;
   if (!it) return null;
 
   const ehAutor = usuarioLogado?.username === it.autor_username;
 
   return (
-    <div style={{ maxWidth: 700, margin: '40px auto', fontFamily: 'sans-serif', padding: '0 16px' }}>
+    <div className="pagina-itinerario">
 
       {/* Cabeçalho */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      <div className="pagina-itinerario__topo">
+        <div className="pagina-itinerario__linha-topo">
           <div>
-            <h1 style={{ margin: '0 0 6px' }}>{it.titulo}</h1>
-            <div style={{ marginBottom: 8 }}>
+            <h1 className="pagina-itinerario__titulo">{it.titulo}</h1>
+            <div className="pagina-itinerario__badges-wrapper">
               <BadgesItinerarioTags badges={it.badges} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="pagina-itinerario__meta">
               {it.autor_foto
-                ? <img src={it.autor_foto} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-                : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                ? <img src={it.autor_foto} alt="" className="avatar-circulo" style={{ width: 28, height: 28 }} />
+                : <div className="avatar-circulo--vazio" style={{ width: 28, height: 28, fontSize: 12 }}>
                     {it.autor_username?.[0]?.toUpperCase()}
                   </div>
               }
-              <Link to={`/perfil/${it.autor_username}`} style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>
+              <Link to={`/perfil/${it.autor_username}`} className="pagina-itinerario__autor-link">
                 {it.autor_username}
               </Link>
               <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
-              <span style={{ fontSize: 12, color: '#bbb' }}>·</span>
-              <span style={{ fontSize: 12, color: '#bbb' }}>
+              <span className="pagina-itinerario__meta-separador">·</span>
+              <span className="pagina-itinerario__meta-texto">
                 {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
               </span>
               {it.data_inicio && (
                 <>
-                  <span style={{ fontSize: 12, color: '#bbb' }}>·</span>
-                  <span style={{ fontSize: 12, color: '#888' }}>
+                  <span className="pagina-itinerario__meta-separador">·</span>
+                  <span className="pagina-itinerario__meta-texto">
                     {it.data_inicio}{it.data_fim ? ` → ${it.data_fim}` : ''}
                   </span>
                 </>
               )}
               {it.status === 'rascunho' && (
-                <span style={{ fontSize: 11, background: '#fff3cd', color: '#856404', padding: '2px 8px', borderRadius: 4 }}>
-                  Rascunho
-                </span>
+                <span className="pagina-itinerario__badge-rascunho">Rascunho</span>
               )}
             </div>
           </div>
 
           {/* Ações */}
           {usuarioLogado && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="pagina-itinerario__acoes">
               <button
                 onClick={handleCurtir}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                  border: '1px solid #ddd', background: '#fff',
-                  color: it.curtido ? '#e53935' : '#666', fontSize: 13,
-                }}
+                className={`btn-outline${it.curtido ? ' btn-outline--curtido' : ''}`}
               >
-                <span style={{ fontSize: 16 }}>{it.curtido ? '❤️' : '🤍'}</span>
+                <IconeLike size={16} fill={it.curtido ? 'currentColor' : 'none'} />
                 {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
               </button>
               {it.status === 'publicado' && (
-                <button
-                  onClick={() => setCompartilhando(true)}
-                  title="Compartilhar"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                    border: '1px solid #ddd', background: '#fff',
-                    color: '#666', fontSize: 13,
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>📤</span>
+                <button onClick={() => setCompartilhando(true)} title="Compartilhar" className="btn-outline">
+                  <IconeCompartilhar size={16} />
                   Compartilhar
                 </button>
               )}
@@ -343,24 +330,12 @@ function PaginaItinerario() {
                   <button
                     onClick={alternarSalvar}
                     disabled={salvando}
-                    style={{
-                      padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
-                      border: '1px solid #ddd',
-                      background: it.salvo_por_mim ? '#f0f5ff' : '#fff',
-                      color: it.salvo_por_mim ? '#1a73e8' : '#333',
-                      fontWeight: 'bold', fontSize: 13,
-                    }}
+                    className={`btn-outline${it.salvo_por_mim ? ' btn-outline--ativo' : ''}`}
                   >
-                    {it.salvo_por_mim ? '✓ Salvo' : '+ Salvar'}
+                    {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
+                    {it.salvo_por_mim ? 'Salvo' : 'Salvar'}
                   </button>
-                  <button
-                    onClick={usarComoBase}
-                    style={{
-                      padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
-                      border: 'none', background: '#1a73e8', color: '#fff',
-                      fontWeight: 'bold', fontSize: 13,
-                    }}
-                  >
+                  <button onClick={usarComoBase} className="btn-primario">
                     Usar como base
                   </button>
                 </>
@@ -368,70 +343,69 @@ function PaginaItinerario() {
             </div>
           )}
         </div>
-        {salvoMsg && <p style={{ color: 'green', fontSize: 13, marginTop: 8 }}>✓ {salvoMsg}</p>}
+        {salvoMsg && (
+          <p className="pagina-itinerario__msg-salvo">
+            <IconeSucesso size={14} /> {salvoMsg}
+          </p>
+        )}
       </div>
 
       {/* Pontos */}
       <div>
         {it.pontos.map((ponto, idx) => (
-          <div key={ponto.id} style={{ display: 'flex', gap: 16, marginBottom: 32 }}>
+          <div key={ponto.id} className="ponto-linha">
 
             {/* Linha vertical de progresso */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: '#1a73e8',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 'bold', fontSize: 13,
-              }}>
-                {ponto.ordem}
-              </div>
-              {idx < it.pontos.length - 1 && (
-                <div style={{ width: 2, flex: 1, background: '#e0e0e0', minHeight: 32, marginTop: 4 }} />
-              )}
+            <div className="ponto-linha__marcador-col">
+              <div className="ponto-linha__numero">{ponto.ordem}</div>
+              {idx < it.pontos.length - 1 && <div className="ponto-linha__conector" />}
             </div>
 
-            <div style={{ flex: 1, paddingBottom: 8 }}>
-              <Link to={`/place/${ponto.local_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <h3 style={{ margin: '4px 0 6px', fontSize: 17 }}>{ponto.local_nome}</h3>
+            <div className="ponto-linha__conteudo">
+              <Link to={`/place/${ponto.local_id}`} className="ponto-linha__nome-link">
+                <h3 className="ponto-linha__nome">{ponto.local_nome}</h3>
               </Link>
               {ponto.local_endereco && (
-                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#888' }}>📍 {ponto.local_endereco}</p>
+                <p className="ponto-linha__endereco">
+                  <IconePin size={13} /> {ponto.local_endereco}
+                </p>
               )}
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <div className="tags-info">
                 {ponto.horario_estimado && (
-                  <span style={tagStyle}>🕐 {ponto.horario_estimado.slice(0, 5)}</span>
+                  <span className="tag-info"><IconeHorario size={13} /> {ponto.horario_estimado.slice(0, 5)}</span>
                 )}
                 {ponto.movimentacao && (
-                  <span style={tagStyle}>👥 {LABEL_MOVIMENTACAO[ponto.movimentacao] || ponto.movimentacao}</span>
+                  <span className="tag-info">
+                    <IconeMovimentacao size={13} /> {LABEL_MOVIMENTACAO[ponto.movimentacao] || ponto.movimentacao}
+                  </span>
                 )}
                 {ponto.seguranca && (
-                  <span style={tagStyle}>🛡️ Segurança <Estrelas valor={ponto.seguranca} /></span>
+                  <span className="tag-info">
+                    <IconeSeguranca size={13} /> Segurança <Estrelas valor={ponto.seguranca} />
+                  </span>
                 )}
                 {ponto.entrada_gratuita ? (
-                  <span style={{ ...tagStyle, background: '#e8f5e9', color: '#2e7d32' }}>✓ Gratuito</span>
+                  <span className="tag-info tag-info--gratuito"><IconeSucesso size={13} /> Gratuito</span>
                 ) : ponto.preco_medio ? (
-                  <span style={tagStyle}>💰 Custo <Estrelas valor={ponto.preco_medio} /></span>
+                  <span className="tag-info"><IconePreco size={13} /> Custo <Estrelas valor={ponto.preco_medio} /></span>
                 ) : null}
               </div>
 
               {ponto.comentario && (
-                <p style={{ margin: '0 0 10px', fontSize: 14, color: '#444', fontStyle: 'italic', borderLeft: '3px solid #e0e0e0', paddingLeft: 10 }}>
-                  "{ponto.comentario}"
-                </p>
+                <p className="ponto-linha__comentario">"{ponto.comentario}"</p>
               )}
 
               {ponto.fotos?.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div className="ponto-linha__midia-lista">
                   {ponto.fotos.map((f) => (
-                    <img key={f.id} src={f.url} alt=""
-                      style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 8 }} />
+                    <img key={f.id} src={f.url} alt="" className="ponto-linha__foto" />
                   ))}
                 </div>
               )}
 
               {ponto.videos?.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div className="ponto-linha__midia-lista">
                   {ponto.videos.map((v) => (
                     <div key={v.id}>
                       {v.status === 'pronto' && v.url ? (
@@ -439,22 +413,15 @@ function PaginaItinerario() {
                           src={v.url}
                           poster={v.thumbnail_url || undefined}
                           controls
-                          style={{ width: 160, borderRadius: 8, display: 'block', background: '#000' }}
+                          className="ponto-linha__video"
                         />
                       ) : v.status === 'erro' ? (
-                        <div style={{
-                          width: 160, height: 90, borderRadius: 8, background: '#fdecea', color: '#c62828',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, textAlign: 'center', padding: 6,
-                        }}>
+                        <div className="ponto-linha__video-erro">
                           Falha ao processar vídeo
                         </div>
                       ) : (
-                        <div style={{
-                          width: 160, height: 90, borderRadius: 8, background: '#f0f0f0', color: '#999',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
-                        }}>
-                          🎬 Processando vídeo...
+                        <div className="ponto-linha__video-processando">
+                          <IconeVideo size={14} /> Processando vídeo...
                         </div>
                       )}
                     </div>
@@ -463,7 +430,7 @@ function PaginaItinerario() {
               )}
 
               {idx < it.pontos.length - 1 && ponto.distancia_ate_proximo && (
-                <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+                <div className="ponto-linha__distancia">
                   ↓ {(ponto.distancia_ate_proximo / 1000).toFixed(1)} km
                   {ponto.meio_deslocamento && ` · ${LABEL_DESLOCAMENTO[ponto.meio_deslocamento] || ponto.meio_deslocamento}`}
                 </div>
@@ -472,42 +439,34 @@ function PaginaItinerario() {
           </div>
         ))}
       </div>
+
       {/* Comentários sociais */}
       {it.status === 'publicado' && (
-        <div style={{ marginTop: 40, borderTop: '1px solid #eee', paddingTop: 24 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 20 }}>
-            Comentários {comentarios.length > 0 && <span style={{ color: '#999', fontWeight: 'normal' }}>({comentarios.length})</span>}
+        <div className="comentarios-secao">
+          <h2 className="comentarios-secao__titulo">
+            Comentários {comentarios.length > 0 && <span className="comentarios-secao__contagem">({comentarios.length})</span>}
           </h2>
 
           {/* Input de novo comentário */}
           {usuarioLogado && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 24, alignItems: 'flex-start' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+            <div className="novo-comentario">
+              <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
                 {usuarioLogado.username?.[0]?.toUpperCase()}
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="novo-comentario__campo">
                 <textarea
                   value={textoComentario}
                   onChange={(e) => setTextoComentario(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), postarComentario())}
                   placeholder="Adicione um comentário..."
                   rows={2}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: 8,
-                    border: '1px solid #ddd', fontSize: 14, resize: 'vertical',
-                    boxSizing: 'border-box', fontFamily: 'sans-serif',
-                  }}
+                  className="novo-comentario__textarea"
                 />
                 <button
                   onClick={postarComentario}
                   disabled={!textoComentario.trim() || enviandoComentario}
-                  style={{
-                    marginTop: 6, padding: '6px 16px', borderRadius: 6,
-                    border: 'none', background: '#1a73e8', color: '#fff',
-                    fontWeight: 'bold', fontSize: 13, cursor: 'pointer',
-                    opacity: !textoComentario.trim() ? 0.5 : 1,
-                  }}
+                  className="btn-primario"
+                  style={{ marginTop: 6 }}
                 >
                   {enviandoComentario ? 'Postando...' : 'Comentar'}
                 </button>
@@ -517,7 +476,7 @@ function PaginaItinerario() {
 
           {/* Lista de comentários */}
           {comentarios.length === 0 && (
-            <p style={{ color: '#bbb', fontSize: 14 }}>Nenhum comentário ainda. Seja o primeiro!</p>
+            <p className="comentarios-vazio">Nenhum comentário ainda. Seja o primeiro!</p>
           )}
           {comentarios.map((c) => (
             <div key={c.id}>
@@ -545,33 +504,23 @@ function PaginaItinerario() {
               ))}
 
               {respondendoA?.raizId === c.id && (
-                <div style={{ display: 'flex', gap: 8, marginLeft: 42, marginBottom: 16, alignItems: 'flex-start' }}>
+                <div className="resposta-form">
                   <input
                     autoFocus
                     value={textoResposta[c.id] || ''}
                     onChange={(e) => setTextoResposta((prev) => ({ ...prev, [c.id]: e.target.value }))}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta(c.id))}
                     placeholder={`Respondendo a @${respondendoA.usuario?.username}...`}
-                    style={{
-                      flex: 1, padding: '6px 10px', borderRadius: 8,
-                      border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box',
-                    }}
+                    className="resposta-form__input"
                   />
                   <button
                     onClick={() => postarResposta(c.id)}
                     disabled={!textoResposta[c.id]?.trim()}
-                    style={{
-                      padding: '6px 12px', borderRadius: 6, border: 'none',
-                      background: '#1a73e8', color: '#fff', fontSize: 12, fontWeight: 'bold',
-                      cursor: 'pointer', opacity: !textoResposta[c.id]?.trim() ? 0.5 : 1,
-                    }}
+                    className="btn-primario"
                   >
                     Enviar
                   </button>
-                  <button
-                    onClick={() => setRespondendoA(null)}
-                    style={{ border: 'none', background: 'none', color: '#999', cursor: 'pointer', fontSize: 12 }}
-                  >
+                  <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar">
                     Cancelar
                   </button>
                 </div>
@@ -591,10 +540,5 @@ function PaginaItinerario() {
     </div>
   );
 }
-
-const tagStyle = {
-  fontSize: 12, background: '#f0f0f0', borderRadius: 12,
-  padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 4,
-};
 
 export default PaginaItinerario;

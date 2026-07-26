@@ -1,0 +1,62 @@
+/*
+  buttons.css — estilos de botão compartilhados.
+  Importar em qualquer .css de componente/página que use botões
+  primário/secundário, em vez de redefinir as regras localmente.
+*/
+
+.btn-primario {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--cor-primaria);
+  color: #fff;
+  font: var(--fonte-meta);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-primario:hover {
+  background: var(--cor-primaria-hover);
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--borda-padrao);
+  background: var(--fundo-card);
+  color: var(--texto-secundario);
+  font: var(--fonte-meta);
+}
+
+.btn-outline:hover {
+  background: var(--fundo-hover);
+}
+
+.btn-outline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estado "ativo" (ex: item já salvo) — borda dobra de espessura
+   conceitualmente vira fundo tingido, como badge-chip--selecionada. */
+.btn-outline--ativo {
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  font-weight: bold;
+}
+
+/* Estado "curtido" — só muda a cor do ícone/texto, sem preencher fundo,
+   consistente com o padrão de curtida do design system (4.6). */
+.btn-outline--curtido {
+  color: var(--cor-perigo);
+}

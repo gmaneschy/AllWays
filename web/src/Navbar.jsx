@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
+import { IconeNotificacao } from './icons';
+import './Navbar.css';
 
 const LINKS_PUBLICOS = [
   { to: '/', label: 'Feed' },
@@ -45,69 +47,41 @@ function Navbar() {
     navigate('/login');
   }
 
+  function classeLink(path) {
+    return `navbar__link${location.pathname === path ? ' navbar__link--ativo' : ''}`;
+  }
+
   return (
-    <nav style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '12px 24px', borderBottom: '1px solid #ddd', fontFamily: 'sans-serif'
-    }}>
-      <div style={{ display: 'flex', gap: 16 }}>
+    <nav className="navbar">
+      <div className="navbar__links">
         {LINKS_PUBLICOS.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            style={{
-              textDecoration: 'none',
-              fontWeight: location.pathname === link.to ? 'bold' : 'normal',
-              color: location.pathname === link.to ? '#1a73e8' : '#333'
-            }}
-          >
+          <Link key={link.to} to={link.to} className={classeLink(link.to)}>
             {link.label}
           </Link>
         ))}
         {logado && (
-          <Link
-            to="/criar"
-            style={{
-              textDecoration: 'none',
-              fontWeight: location.pathname === '/criar' ? 'bold' : 'normal',
-              color: location.pathname === '/criar' ? '#1a73e8' : '#333'
-            }}
-          >
+          <Link to="/criar" className={classeLink('/criar')}>
             Criar Itinerário
           </Link>
         )}
         {logado && (
-          <Link
-            to="/mensagens"
-            style={{
-              textDecoration: 'none',
-              fontWeight: location.pathname === '/mensagens' ? 'bold' : 'normal',
-              color: location.pathname === '/mensagens' ? '#1a73e8' : '#333'
-            }}
-          >
+          <Link to="/mensagens" className={classeLink('/mensagens')}>
             Mensagens
           </Link>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="navbar__right">
         {logado && (
-          <div ref={sinoRef} style={{ position: 'relative' }}>
+          <div ref={sinoRef} className="navbar__sino-wrapper">
             <button
               onClick={() => setPainelAberto((prev) => !prev)}
               title="Notificações"
-              style={{
-                position: 'relative', border: 'none', background: 'none',
-                cursor: 'pointer', fontSize: 18, padding: 4,
-              }}
+              className="navbar__sino-btn"
             >
-              🔔
+              <IconeNotificacao size={20} strokeWidth={2} />
               {naoLidas > 0 && (
-                <span style={{
-                  position: 'absolute', top: -2, right: -2, background: '#e53935', color: '#fff',
-                  borderRadius: '50%', fontSize: 10, fontWeight: 'bold', minWidth: 16, height: 16,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
-                }}>
+                <span className="navbar__sino-badge">
                   {naoLidas > 9 ? '9+' : naoLidas}
                 </span>
               )}
@@ -123,16 +97,16 @@ function Navbar() {
         )}
 
         {logado ? (
-          <span style={{ fontSize: 14 }}>
-            <Link to={`/perfil/${usuario?.username}`} style={{ textDecoration: 'none', color: '#333' }}>
+          <span className="navbar__usuario">
+            <Link to={`/perfil/${usuario?.username}`} className="navbar__link-usuario">
               {usuario?.username}
             </Link>
-            <button onClick={handleLogout} style={{ marginLeft: 8, cursor: 'pointer' }}>
+            <button onClick={handleLogout} className="navbar__logout-btn">
               Sair
             </button>
           </span>
         ) : (
-          <Link to="/login" style={{ textDecoration: 'none', color: '#1a73e8' }}>
+          <Link to="/login" className="navbar__entrar-link">
             Entrar
           </Link>
         )}

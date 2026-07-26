@@ -1,0 +1,23 @@
+/*
+  avatar.css — avatar circular compartilhado (foto ou inicial).
+  O tamanho é sempre dinâmico via style inline (width/height/fontSize),
+  já que muda conforme o contexto (28px cabeçalho, 32px lista, 40px inbox...).
+  Importar em qualquer .css de componente/página que precise exibir avatar.
+*/
+
+.avatar-circulo {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-circulo--vazio {
+  border-radius: 50%;
+  background: var(--fundo-avatar-vazio);
+  color: var(--texto-secundario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}

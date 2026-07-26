@@ -1,0 +1,294 @@
+@import './forms.css';
+
+.criar-itinerario {
+  max-width: 600px;
+  margin: 40px auto;
+  font-family: sans-serif;
+  color: var(--texto-principal);
+  background: var(--fundo-pagina);
+}
+
+.criar-itinerario__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.criar-itinerario__titulo {
+  margin: 0;
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+}
+
+.secao-pontos__titulo {
+  margin: 0;
+  font: var(--fonte-titulo-card);
+  color: var(--texto-principal);
+}
+
+/* --- Botões --- */
+
+.btn-primario {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background: var(--cor-primaria);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-primario:hover {
+  background: var(--cor-primaria-hover);
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secundario {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 16px;
+  color: var(--texto-principal);
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-secundario:hover {
+  background: var(--fundo-hover);
+}
+
+.btn-secundario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secundario--compacto {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.btn-remover {
+  color: var(--cor-perigo);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+/* --- Modal "Carregar existente" --- */
+
+.modal-carregar {
+  border: 1px solid var(--borda-sutil);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background: var(--fundo-hover);
+}
+
+.modal-carregar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-carregar__fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--texto-secundario);
+}
+
+.modal-carregar__aviso {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 0 0 12px;
+}
+
+.modal-carregar__vazio {
+  color: var(--texto-secundario);
+}
+
+.modal-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--borda-sutil);
+  margin-bottom: 8px;
+  cursor: pointer;
+  background: var(--fundo-card);
+  transition: background 0.15s ease;
+}
+
+.modal-item:hover {
+  background: var(--cor-primaria-fundo);
+}
+
+.modal-item__status {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin-left: 8px;
+}
+
+/* --- Categorias (badges) --- */
+
+.badges-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.badge-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font: var(--fonte-meta);
+  border: 1px solid var(--borda-padrao);
+  background: var(--fundo-chip);
+  color: var(--texto-secundario);
+}
+
+.badge-chip--selecionada {
+  border: 2px solid var(--borda-selecionado);
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-texto-em-fundo);
+}
+
+.badge-chip__icone {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.badges-lista__vazio {
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+}
+
+/* --- Ponto do itinerário --- */
+
+.ponto-card {
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--fundo-card);
+}
+
+.ponto-card__titulo {
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.ponto-card__busca-local {
+  margin: 8px 0;
+}
+
+.midia-input {
+  margin-bottom: 8px;
+}
+
+.midia-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.midia-item {
+  position: relative;
+}
+
+.midia-item__thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.midia-item__thumb--video {
+  background: #000;
+}
+
+.midia-item__badge-video {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  display: flex;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+.midia-item__remover {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* --- Rodapé de ações --- */
+
+.acoes-rodape {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.msg-sucesso {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cor-sucesso);
+  font: var(--fonte-meta);
+}
+
+.msg-erro {
+  color: var(--cor-perigo);
+  margin-top: 16px;
+}
+
+.resultado-box {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--fundo-hover);
+  border-radius: 8px;
+}
+
+.resultado-box__json {
+  white-space: pre-wrap;
+  font: var(--fonte-meta);
+  color: var(--texto-corpo);
+}

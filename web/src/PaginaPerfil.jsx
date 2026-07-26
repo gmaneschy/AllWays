@@ -3,38 +3,27 @@ import { Link, useParams } from 'react-router-dom';
 import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes, editarPerfil, getMe } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import { IconeFechar, IconeCompartilhar, IconeSeguir, IconeEditar } from './icons';
+import './PaginaPerfil.css';
 
 function ModalListaUsuarios({ titulo, usuarios, onFechar }) {
   return (
-    <div
-      onClick={onFechar}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#fff', borderRadius: 12, padding: 20,
-          width: 320, maxHeight: '70vh', overflowY: 'auto',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+    <div onClick={onFechar} className="modal-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="modal-box modal-box--pequena">
+        <div className="modal-box__header">
           <strong>{titulo}</strong>
-          <button onClick={onFechar} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onFechar} className="modal-box__fechar">
+            <IconeFechar size={18} />
+          </button>
         </div>
 
-        {usuarios.length === 0 && <p style={{ color: '#999' }}>Ninguém por aqui ainda.</p>}
+        {usuarios.length === 0 && <p className="modal-usuarios__vazio">Ninguém por aqui ainda.</p>}
 
         {usuarios.map((u) => (
-          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0' }}>
+          <div key={u.id} className="usuario-item">
             {u.foto_perfil
-              ? <img src={u.foto_perfil} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
-              : <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#ddd',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
-                  {u.username[0].toUpperCase()}
-                </div>
+              ? <img src={u.foto_perfil} alt="" className="usuario-item__avatar" />
+              : <div className="usuario-item__avatar-vazio">{u.username[0].toUpperCase()}</div>
             }
             <span>{u.username}</span>
           </div>
@@ -56,64 +45,41 @@ function ModalSelecaoBadge({ conquistas, idAtual, selecionando, onSelecionar, on
   }, {});
 
   return (
-    <div
-      onClick={onFechar}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#fff', borderRadius: 12, padding: 20,
-          width: 380, maxHeight: '75vh', overflowY: 'auto',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+    <div onClick={onFechar} className="modal-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="modal-box modal-box--grande">
+        <div className="modal-box__header">
           <strong>Escolher badge de destaque</strong>
-          <button onClick={onFechar} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onFechar} className="modal-box__fechar">
+            <IconeFechar size={18} />
+          </button>
         </div>
 
         <button
           onClick={() => onSelecionar(null)}
           disabled={selecionando}
-          style={{
-            width: '100%', textAlign: 'left', padding: '10px 12px', marginBottom: 10,
-            borderRadius: 8, cursor: 'pointer', fontSize: 14,
-            border: idAtual == null ? '2px solid #1a73e8' : '1px solid #ddd',
-            background: idAtual == null ? '#f0f5ff' : '#999999',
-          }}
+          className={`modal-badge__opcao${idAtual == null ? ' modal-badge__opcao--selecionada' : ''}`}
         >
           Nenhuma badge exibida
         </button>
 
         {conquistas.length === 0 && (
-          <p style={{ color: '#999', fontSize: 14 }}>Você ainda não conquistou nenhuma badge.</p>
+          <p className="modal-badge__vazio">Você ainda não conquistou nenhuma badge.</p>
         )}
 
         {Object.entries(grupos).map(([tipoNome, itens]) => (
-          <div key={tipoNome} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', color: '#999', textTransform: 'uppercase', marginBottom: 6 }}>
-              {tipoNome}
-            </div>
+          <div key={tipoNome} className="modal-badge__grupo">
+            <div className="modal-badge__grupo-titulo">{tipoNome}</div>
             {itens.map((c) => (
               <button
                 key={c.id}
                 onClick={() => onSelecionar(c.badge.id)}
                 disabled={selecionando}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  textAlign: 'left', padding: '8px 12px', marginBottom: 6,
-                  borderRadius: 8, cursor: 'pointer',
-                  border: idAtual === c.badge.id ? '2px solid #1a73e8' : '1px solid #eee',
-                  background: idAtual === c.badge.id ? '#999999' : '#999999',
-                }}
+                className={`modal-badge__item${idAtual === c.badge.id ? ' modal-badge__item--selecionada' : ''}`}
               >
-                <img src={c.badge.icone} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                <img src={c.badge.icone} alt="" className="modal-badge__item-icone" />
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 'bold' }}>{c.badge.nome}</div>
-                  {c.contexto && <div style={{ fontSize: 12, color: '#888' }}>{c.contexto}</div>}
+                  <div className="modal-badge__item-nome">{c.badge.nome}</div>
+                  {c.contexto && <div className="modal-badge__item-contexto">{c.contexto}</div>}
                 </div>
               </button>
             ))}
@@ -159,78 +125,60 @@ function ModalEditarPerfil({ me, salvando, erro, onSalvar, onFechar }) {
   }
 
   return (
-    <div
-      onClick={onFechar}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ background: '#fff', borderRadius: 12, padding: 20, width: 360 }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+    <div onClick={onFechar} className="modal-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="modal-box modal-box--media">
+        <div className="modal-box__header">
           <strong>Editar perfil</strong>
-          <button onClick={onFechar} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onFechar} className="modal-box__fechar">
+            <IconeFechar size={18} />
+          </button>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <label style={{ cursor: 'pointer', position: 'relative' }}>
+        <div className="modal-editar__avatar-linha">
+          <label className="modal-editar__avatar-label">
             {fotoPreview
-              ? <img src={fotoPreview} alt="Foto de perfil"
-                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
-              : <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#ddd',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-                  {(nomeExibicao || me.username)[0]?.toUpperCase()}
-                </div>
+              ? <img src={fotoPreview} alt="Foto de perfil" className="modal-editar__avatar" />
+              : <div className="modal-editar__avatar-vazio">{(nomeExibicao || me.username)[0]?.toUpperCase()}</div>
             }
-            <div style={{
-              position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%',
-              background: '#1a73e8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, border: '2px solid #fff',
-            }}>
-              ✎
+            <div className="modal-editar__avatar-badge">
+              <IconeEditar size={13} />
             </div>
-            <input type="file" accept="image/*" onChange={handleFotoChange} style={{ display: 'none' }} />
+            <input type="file" accept="image/*" onChange={handleFotoChange} className="modal-editar__input-arquivo" />
           </label>
         </div>
 
-        <label style={{ fontSize: 13, color: '#555' }}>Nome de exibição</label>
+        <label className="modal-editar__label">Nome de exibição</label>
         <input
           value={nomeExibicao}
           onChange={(e) => setNomeExibicao(e.target.value)}
           maxLength={50}
-          style={{ width: '100%', padding: 8, marginTop: 4, marginBottom: 4, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box' }}
+          className="modal-editar__input"
         />
         {cooldownAtivo && (
-          <p style={{ fontSize: 12, color: nomeMudou ? '#e53935' : '#999', margin: '0 0 12px' }}>
+          <p className={`modal-editar__cooldown-aviso${nomeMudou ? ' modal-editar__cooldown-aviso--bloqueado' : ''}`}>
             {nomeMudou
               ? `Você poderá trocar o nome de exibição novamente em ${me.dias_para_trocar_nome_exibicao} dia${me.dias_para_trocar_nome_exibicao !== 1 ? 's' : ''}.`
               : `Próxima troca disponível em ${me.dias_para_trocar_nome_exibicao} dia${me.dias_para_trocar_nome_exibicao !== 1 ? 's' : ''}.`}
           </p>
         )}
-        {!cooldownAtivo && <div style={{ marginBottom: 12 }} />}
+        {!cooldownAtivo && <div className="modal-editar__espaco" />}
 
-        <label style={{ fontSize: 13, color: '#555' }}>Bio</label>
+        <label className="modal-editar__label">Bio</label>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           maxLength={200}
           rows={3}
-          style={{ width: '100%', padding: 8, marginTop: 4, marginBottom: 4, borderRadius: 6, border: '1px solid #ddd', boxSizing: 'border-box', resize: 'vertical', font: 'inherit' }}
+          className="modal-editar__textarea"
         />
-        <p style={{ fontSize: 11, color: '#bbb', margin: '0 0 12px', textAlign: 'right' }}>{bio.length}/200</p>
+        <p className="modal-editar__contador-bio">{bio.length}/200</p>
 
-        {erro && <p style={{ color: 'red', fontSize: 13, margin: '0 0 12px' }}>{erro}</p>}
+        {erro && <p className="modal-editar__erro">{erro}</p>}
 
         <button
           onClick={handleSalvar}
           disabled={salvando || bloqueado || !nomeExibicao.trim()}
-          style={{
-            width: '100%', padding: 10, borderRadius: 6, border: 'none', fontWeight: 'bold', cursor: 'pointer',
-            background: '#1a73e8', color: '#fff', opacity: (salvando || bloqueado || !nomeExibicao.trim()) ? 0.5 : 1,
-          }}
+          className="modal-editar__salvar"
         >
           {salvando ? 'Salvando...' : 'Salvar'}
         </button>
@@ -394,8 +342,8 @@ function PaginaPerfil() {
     }
   }
 
-  if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando...</p>;
-  if (erro && !perfil) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
+  if (carregando) return <p className="pagina-perfil__carregando">Carregando...</p>;
+  if (erro && !perfil) return <p className="pagina-perfil__erro">{erro}</p>;
   if (!perfil) return null;
 
   const abas = [
@@ -411,51 +359,38 @@ function PaginaPerfil() {
   }[aba];
 
   return (
-    <div style={{ maxWidth: 650, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginBottom: 24 }}>
+    <div className="pagina-perfil">
+      <div className="perfil-header">
         {perfil.foto_perfil
-          ? <img src={perfil.foto_perfil} alt="Foto de perfil"
-              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
-          : <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#ddd',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
-              {perfil.username[0].toUpperCase()}
-            </div>
+          ? <img src={perfil.foto_perfil} alt="Foto de perfil" className="perfil-header__avatar" />
+          : <div className="perfil-header__avatar-vazio">{perfil.username[0].toUpperCase()}</div>
         }
 
-        <div style={{ flex: 1 }}>
+        <div className="perfil-header__info">
           {perfil.nome_exibicao && (
-            <div style={{ fontSize: 14, color: '#666', marginBottom: 2 }}>
-              {perfil.nome_exibicao}
-            </div>
+            <div className="perfil-header__nome-exibicao">{perfil.nome_exibicao}</div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>@{perfil.username}</h1>
+          <div className="perfil-header__linha-username">
+            <h1 className="perfil-header__username">@{perfil.username}</h1>
             <BadgeDestaque badge={perfil.badge_destaque} size={22} />
             {!ehProprioPerfil && perfil.voce_segue !== null && (
               <button
                 onClick={alternarSeguir}
                 disabled={enviandoFollow}
-                style={{
-                  padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-                  border: perfil.voce_segue ? '1px solid #ccc' : 'none',
-                  background: perfil.voce_segue ? '#f0f0f0' : '#1a73e8',
-                  color: perfil.voce_segue ? '#333' : '#fff',
-                  fontWeight: 'bold',
-                }}
+                className={`btn-seguir${perfil.voce_segue ? ' btn-seguir--seguindo' : ''}`}
               >
+                {!perfil.voce_segue && <IconeSeguir size={15} />}
                 {perfil.voce_segue ? 'Seguindo' : 'Seguir'}
               </button>
             )}
           </div>
-          {perfil.bio && <p style={{ color: '#666', margin: '4px 0' }}>{perfil.bio}</p>}
-          <p style={{ margin: '4px 0', fontSize: 14 }}>
-            <button onClick={() => abrirModal('seguidores')}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+          {perfil.bio && <p className="perfil-header__bio">{perfil.bio}</p>}
+          <p className="perfil-header__stats">
+            <button onClick={() => abrirModal('seguidores')} className="perfil-header__stats-link">
               <strong>{perfil.total_seguidores}</strong> seguidores
             </button>
             {' · '}
-            <button onClick={() => abrirModal('seguindo')}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+            <button onClick={() => abrirModal('seguindo')} className="perfil-header__stats-link">
               <strong>{perfil.total_seguindo_usuarios}</strong> usuários seguidos
             </button>
             {perfil.total_seguindo_lugares > 0 && (
@@ -468,33 +403,27 @@ function PaginaPerfil() {
         </div>
       </div>
 
-      {erro && <p style={{ color: 'red', fontSize: 13 }}>{erro}</p>}
+      {erro && <p className="perfil-erro">{erro}</p>}
 
       {/* Painel de gerenciamento — só o dono do perfil vê */}
       {ehProprioPerfil && (
-        <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 14, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 'bold' }}>Seu perfil</span>
-            <button
-              onClick={abrirModalEditar}
-              style={{ fontSize: 13, padding: '5px 12px', borderRadius: 6, border: '1px solid #ddd', background: '#999999', cursor: 'pointer' }}
-            >
+        <div className="painel-gerenciamento">
+          <div className="painel-gerenciamento__linha">
+            <span className="painel-gerenciamento__titulo">Seu perfil</span>
+            <button onClick={abrirModalEditar} className="btn-secundario btn-secundario--compacto">
               Editar perfil
             </button>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: configuracoes ? 10 : 0 }}>
-            <span style={{ fontSize: 14, fontWeight: 'bold' }}>Suas badges</span>
-            <button
-              onClick={abrirModalBadge}
-              style={{ fontSize: 13, padding: '5px 12px', borderRadius: 6, border: '1px solid #ddd', background: '#999999', cursor: 'pointer' }}
-            >
+          <div className={`painel-gerenciamento__linha${!configuracoes ? ' painel-gerenciamento__linha--sem-margem' : ''}`}>
+            <span className="painel-gerenciamento__titulo">Suas badges</span>
+            <button onClick={abrirModalBadge} className="btn-secundario btn-secundario--compacto">
               Escolher destaque
             </button>
           </div>
 
           {configuracoes && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#555', cursor: 'pointer' }}>
+            <label className="painel-gerenciamento__exibir-badges">
               <input
                 type="checkbox"
                 checked={configuracoes.exibir_badges}
@@ -508,52 +437,47 @@ function PaginaPerfil() {
       )}
 
       {perfil.badges?.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div className="perfil-badges-lista">
           {perfil.badges.map((b, i) => (
-            <div key={i} title={`${b.nome}${b.contexto ? ' — ' + b.contexto : ''}`} style={{
-              display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, background: '#f0f0f0',
-              padding: '4px 10px 4px 4px', borderRadius: 12,
-            }}>
-              <img src={b.icone} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+            <div key={i} title={`${b.nome}${b.contexto ? ' — ' + b.contexto : ''}`} className="perfil-badge-chip">
+              <img src={b.icone} alt="" className="perfil-badge-chip__icone" />
               {b.nome}
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #eee', marginBottom: 20 }}>
+      <div className="perfil-abas">
         {abas.map((a) => (
-          <button key={a.key} onClick={() => setAba(a.key)} style={{
-            padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer',
-            borderBottom: aba === a.key ? '2px solid #1a73e8' : '2px solid transparent',
-            fontWeight: aba === a.key ? 'bold' : 'normal',
-            color: aba === a.key ? '#1a73e8' : '#333',
-          }}>
+          <button
+            key={a.key}
+            onClick={() => setAba(a.key)}
+            className={`perfil-abas__botao${aba === a.key ? ' perfil-abas__botao--ativa' : ''}`}
+          >
             {a.label}
           </button>
         ))}
       </div>
 
       {itinerariosAba.length === 0 && (
-        <p style={{ color: '#999' }}>Nenhum itinerário aqui ainda.</p>
+        <p className="perfil-lista-vazia">Nenhum itinerário aqui ainda.</p>
       )}
 
       {itinerariosAba.map((it) => (
-        <div key={it.id} style={{ border: '1px solid #ddd', borderRadius: 8,
-            padding: 16, marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Link to={`/itinerario/${it.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <h3 style={{ margin: 0 }}>{it.titulo}</h3>
+        <div key={it.id} className="itinerario-card">
+          <div className="itinerario-card__cabecalho">
+            <Link to={`/itinerario/${it.id}`} className="itinerario-card__link">
+              <h3 className="itinerario-card__titulo">{it.titulo}</h3>
             </Link>
             <button
               onClick={() => setCompartilhando(it)}
               title="Compartilhar"
-              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, padding: 0 }}
+              className="itinerario-card__compartilhar"
             >
-              📤
+              <IconeCompartilhar size={16} />
             </button>
           </div>
-          <p style={{ fontSize: 13, color: '#888', margin: '4px 0 0' }}>
+          <p className="itinerario-card__meta">
             {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
             {it.data_inicio && ` · ${it.data_inicio}`}
           </p>

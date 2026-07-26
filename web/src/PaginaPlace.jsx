@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api, { estaLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
+import { IconeSeguir, IconeSucesso, IconeSeguranca, IconePreco, IconePin, IconeLike } from './icons';
+import './PaginaPlace.css';
 
 function PaginaPlace() {
   const { placeId } = useParams();
@@ -82,91 +84,90 @@ function PaginaPlace() {
     }
   }
 
-  if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando...</p>;
-  if (erro) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
+  if (carregando) return <p className="pagina-place__carregando">Carregando...</p>;
+  if (erro) return <p className="pagina-place__erro">{erro}</p>;
   if (!dados) return null;
 
   const { place, comentarios, fotos } = dados;
 
   return (
-    <div style={{ maxWidth: 700, margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <div className="pagina-place">
       {place.foto_capa && (
-        <img
-          src={place.foto_capa}
-          alt={place.nome}
-          style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 8 }}
-        />
+        <img src={place.foto_capa} alt={place.nome} className="pagina-place__capa" />
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
-        <h1 style={{ margin: 0 }}>{place.nome}</h1>
+      <div className="pagina-place__header">
+        <h1 className="pagina-place__nome">{place.nome}</h1>
         {logado && (
           <button
             onClick={alternarSeguir}
             disabled={enviandoFollow}
-            style={{
-              padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-              border: seguindo ? '1px solid #ccc' : 'none',
-              background: seguindo ? '#f0f0f0' : '#1a73e8',
-              color: seguindo ? '#333' : '#fff',
-              fontWeight: 'bold', whiteSpace: 'nowrap',
-            }}
+            className={seguindo ? 'btn-outline btn-outline--ativo' : 'btn-primario'}
           >
+            {seguindo ? <IconeSucesso size={16} /> : <IconeSeguir size={16} />}
             {seguindo ? 'Seguindo' : 'Seguir lugar'}
           </button>
         )}
       </div>
-      <p style={{ color: '#666', marginTop: 0 }}>{place.endereco}</p>
+      <p className="pagina-place__endereco">
+        <IconePin size={13} /> {place.endereco}
+      </p>
 
-      <div style={{ display: 'flex', gap: 24, margin: '16px 0', padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+      <div className="pagina-place__stats">
         <div>
-          <strong>Segurança média</strong>
-          <p>{place.seguranca_media ? `${place.seguranca_media.toFixed(1)} / 5` : '— sem avaliações'}</p>
+          <p className="pagina-place__stat-label"><IconeSeguranca size={15} /> Segurança média</p>
+          <p className="pagina-place__stat-valor">
+            {place.seguranca_media ? `${place.seguranca_media.toFixed(1)} / 5` : '— sem avaliações'}
+          </p>
         </div>
         <div>
-          <strong>Custo-benefício médio</strong>
-          <p>{place.preco_medio_geral ? `${place.preco_medio_geral.toFixed(1)} / 5` : '— sem avaliações'}</p>
+          <p className="pagina-place__stat-label"><IconePreco size={15} /> Custo-benefício médio</p>
+          <p className="pagina-place__stat-valor">
+            {place.preco_medio_geral ? `${place.preco_medio_geral.toFixed(1)} / 5` : '— sem avaliações'}
+          </p>
         </div>
       </div>
 
       {fotos.length > 0 && (
         <>
-          <h2>Fotos</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, marginBottom: 32 }}>
+          <h2 className="pagina-place__secao-titulo">Fotos</h2>
+          <div className="pagina-place__fotos-grid">
             {fotos.map((url, i) => (
               <img
                 key={i}
                 src={url}
                 alt={`Foto ${i + 1} de ${place.nome}`}
-                style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 6 }}
+                className="pagina-place__foto"
               />
             ))}
           </div>
         </>
       )}
 
-      <h2>Comentários de quem visitou</h2>
-      {comentarios.length === 0 && <p style={{ color: '#999' }}>Ainda não há comentários para este local.</p>}
+      <h2 className="pagina-place__secao-titulo">Comentários de quem visitou</h2>
+      {comentarios.length === 0 && (
+        <p className="pagina-place__comentarios-vazio">Ainda não há comentários para este local.</p>
+      )}
 
       {comentarios.map((c) => (
-        <div key={c.ponto_id} style={{ borderBottom: '1px solid #eee', padding: '16px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <strong>{c.autor_nome}</strong>
+        <div key={c.ponto_id} className="comentario-place">
+          <div className="comentario-place__topo">
+            <strong className="comentario-place__autor">{c.autor_nome}</strong>
             <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
           </div>
-          <p style={{ fontSize: 13, color: '#888', margin: '2px 0 8px' }}>
+          <p className="comentario-place__origem">
             do itinerário "{c.itinerario_titulo}"
           </p>
-          <p>{c.texto}</p>
+          <p className="comentario-place__texto">"{c.texto}"</p>
 
           {c.fotos.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <div className="comentario-place__fotos">
               {c.fotos.map((url, j) => (
                 <img
                   key={j}
                   src={url}
                   alt={`Foto do comentário de ${c.autor_nome}`}
-                  style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 6 }}
+                  className="comentario-place__foto"
                 />
               ))}
             </div>
@@ -175,13 +176,9 @@ function PaginaPlace() {
           {logado && (
             <button
               onClick={() => handleCurtirComentario(c.ponto_id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4, marginTop: 8,
-                border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-                fontSize: 12, color: c.curtido ? '#e53935' : '#999',
-              }}
+              className={`comentario-place__curtir${c.curtido ? ' comentario-place__curtir--ativo' : ''}`}
             >
-              <span style={{ fontSize: 14 }}>{c.curtido ? '❤️' : '🤍'}</span>
+              <IconeLike size={14} fill={c.curtido ? 'currentColor' : 'none'} />
               {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
             </button>
           )}

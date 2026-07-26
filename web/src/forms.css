@@ -1,0 +1,42 @@
+/*
+  forms.css — estilos de elementos de formulário compartilhados.
+  Importar em qualquer .css de componente que tenha inputs/selects/textarea
+  (ex: CriarItinerario.css, BuscaLocal.css), assim todos ficam visualmente
+  idênticos sem duplicar regras nem depender do CSS de outra página.
+*/
+
+.form-label {
+  display: block;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin-bottom: 6px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--cor-primaria);
+}
+
+.form-checkbox-label {
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -1,15 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
+import {
+  IconeLike,
+  IconePin,
+  IconeVideo,
+  IconeMensagem,
+  IconeFechar,
+  IconeAnexo,
+  IconeMicrofone,
+  IconePararGravacao,
+  IconeAdicionar,
+} from './icons';
+import './PaginaMensagens.css';
 
 function Avatar({ usuario, tamanho = 40 }) {
   if (usuario?.foto_perfil) {
-    return <img src={usuario.foto_perfil} alt={usuario.username}
-      style={{ width: tamanho, height: tamanho, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+    return (
+      <img
+        src={usuario.foto_perfil}
+        alt={usuario.username}
+        className="avatar-circulo"
+        style={{ width: tamanho, height: tamanho }}
+      />
+    );
   }
   return (
-    <div style={{ width: tamanho, height: tamanho, borderRadius: '50%', background: '#ddd',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: tamanho * 0.4, flexShrink: 0 }}>
+    <div className="avatar-circulo--vazio" style={{ width: tamanho, height: tamanho, fontSize: tamanho * 0.4 }}>
       {usuario?.username?.[0]?.toUpperCase() ?? '?'}
     </div>
   );
@@ -34,26 +51,30 @@ function SeletorDestinatario({ onSelecionar }) {
   }, [query]);
 
   return (
-    <div style={{ padding: '12px 16px', borderBottom: '1px solid #eee' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 13, color: '#555', fontWeight: 'bold' }}>Nova conversa</p>
-      <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
+    <div className="seletor-destinatario">
+      <p className="seletor-destinatario__titulo">Nova conversa</p>
+      <input
+        autoFocus
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar usuário..."
-        style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, boxSizing: 'border-box' }} />
-      <div style={{ marginTop: 8, maxHeight: 260, overflowY: 'auto' }}>
-        {carregando && <p style={{ color: '#aaa', fontSize: 13, margin: '8px 0' }}>Carregando...</p>}
-        {!carregando && usuarios.length === 0 && <p style={{ color: '#aaa', fontSize: 13, margin: '8px 0' }}>Nenhum usuário encontrado.</p>}
+        className="form-input"
+        style={{ marginBottom: 0 }}
+      />
+      <div className="seletor-destinatario__resultados">
+        {carregando && <p className="seletor-destinatario__estado">Carregando...</p>}
+        {!carregando && usuarios.length === 0 && (
+          <p className="seletor-destinatario__estado">Nenhum usuário encontrado.</p>
+        )}
         {usuarios.map((u) => (
-          <div key={u.id} onClick={() => onSelecionar(u)}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', cursor: 'pointer', borderRadius: 6 }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+          <div key={u.id} onClick={() => onSelecionar(u)} className="seletor-destinatario__item">
             <Avatar usuario={u} tamanho={32} />
             <div>
-              <div style={{ fontSize: 14 }}>
+              <div className="seletor-destinatario__nome">
                 {u.nome_exibicao || u.username}
-                {u.seguido && <span style={{ fontSize: 11, color: '#1a73e8', marginLeft: 6 }}>seguindo</span>}
+                {u.seguido && <span className="seletor-destinatario__seguindo">seguindo</span>}
               </div>
-              <div style={{ fontSize: 12, color: '#999' }}>@{u.username}</div>
+              <div className="seletor-destinatario__username">@{u.username}</div>
             </div>
           </div>
         ))}
@@ -66,50 +87,46 @@ function BotaoCurtirMensagem({ m, minha, onCurtir }) {
   return (
     <button
       onClick={() => onCurtir(m.id)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 3, marginTop: 2,
-        border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-        fontSize: 11, color: m.curtido ? '#e53935' : '#aaa',
-        alignSelf: minha ? 'flex-end' : 'flex-start',
-      }}
+      className={[
+        'btn-curtir-mensagem',
+        m.curtido && 'btn-curtir-mensagem--ativo',
+        minha ? 'btn-curtir-mensagem--minha' : 'btn-curtir-mensagem--deles',
+      ].filter(Boolean).join(' ')}
     >
-      <span style={{ fontSize: 12 }}>{m.curtido ? '❤️' : '🤍'}</span>
+      <IconeLike size={12} fill={m.curtido ? 'currentColor' : 'none'} />
       {m.total_curtidas > 0 && <span>{m.total_curtidas}</span>}
     </button>
   );
 }
 
 function BolhaMensagem({ m, minha, onCurtir }) {
+  const wrapperClasse = `bolha-wrapper ${minha ? 'bolha-wrapper--minha' : 'bolha-wrapper--deles'}`;
+  const horaFora = `bolha-hora-fora ${minha ? 'bolha-hora-fora--minha' : 'bolha-hora-fora--deles'}`;
+  const hora = new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   if (m.tipo === 'itinerario') {
     const preview = m.itinerario;
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+      <div className={wrapperClasse}>
         {preview?.disponivel ? (
-          <Link to={`/itinerario/${preview.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{
-              border: '1px solid #eee', borderRadius: 12, padding: 12,
-              background: minha ? '#f0f5ff' : '#fafafa', cursor: 'pointer',
-            }}>
-              <div style={{ fontSize: 11, color: '#1a73e8', fontWeight: 'bold', marginBottom: 4 }}>
-                📍 Itinerário compartilhado
-              </div>
-              <div style={{ fontWeight: 'bold', fontSize: 14 }}>{preview.titulo}</div>
-              {preview.lugar_principal && (
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                  {preview.lugar_principal.nome}
-                  {preview.total_pontos > 1 ? ` + ${preview.total_pontos - 1} lugar${preview.total_pontos > 2 ? 'es' : ''}` : ''}
-                </div>
-              )}
+          <Link to={`/itinerario/${preview.id}`} className={`bolha-itinerario${minha ? ' bolha-itinerario--minha' : ''}`}>
+            <div className="bolha-itinerario__label">
+              <IconePin size={12} /> Itinerário compartilhado
             </div>
+            <div className="bolha-itinerario__titulo">{preview.titulo}</div>
+            {preview.lugar_principal && (
+              <div className="bolha-itinerario__lugar">
+                {preview.lugar_principal.nome}
+                {preview.total_pontos > 1 ? ` + ${preview.total_pontos - 1} lugar${preview.total_pontos > 2 ? 'es' : ''}` : ''}
+              </div>
+            )}
           </Link>
         ) : (
-          <div style={{ border: '1px dashed #ddd', borderRadius: 12, padding: 12, color: '#aaa', fontSize: 13 }}>
-            📍 Itinerário indisponível
+          <div className="bolha-itinerario--indisponivel">
+            <IconePin size={13} /> Itinerário indisponível
           </div>
         )}
-        <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
-          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
+        <div className={horaFora}>{hora}</div>
         <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
     );
@@ -117,29 +134,17 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   if (m.tipo === 'video') {
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
+      <div className={wrapperClasse}>
         {m.video_status === 'pronto' && m.video ? (
-          <video
-            src={m.video}
-            poster={m.video_thumbnail_url || undefined}
-            controls
-            style={{ borderRadius: 12, maxWidth: '100%', maxHeight: 280, display: 'block', background: '#000' }}
-          />
+          <video src={m.video} poster={m.video_thumbnail_url || undefined} controls className="bolha-video" />
         ) : m.video_status === 'erro' ? (
-          <div style={{ borderRadius: 12, padding: 12, background: '#fdecea', color: '#c62828', fontSize: 13 }}>
-            Falha ao processar vídeo
-          </div>
+          <div className="bolha-video-erro">Falha ao processar vídeo</div>
         ) : (
-          <div style={{
-            borderRadius: 12, padding: 12, background: '#f0f0f0', color: '#999', fontSize: 13,
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            🎬 Processando vídeo...
+          <div className="bolha-video-processando">
+            <IconeVideo size={14} /> Processando vídeo...
           </div>
         )}
-        <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
-          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
+        <div className={horaFora}>{hora}</div>
         <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
     );
@@ -147,13 +152,9 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   if (m.tipo === 'imagem') {
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
-        <img src={m.imagem} alt="imagem"
-          style={{ borderRadius: 12, maxWidth: '100%', maxHeight: 280, display: 'block', cursor: 'pointer' }}
-          onClick={() => window.open(m.imagem, '_blank')} />
-        <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
-          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
+      <div className={wrapperClasse}>
+        <img src={m.imagem} alt="imagem" className="bolha-imagem" onClick={() => window.open(m.imagem, '_blank')} />
+        <div className={horaFora}>{hora}</div>
         <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
     );
@@ -161,14 +162,10 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   if (m.tipo === 'audio') {
     return (
-      <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{
-            background: minha ? '#1a73e8' : '#f0f0f0', borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-            padding: '8px 14px' }}>
-          <audio controls src={m.audio} style={{ height: 36, maxWidth: 240 }} />
-          <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right', color: minha ? '#fff' : '#333' }}>
-            {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          </div>
+      <div className={wrapperClasse}>
+        <div className={`bolha-audio${minha ? ' bolha-audio--minha' : ''}`}>
+          <audio controls src={m.audio} className="bolha-audio__player" />
+          <div className={`bolha-audio__hora${minha ? ' bolha-audio__hora--minha' : ''}`}>{hora}</div>
         </div>
         <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
       </div>
@@ -176,16 +173,10 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   }
 
   return (
-    <div style={{ alignSelf: minha ? 'flex-end' : 'flex-start', maxWidth: '65%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        background: minha ? '#1a73e8' : '#f0f0f0', color: minha ? '#fff' : '#333',
-        borderRadius: minha ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-        padding: '8px 14px', fontSize: 14,
-      }}>
+    <div className={wrapperClasse}>
+      <div className={`bolha-texto${minha ? ' bolha-texto--minha' : ''}`}>
         {m.texto}
-        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
-          {new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </div>
+        <div className="bolha-texto__hora">{hora}</div>
       </div>
       <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
     </div>
@@ -396,39 +387,37 @@ function PaginaMensagens() {
   const interlocutorAtivo = conversas.find((c) => c.usuario.username === conversaAtiva)?.usuario;
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 57px)', fontFamily: 'sans-serif' }}>
+    <div className="pagina-mensagens">
 
       {/* ── Inbox ── */}
-      <div style={{ width: 300, borderRight: '1px solid #eee', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <strong style={{ fontSize: 16 }}>Mensagens</strong>
-            <button onClick={() => setMostraSeletor((v) => !v)}
-              style={{ border: 'none', borderRadius: 6, padding: '4px 12px',
-                background: mostraSeletor ? '#f0f0f0' : '#1a73e8', color: mostraSeletor ? '#333' : '#fff',
-                cursor: 'pointer', fontSize: 13, fontWeight: 'bold' }}>
-              {mostraSeletor ? 'Cancelar' : '+ Nova'}
-            </button>
-          </div>
+      <div className="mensagens-inbox">
+        <div className="mensagens-inbox__header">
+          <strong className="mensagens-inbox__titulo">Mensagens</strong>
+          <button
+            onClick={() => setMostraSeletor((v) => !v)}
+            className={`btn-toggle-nova${mostraSeletor ? ' btn-toggle-nova--cancelar' : ''}`}
+          >
+            {mostraSeletor ? 'Cancelar' : <><IconeAdicionar size={13} /> Nova</>}
+          </button>
         </div>
 
         {mostraSeletor && <SeletorDestinatario onSelecionar={selecionarDestinatario} />}
 
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          {carregandoConversas && <p style={{ padding: 16, color: '#999', fontSize: 13 }}>Carregando...</p>}
+        <div className="mensagens-inbox__lista">
+          {carregandoConversas && <p className="mensagens-inbox__estado">Carregando...</p>}
           {!carregandoConversas && conversas.length === 0 && !mostraSeletor && (
-            <p style={{ padding: 16, color: '#999', fontSize: 13 }}>Nenhuma conversa ainda.</p>
+            <p className="mensagens-inbox__estado">Nenhuma conversa ainda.</p>
           )}
           {conversas.map((c) => (
-            <div key={c.usuario.username}
+            <div
+              key={c.usuario.username}
               onClick={() => { setConversaAtiva(c.usuario.username); setMostraSeletor(false); }}
-              style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', cursor: 'pointer',
-                background: conversaAtiva === c.usuario.username ? '#f0f5ff' : 'transparent',
-                borderLeft: conversaAtiva === c.usuario.username ? '3px solid #1a73e8' : '3px solid transparent' }}>
+              className={`conversa-item${conversaAtiva === c.usuario.username ? ' conversa-item--ativa' : ''}`}
+            >
               <Avatar usuario={c.usuario} tamanho={40} />
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontWeight: 'bold', fontSize: 14 }}>{c.usuario.username}</div>
-                <div style={{ fontSize: 12, color: '#999', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="conversa-item__info">
+                <div className="conversa-item__nome">{c.usuario.username}</div>
+                <div className="conversa-item__preview">
                   {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
                 </div>
               </div>
@@ -439,21 +428,21 @@ function PaginaMensagens() {
 
       {/* ── Chat ── */}
       {!conversaAtiva ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 40 }}>💬</span>
+        <div className="chat-painel__vazio">
+          <IconeMensagem size={40} />
           <span>Selecione uma conversa ou inicie uma nova</span>
         </div>
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '12px 20px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="chat-painel">
+          <div className="chat-painel__header">
             <Avatar usuario={interlocutorAtivo ?? { username: conversaAtiva }} tamanho={36} />
-            <strong>{conversaAtiva}</strong>
+            <strong className="chat-painel__header-nome">{conversaAtiva}</strong>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {carregandoMensagens && mensagens.length === 0 && <p style={{ color: '#999', textAlign: 'center' }}>Carregando...</p>}
+          <div className="mensagens-lista">
+            {carregandoMensagens && mensagens.length === 0 && <p className="mensagens-lista__estado">Carregando...</p>}
             {mensagens.length === 0 && !carregandoMensagens && (
-              <p style={{ color: '#bbb', textAlign: 'center', marginTop: 40 }}>Nenhuma mensagem ainda. Diga olá! 👋</p>
+              <p className="mensagens-lista__estado">Nenhuma mensagem ainda. Diga olá! 👋</p>
             )}
             {mensagens.map((m) => {
               const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
@@ -464,58 +453,58 @@ function PaginaMensagens() {
 
           {/* Preview de imagem antes de enviar */}
           {previewImagem && (
-            <div style={{ padding: '8px 20px', borderTop: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={previewImagem.url} alt="preview" style={{ height: 60, borderRadius: 8, objectFit: 'cover' }} />
-              <button onClick={() => enviarImagem(previewImagem.file)} disabled={enviando}
-                style={{ padding: '6px 16px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold' }}>
+            <div className="preview-midia">
+              <img src={previewImagem.url} alt="preview" className="preview-midia__imagem" />
+              <button onClick={() => enviarImagem(previewImagem.file)} disabled={enviando} className="btn-primario">
                 {enviando ? 'Enviando...' : 'Enviar foto'}
               </button>
-              <button onClick={() => setPreviewImagem(null)}
-                style={{ border: 'none', background: 'none', color: '#aaa', cursor: 'pointer', fontSize: 20 }}>×</button>
+              <button onClick={() => setPreviewImagem(null)} className="preview-midia__fechar">
+                <IconeFechar size={20} />
+              </button>
             </div>
           )}
 
           {/* Preview de vídeo antes de enviar */}
           {previewVideo && (
-            <div style={{ padding: '8px 20px', borderTop: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <video src={previewVideo.url} muted style={{ height: 60, borderRadius: 8 }} />
-              <button onClick={() => enviarVideo(previewVideo.file)} disabled={enviando}
-                style={{ padding: '6px 16px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold' }}>
+            <div className="preview-midia">
+              <video src={previewVideo.url} muted className="preview-midia__video" />
+              <button onClick={() => enviarVideo(previewVideo.file)} disabled={enviando} className="btn-primario">
                 {enviando ? 'Enviando...' : 'Enviar vídeo'}
               </button>
-              <button onClick={() => setPreviewVideo(null)}
-                style={{ border: 'none', background: 'none', color: '#aaa', cursor: 'pointer', fontSize: 20 }}>×</button>
+              <button onClick={() => setPreviewVideo(null)} className="preview-midia__fechar">
+                <IconeFechar size={20} />
+              </button>
             </div>
           )}
 
           {/* Barra de input */}
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #eee', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="barra-input">
             {/* Botão de mídia (foto ou vídeo) */}
             <input ref={midiaInputRef} type="file" accept="image/*,video/*" onChange={handleMidiaSelect} style={{ display: 'none' }} />
-            <button onClick={() => midiaInputRef.current?.click()} title="Enviar foto ou vídeo"
-              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, padding: '0 4px', color: '#888' }}>
-              📎
+            <button onClick={() => midiaInputRef.current?.click()} title="Enviar foto ou vídeo" className="barra-input__icone-btn">
+              <IconeAnexo size={20} />
             </button>
 
             {/* Botão áudio */}
             <button
               onClick={gravando ? pararGravacao : iniciarGravacao}
               title={gravando ? 'Parar gravação' : 'Gravar áudio'}
-              style={{ border: 'none', background: gravando ? '#ffebee' : 'none', cursor: 'pointer',
-                fontSize: 20, padding: '0 4px', color: gravando ? '#e53935' : '#888', borderRadius: 6 }}>
-              {gravando ? '⏹' : '🎤'}
+              className={`barra-input__icone-btn${gravando ? ' barra-input__icone-btn--gravando' : ''}`}
+            >
+              {gravando ? <IconePararGravacao size={18} /> : <IconeMicrofone size={20} />}
             </button>
 
-            <input ref={inputRef} value={texto}
+            <input
+              ref={inputRef}
+              value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && enviarTexto()}
-              placeholder={gravando ? 'Gravando... clique em ⏹ para enviar' : 'Digite uma mensagem...'}
+              placeholder={gravando ? 'Gravando... clique em parar para enviar' : 'Digite uma mensagem...'}
               disabled={gravando}
-              style={{ flex: 1, padding: '10px 14px', borderRadius: 20, border: '1px solid #ddd', fontSize: 14, outline: 'none' }} />
+              className="barra-input__texto"
+            />
 
-            <button onClick={enviarTexto} disabled={enviando || !texto.trim() || gravando}
-              style={{ padding: '0 20px', borderRadius: 20, border: 'none', background: '#1a73e8', color: '#fff',
-                fontWeight: 'bold', cursor: 'pointer', opacity: !texto.trim() || gravando ? 0.5 : 1, height: 40 }}>
+            <button onClick={enviarTexto} disabled={enviando || !texto.trim() || gravando} className="barra-input__enviar">
               Enviar
             </button>
           </div>

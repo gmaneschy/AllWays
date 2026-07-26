@@ -1,0 +1,116 @@
+.painel-notificacoes {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 340px;
+  background: var(--fundo-card);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--borda-padrao);
+  z-index: 200;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-notificacoes__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borda-sutil);
+}
+
+.painel-notificacoes__titulo {
+  font: var(--fonte-nome-autor);
+  color: var(--texto-principal);
+}
+
+.painel-notificacoes__marcar-todas {
+  border: none;
+  background: none;
+  color: var(--cor-primaria);
+  font: var(--fonte-micro);
+  cursor: pointer;
+  padding: 0;
+}
+
+.painel-notificacoes__lista {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.painel-notificacoes__vazio {
+  padding: 16px;
+  color: var(--texto-secundario);
+  font: var(--fonte-meta);
+  margin: 0;
+}
+
+.painel-notificacoes__item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  background: var(--fundo-card);
+  border-bottom: 1px solid var(--borda-sutil);
+}
+
+.painel-notificacoes__item--nao-lida {
+  background: var(--cor-primaria-fundo);
+}
+
+.painel-notificacoes__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.painel-notificacoes__avatar-vazio {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--fundo-avatar-vazio);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--texto-secundario);
+  flex-shrink: 0;
+}
+
+.painel-notificacoes__conteudo {
+  flex: 1;
+  min-width: 0;
+}
+
+.painel-notificacoes__mensagem {
+  font: var(--fonte-corpo);
+  color: var(--texto-corpo);
+}
+
+.painel-notificacoes__tempo {
+  font: var(--fonte-micro);
+  color: var(--texto-muted);
+  margin-top: 2px;
+}
+
+.painel-notificacoes__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.painel-notificacoes__ver-todas {
+  display: block;
+  text-align: center;
+  padding: 10px 0;
+  font: var(--fonte-micro);
+  color: var(--cor-primaria);
+  text-decoration: none;
+  border-top: 1px solid var(--borda-sutil);
+}

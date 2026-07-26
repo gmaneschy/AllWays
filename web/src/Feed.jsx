@@ -4,6 +4,16 @@ import api, { curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import {
+  IconeCompartilhar,
+  IconeLike,
+  IconeMovimentacao,
+  IconePreco,
+  IconeSeguranca,
+  IconeSucesso,
+  IconeProximaParada,
+} from './icons';
+import './Feed.css';
 
 const TIPO_LABEL = {
   day_trip: 'Day Trip',
@@ -68,39 +78,36 @@ function Feed() {
     }
   }
 
-  if (carregando) return <p style={{ textAlign: 'center', marginTop: 40 }}>Carregando feed...</p>;
-  if (erro) return <p style={{ textAlign: 'center', marginTop: 40, color: 'red' }}>{erro}</p>;
+  if (carregando) return <p className="feed-estado">Carregando feed...</p>;
+  if (erro) return <p className="feed-estado erro">{erro}</p>;
 
   return (
-    <div style={{ maxWidth: 650, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      <h1>Feed</h1>
+    <div className="feed-pagina">
+      <h1 className="feed-titulo">Feed</h1>
 
       {itinerarios.length === 0 && (
-        <p style={{ color: '#999' }}>Nenhum itinerário publicado ainda.</p>
+        <p className="feed-vazio">Nenhum itinerário publicado ainda.</p>
       )}
 
       {itinerarios.map((it) => (
-        <div
-          key={it.id}
-          style={{ border: '1px solid #ddd', borderRadius: 8, padding: 20, marginBottom: 20 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Link to={`/itinerario/${it.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <h2 style={{ margin: 0 }}>{it.titulo}</h2>
+        <div key={it.id} className="feed-card">
+          <div className="feed-card-header">
+            <Link to={`/itinerario/${it.id}`} className="feed-card-titulo">
+              <h2>{it.titulo}</h2>
             </Link>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: '#888' }}>{TIPO_LABEL[it.tipo]}</span>
+            <div className="feed-card-header-acoes">
+              <span className="feed-card-tipo">{TIPO_LABEL[it.tipo]}</span>
               <button
+                className="feed-btn-compartilhar"
                 onClick={() => setCompartilhando(it)}
                 title="Compartilhar"
-                style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, padding: 0 }}
               >
-                📤
+                <IconeCompartilhar size={16} />
               </button>
             </div>
           </div>
 
-          <p style={{ color: '#666', margin: '4px 0 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <p className="feed-autor">
             por <strong>{it.autor_nome}</strong>
             <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
             {it.data_inicio && <span>· {formatarData(it.data_inicio)}</span>}
@@ -108,48 +115,60 @@ function Feed() {
           </p>
 
           {it.badges?.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
+            <div className="feed-badges">
               <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
             </div>
           )}
 
           <button
+            className={`feed-curtir${it.curtido ? ' ativo' : ''}`}
             onClick={() => handleCurtir(it.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12,
-              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-              fontSize: 14, color: it.curtido ? '#e53935' : '#888',
-            }}
           >
-            <span style={{ fontSize: 18 }}>{it.curtido ? '❤️' : '🤍'}</span>
+            <IconeLike size={18} fill={it.curtido ? 'currentColor' : 'none'} />
             {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
           </button>
 
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
+          <ol className="feed-lista">
             {it.pontos.map((ponto) => (
-              <li key={ponto.id} style={{ marginBottom: 10 }}>
-                <Link
-                  to={`/place/${ponto.local}`}
-                  style={{ fontWeight: 'bold', textDecoration: 'none', color: '#1a73e8' }}
-                >
+              <li key={ponto.id} className="feed-ponto">
+                <Link to={`/place/${ponto.local}`} className="feed-ponto-local">
                   {ponto.local_nome}
                 </Link>
 
-                <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
-                  {ponto.movimentacao && <span>{MOVIMENTACAO_LABEL[ponto.movimentacao]} · </span>}
-                  {ponto.entrada_gratuita
-                    ? <span>Entrada gratuita</span>
-                    : ponto.preco_medio && <span>Custo-benefício {ponto.preco_medio}/5</span>}
-                  {ponto.seguranca && <span> · Segurança {ponto.seguranca}/5</span>}
+                <div className="feed-ponto-meta">
+                  {ponto.movimentacao && (
+                    <span className="feed-ponto-meta-item">
+                      <IconeMovimentacao size={13} />
+                      {MOVIMENTACAO_LABEL[ponto.movimentacao]}
+                    </span>
+                  )}
+                  {ponto.entrada_gratuita ? (
+                    <span className="feed-ponto-meta-item">
+                      <IconeSucesso size={13} />
+                      Entrada gratuita
+                    </span>
+                  ) : ponto.preco_medio && (
+                    <span className="feed-ponto-meta-item">
+                      <IconePreco size={13} />
+                      Custo-benefício {ponto.preco_medio}/5
+                    </span>
+                  )}
+                  {ponto.seguranca && (
+                    <span className="feed-ponto-meta-item">
+                      <IconeSeguranca size={13} />
+                      Segurança {ponto.seguranca}/5
+                    </span>
+                  )}
                 </div>
 
                 {ponto.comentario && (
-                  <p style={{ fontSize: 14, margin: '4px 0 0' }}>{ponto.comentario}</p>
+                  <p className="feed-ponto-comentario">"{ponto.comentario}"</p>
                 )}
 
                 {ponto.distancia_ate_proximo != null && (
-                  <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0' }}>
-                    ↓ {Math.round(ponto.distancia_ate_proximo)}m até o próximo
+                  <p className="feed-ponto-distancia">
+                    <IconeProximaParada size={12} />
+                    {Math.round(ponto.distancia_ate_proximo)}m até o próximo
                   </p>
                 )}
               </li>

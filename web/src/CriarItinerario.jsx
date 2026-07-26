@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
+import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar } from './icons';
+import './CriarItinerario.css';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
   { value: '', label: '—' },
@@ -313,45 +315,38 @@ function CriarItinerario() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h1 style={{ margin: 0 }}>Criar Itinerário</h1>
-        <button
-          type="button"
-          onClick={abrirCarregar}
-          style={{ fontSize: 13, padding: '6px 14px', borderRadius: 6, border: '1px solid #ddd', background: '#736060', cursor: 'pointer' }}
-        >
-          📂 Carregar existente
+    <div className="criar-itinerario">
+      <div className="criar-itinerario__header">
+        <h1 className="criar-itinerario__titulo">Criar Itinerário</h1>
+        <button type="button" onClick={abrirCarregar} className="btn-secundario btn-secundario--compacto">
+          <IconeCarregar size={16} /> Carregar existente
         </button>
       </div>
 
       {/* Modal de carregar itinerário */}
       {mostraCarregar && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 10, padding: 16, marginBottom: 20, background: '#fafafa' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div className="modal-carregar">
+          <div className="modal-carregar__header">
             <strong>Selecionar itinerário para copiar</strong>
-            <button onClick={() => setMostraCarregar(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button>
+            <button onClick={() => setMostraCarregar(false)} className="modal-carregar__fechar">
+              <IconeFechar size={18} />
+            </button>
           </div>
-          <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px' }}>
+          <p className="modal-carregar__aviso">
             Data e comentários dos pontos não serão copiados.
           </p>
-          {carregandoSalvos && <p style={{ color: '#999' }}>Carregando...</p>}
+          {carregandoSalvos && <p className="modal-carregar__vazio">Carregando...</p>}
           {!carregandoSalvos && itinerariosSalvos.length === 0 && (
-            <p style={{ color: '#999' }}>Nenhum itinerário encontrado.</p>
+            <p className="modal-carregar__vazio">Nenhum itinerário encontrado.</p>
           )}
           {itinerariosSalvos.map((it) => (
             <div
               key={it.id}
               onClick={() => carregarItinerario(it.id)}
-              style={{
-                padding: '10px 12px', borderRadius: 8, border: '1px solid #eee',
-                marginBottom: 8, cursor: 'pointer', background: '#fff',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#f0f5ff'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+              className="modal-item"
             >
               <strong>{it.titulo}</strong>
-              <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
+              <span className="modal-item__status">
                 {it.status === 'rascunho' ? '· Rascunho' : '· Publicado'}
               </span>
             </div>
@@ -359,46 +354,46 @@ function CriarItinerario() {
         </div>
       )}
 
-      <label>Título</label>
+      <label className="form-label">Título</label>
       <input
         type="text"
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
-        style={{ width: '100%', padding: 8, marginBottom: 12 }}
+        className="form-input"
       />
 
-      <label>Tipo</label>
+      <label className="form-label">Tipo</label>
       <select
         value={tipo}
         onChange={(e) => setTipo(e.target.value)}
-        style={{ width: '100%', padding: 8, marginBottom: 12 }}
+        className="form-select"
       >
         <option value="day_trip">Day Trip</option>
         <option value="multi_day">Multi-Day Trip</option>
       </select>
 
-      <label>Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
+      <label className="form-label">Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
       <input
         type="date"
         value={dataInicio}
         onChange={(e) => setDataInicio(e.target.value)}
-        style={{ width: '100%', padding: 8, marginBottom: tipo === 'multi_day' ? 12 : 20 }}
+        className="form-input"
       />
 
       {tipo === 'multi_day' && (
         <>
-          <label>Data de término</label>
+          <label className="form-label">Data de término</label>
           <input
             type="date"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}
-            style={{ width: '100%', padding: 8, marginBottom: 20 }}
+            className="form-input"
           />
         </>
       )}
 
-      <label style={{ display: 'block', marginBottom: 6 }}>Categorias do itinerário</label>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+      <label className="form-label">Categorias do itinerário</label>
+      <div className="badges-lista">
         {badgesDisponiveis.map((b) => {
           const selecionada = badgesSelecionadas.includes(b.id);
           return (
@@ -406,111 +401,102 @@ function CriarItinerario() {
               key={b.id}
               type="button"
               onClick={() => alternarBadge(b.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 16, cursor: 'pointer', fontSize: 13,
-                border: selecionada ? '2px solid #1a73e8' : '1px solid #ddd',
-                background: selecionada ? '#f0f5ff' : '#fff',
-                color: selecionada ? '#1a73e8' : '#555',
-              }}
+              className={`badge-chip${selecionada ? ' badge-chip--selecionada' : ''}`}
             >
-              {b.icone && <img src={b.icone} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
+              {b.icone && <img src={b.icone} alt="" className="badge-chip__icone" />}
               {b.nome}
             </button>
           );
         })}
         {badgesDisponiveis.length === 0 && (
-          <span style={{ fontSize: 13, color: '#999' }}>Nenhuma categoria cadastrada ainda.</span>
+          <span className="badges-lista__vazio">Nenhuma categoria cadastrada ainda.</span>
         )}
       </div>
 
-      <h2>Pontos</h2>
+      <h2 className="secao-pontos__titulo">Pontos</h2>
 
       {pontos.map((ponto, index) => (
-        <div
-          key={index}
-          style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}
-        >
-          <strong>Ponto #{index + 1}</strong>
+        <div key={index} className="ponto-card">
+          <strong className="ponto-card__titulo">Ponto #{index + 1}</strong>
 
-          <div style={{ margin: '8px 0' }}>
+          <div className="ponto-card__busca-local">
             <BuscaLocal
               localSelecionado={ponto.local}
               onSelecionar={(local) => atualizarPonto(index, 'local', local)}
             />
           </div>
 
-          <label>Movimentação</label>
+          <label className="form-label">Movimentação</label>
           <select
             value={ponto.movimentacao}
             onChange={(e) => atualizarPonto(index, 'movimentacao', e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+            className="form-select"
           >
             {MOVIMENTACAO_OPCOES.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
 
-          <label>Segurança (1-5)</label>
+          <label className="form-label">Segurança (1-5)</label>
           <input
             type="number"
             min="1"
             max="5"
             value={ponto.seguranca}
             onChange={(e) => atualizarPonto(index, 'seguranca', e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+            className="form-input"
           />
 
-          <label>
+          <label className="form-checkbox-label">
             <input
               type="checkbox"
               checked={ponto.entrada_gratuita}
               onChange={(e) => atualizarPonto(index, 'entrada_gratuita', e.target.checked)}
             />
-            {' '}Entrada gratuita
+            Entrada gratuita
           </label>
 
           {!ponto.entrada_gratuita && (
             <>
-              <label style={{ display: 'block', marginTop: 8 }}>Avaliação de preço (1-5)</label>
+              <label className="form-label">Avaliação de preço (1-5)</label>
               <input
                 type="number"
                 min="1"
                 max="5"
                 value={ponto.preco_medio}
                 onChange={(e) => atualizarPonto(index, 'preco_medio', e.target.value)}
-                style={{ width: '100%', padding: 6, marginBottom: 8 }}
+                className="form-input"
               />
             </>
           )}
 
-          <label style={{ display: 'block', marginTop: 8 }}>Meio de deslocamento até aqui</label>
+          <label className="form-label">Meio de deslocamento até aqui</label>
           <select
             value={ponto.meio_deslocamento}
             onChange={(e) => atualizarPonto(index, 'meio_deslocamento', e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+            className="form-select"
           >
             {MEIO_DESLOCAMENTO_OPCOES.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
 
-          <label style={{ display: 'block', marginTop: 8 }}>Horário estimado</label>
+          <label className="form-label">Horário estimado</label>
           <input
             type="time"
             value={ponto.horario_estimado}
             onChange={(e) => atualizarPonto(index, 'horario_estimado', e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+            className="form-input"
           />
 
-          <label style={{ display: 'block', marginTop: 8 }}>Comentário</label>
+          <label className="form-label">Comentário</label>
           <textarea
             value={ponto.comentario}
             onChange={(e) => atualizarPonto(index, 'comentario', e.target.value)}
-            style={{ width: '100%', padding: 6, marginBottom: 8 }}
+            className="form-textarea"
           />
 
-          <label style={{ display: 'block', marginTop: 8 }}>
+          <label className="form-label">
             Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
           </label>
           <input
@@ -518,57 +504,40 @@ function CriarItinerario() {
             accept="image/*,video/*"
             multiple
             onChange={(e) => { adicionarMidia(index, e.target.files); e.target.value = ''; }}
-            style={{ marginBottom: 8 }}
+            className="midia-input"
           />
           {(ponto.arquivos.length > 0 || ponto.videos.length > 0) && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+            <div className="midia-lista">
               {ponto.arquivos.map((arquivo, iArq) => (
-                <div key={`foto-${iArq}`} style={{ position: 'relative' }}>
+                <div key={`foto-${iArq}`} className="midia-item">
                   <img
                     src={URL.createObjectURL(arquivo)}
                     alt={`foto ${iArq + 1}`}
-                    style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                    className="midia-item__thumb"
                   />
                   <button
                     type="button"
                     onClick={() => removerArquivo(index, iArq)}
-                    style={{
-                      position: 'absolute', top: 2, right: 2,
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)', color: '#fff',
-                      border: 'none', cursor: 'pointer', fontSize: 11,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-                    }}
+                    className="midia-item__remover"
                   >
-                    ×
+                    <IconeFechar size={12} />
                   </button>
                 </div>
               ))}
               {ponto.videos.map((video, iVid) => (
-                <div key={`video-${iVid}`} style={{ position: 'relative' }}>
+                <div key={`video-${iVid}`} className="midia-item">
                   <video
                     src={URL.createObjectURL(video)}
                     muted
-                    style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block', background: '#000' }}
+                    className="midia-item__thumb midia-item__thumb--video"
                   />
-                  <span style={{
-                    position: 'absolute', bottom: 2, left: 2, fontSize: 13,
-                    filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.8))',
-                  }}>
-                    🎬
-                  </span>
+                  <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
                   <button
                     type="button"
                     onClick={() => removerVideo(index, iVid)}
-                    style={{
-                      position: 'absolute', top: 2, right: 2,
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)', color: '#fff',
-                      border: 'none', cursor: 'pointer', fontSize: 11,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-                    }}
+                    className="midia-item__remover"
                   >
-                    ×
+                    <IconeFechar size={12} />
                   </button>
                 </div>
               ))}
@@ -576,25 +545,23 @@ function CriarItinerario() {
           )}
 
           {pontos.length > 1 && (
-            <button type="button" onClick={() => removerPonto(index)} style={{ color: 'red' }}>
+            <button type="button" onClick={() => removerPonto(index)} className="btn-remover">
               Remover ponto
             </button>
           )}
         </div>
       ))}
 
-      <button type="button" onClick={adicionarPonto} style={{ marginBottom: 20 }}>
-        + Adicionar ponto
+      <button type="button" onClick={adicionarPonto} className="btn-secundario" style={{ marginBottom: 20 }}>
+        <IconeAdicionar size={16} /> Adicionar ponto
       </button>
 
-      <br />
-
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
+      <div className="acoes-rodape">
         <button
           type="button"
           onClick={publicar}
           disabled={enviando}
-          style={{ padding: '10px 20px', fontSize: 16 }}
+          className="btn-primario"
         >
           {enviando ? 'Publicando...' : 'Publicar Itinerário'}
         </button>
@@ -602,22 +569,19 @@ function CriarItinerario() {
           type="button"
           onClick={salvarRascunho}
           disabled={salvandoRascunho}
-          style={{
-            padding: '10px 20px', fontSize: 16,
-            background: '#635858', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer',
-          }}
+          className="btn-secundario"
         >
-          {salvandoRascunho ? 'Salvando...' : '💾 Salvar rascunho'}
+          {salvandoRascunho ? 'Salvando...' : <><IconeSalvar size={16} /> Salvar rascunho</>}
         </button>
-        {rascunhoSalvo && <span style={{ color: 'green', fontSize: 13 }}>✓ Rascunho salvo!</span>}
+        {rascunhoSalvo && <span className="msg-sucesso"><IconeSucesso size={14} /> Rascunho salvo!</span>}
       </div>
 
-      {erro && <p style={{ color: 'red', marginTop: 16 }}>{erro}</p>}
+      {erro && <p className="msg-erro">{erro}</p>}
 
       {resultado && (
-        <div style={{ marginTop: 20, padding: 16, background: '#f0f0f0', borderRadius: 8 }}>
+        <div className="resultado-box">
           <h3>Itinerário criado:</h3>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(resultado, null, 2)}</pre>
+          <pre className="resultado-box__json">{JSON.stringify(resultado, null, 2)}</pre>
         </div>
       )}
     </div>

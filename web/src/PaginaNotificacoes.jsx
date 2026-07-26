@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificacoes, marcarNotificacaoLida, marcarTodasNotificacoesLidas } from './api';
+import {
+  IconeNotificacao,
+  IconeSeguir,
+  IconeMensagem,
+  IconeResposta,
+  IconeLike,
+} from './icons';
+import './PaginaNotificacoes.css';
 
 const ICONE_TIPO = {
-  follow: '👤',
-  comentario: '💬',
-  resposta_comentario: '↩️',
-  mensagem: '✉️',
-  curtida: '❤️',
+  follow: IconeSeguir,
+  comentario: IconeMensagem,
+  resposta_comentario: IconeResposta,
+  mensagem: IconeMensagem,
+  curtida: IconeLike,
 };
 
 function tempoRelativo(dataIso) {
@@ -54,52 +62,40 @@ function PaginaNotificacoes() {
   const temNaoLidas = notificacoes.some((n) => !n.lida);
 
   return (
-    <div style={{ maxWidth: 650, margin: '40px auto', fontFamily: 'sans-serif', padding: '0 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>Notificações</h1>
+    <div className="pagina-notificacoes">
+      <div className="pagina-notificacoes__header">
+        <h1 className="pagina-notificacoes__titulo">Notificações</h1>
         {temNaoLidas && (
-          <button
-            onClick={handleMarcarTodas}
-            style={{ border: 'none', background: 'none', color: '#1a73e8', fontSize: 13, cursor: 'pointer' }}
-          >
+          <button onClick={handleMarcarTodas} className="pagina-notificacoes__marcar-todas-btn">
             Marcar todas como lidas
           </button>
         )}
       </div>
 
-      {carregando && <p style={{ color: '#999' }}>Carregando...</p>}
+      {carregando && <p className="pagina-notificacoes__estado-vazio">Carregando...</p>}
       {!carregando && notificacoes.length === 0 && (
-        <p style={{ color: '#999' }}>Nenhuma notificação ainda.</p>
+        <p className="pagina-notificacoes__estado-vazio">Nenhuma notificação ainda.</p>
       )}
 
-      {notificacoes.map((n) => (
-        <div
-          key={n.id}
-          onClick={() => handleClicar(n)}
-          style={{
-            display: 'flex', gap: 12, padding: '14px 12px', cursor: 'pointer',
-            background: n.lida ? '#fff' : '#f0f6ff', borderRadius: 10, marginBottom: 6,
-            border: '1px solid #f0f0f0',
-          }}
-        >
-          {n.ator_foto
-            ? <img src={n.ator_foto} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{
-                width: 42, height: 42, borderRadius: '50%', background: '#ddd',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0,
-              }}>
-                {ICONE_TIPO[n.tipo] || '🔔'}
-              </div>
-          }
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, color: '#333' }}>{n.mensagem}</div>
-            <div style={{ fontSize: 12, color: '#999', marginTop: 3 }}>{tempoRelativo(n.criado_em)}</div>
+      {notificacoes.map((n) => {
+        const IconeTipo = ICONE_TIPO[n.tipo] || IconeNotificacao;
+        const classeItem = `pagina-notificacoes__item${!n.lida ? ' pagina-notificacoes__item--nao-lida' : ''}`;
+        return (
+          <div key={n.id} onClick={() => handleClicar(n)} className={classeItem}>
+            {n.ator_foto
+              ? <img src={n.ator_foto} alt="" className="pagina-notificacoes__avatar" />
+              : <div className="pagina-notificacoes__avatar-vazio">
+                  <IconeTipo size={18} strokeWidth={2} />
+                </div>
+            }
+            <div className="pagina-notificacoes__conteudo">
+              <div className="pagina-notificacoes__mensagem">{n.mensagem}</div>
+              <div className="pagina-notificacoes__tempo">{tempoRelativo(n.criado_em)}</div>
+            </div>
+            {!n.lida && <div className="pagina-notificacoes__dot" />}
           </div>
-          {!n.lida && (
-            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#1a73e8', flexShrink: 0, marginTop: 6 }} />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

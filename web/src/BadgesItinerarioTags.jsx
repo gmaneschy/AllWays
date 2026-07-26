@@ -1,20 +1,18 @@
+import './BadgesItinerarioTags.css';
+
 /** Linha de tags de categorias do itinerário (caro, econômico, relaxante etc.).
  * Recebe `badges` no formato [{ id, nome, icone }, ...]. Múltiplas por itinerário são permitidas. */
 function BadgesItinerarioTags({ badges, tamanho = 'normal' }) {
   if (!badges || badges.length === 0) return null;
-  const fontSize = tamanho === 'pequeno' ? 11 : 12;
 
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <div className="badges-tags">
       {badges.map((b) => (
         <span
           key={b.id}
-          style={{
-            fontSize, display: 'inline-flex', alignItems: 'center', gap: 4,
-            background: '#f0f0f0', borderRadius: 12, padding: '3px 10px', color: '#555',
-          }}
+          className={`badge-tag${tamanho === 'pequeno' ? ' badge-tag--pequeno' : ''}`}
         >
-          {b.icone && <img src={b.icone} alt="" style={{ width: 14, height: 14, objectFit: 'contain' }} />}
+          {b.icone && <img src={b.icone} alt="" className="badge-tag__icone" />}
           {b.nome}
         </span>
       ))}

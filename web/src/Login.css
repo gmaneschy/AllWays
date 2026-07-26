@@ -1,0 +1,137 @@
+/*
+  Login.css — estilos do componente Login/Cadastro.
+  Consome os tokens de theme.css (importado globalmente em main.jsx).
+*/
+
+.login-pagina {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--fundo-pagina);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(44, 44, 42, 0.06);
+}
+
+.login-titulo {
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-campo label {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-wrapper svg {
+  position: absolute;
+  left: 12px;
+  color: var(--texto-muted);
+  pointer-events: none;
+}
+
+.login-input,
+.login-select {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  background: var(--fundo-pagina);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.login-input::placeholder {
+  color: var(--texto-muted);
+}
+
+.login-input:focus,
+.login-select:focus {
+  outline: none;
+  border-color: var(--borda-selecionado);
+  box-shadow: 0 0 0 3px var(--cor-primaria-fundo);
+}
+
+.login-botao {
+  margin-top: 8px;
+  padding: 11px;
+  font: var(--fonte-corpo);
+  font-weight: bold;
+  color: #fff;
+  background: var(--cor-primaria);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.login-botao:hover:not(:disabled) {
+  background: var(--cor-primaria-hover);
+}
+
+.login-botao:disabled {
+  background: var(--texto-muted);
+  cursor: default;
+}
+
+.login-erro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  font: var(--fonte-meta);
+  color: var(--cor-perigo);
+}
+
+.login-rodape {
+  text-align: center;
+  margin-top: 20px;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+.login-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--texto-link);
+  font: var(--fonte-meta);
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}

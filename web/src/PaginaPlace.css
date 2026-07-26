@@ -1,0 +1,161 @@
+@import './buttons.css';
+
+.pagina-place {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 0 16px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+}
+
+.pagina-place__carregando,
+.pagina-place__erro {
+  text-align: center;
+  margin-top: 40px;
+  font: var(--fonte-corpo);
+}
+
+.pagina-place__erro {
+  color: var(--cor-perigo);
+}
+
+.pagina-place__capa {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.pagina-place__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0 4px;
+  flex-wrap: wrap;
+}
+
+.pagina-place__nome {
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+  margin: 0;
+}
+
+.pagina-place__endereco {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagina-place__stats {
+  display: flex;
+  gap: 24px;
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--fundo-hover);
+  border-radius: 8px;
+}
+
+.pagina-place__stat-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--fonte-nome-autor);
+  color: var(--texto-principal);
+}
+
+.pagina-place__stat-valor {
+  font: var(--fonte-corpo);
+  color: var(--texto-secundario);
+  margin: 2px 0 0;
+}
+
+.pagina-place__secao-titulo {
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.pagina-place__fotos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.pagina-place__foto {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.pagina-place__comentarios-vazio {
+  color: var(--texto-muted);
+  font: var(--fonte-corpo);
+}
+
+/* --- Comentário de quem visitou --- */
+
+.comentario-place {
+  border-bottom: 1px solid var(--borda-sutil);
+  padding: 16px 0;
+}
+
+.comentario-place__topo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comentario-place__autor {
+  font: var(--fonte-nome-autor);
+  color: var(--texto-principal);
+}
+
+.comentario-place__origem {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 2px 0 8px;
+}
+
+.comentario-place__texto {
+  font: var(--fonte-corpo);
+  font-style: italic;
+  color: var(--texto-corpo);
+  border-left: 3px solid var(--borda-padrao);
+  padding-left: 10px;
+  margin: 0;
+}
+
+.comentario-place__fotos {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.comentario-place__foto {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.comentario-place__curtir {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+}
+
+.comentario-place__curtir--ativo {
+  color: var(--cor-perigo);
+}

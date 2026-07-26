@@ -1,0 +1,280 @@
+@import './avatar.css';
+
+.pagina-explorar {
+  max-width: 680px;
+  margin: 32px auto;
+  padding: 0 16px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+}
+
+/* --- Barra de busca --- */
+
+.pagina-explorar__busca-wrapper {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.pagina-explorar__busca-icone {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--texto-muted);
+  pointer-events: none;
+}
+
+.pagina-explorar__input {
+  width: 100%;
+  padding: 12px 40px;
+  border-radius: 12px;
+  border: 1px solid var(--borda-padrao);
+  font: var(--fonte-corpo);
+  font-size: 15px;
+  color: var(--texto-principal);
+  box-sizing: border-box;
+  outline: none;
+}
+
+.pagina-explorar__input:focus {
+  border-color: var(--cor-primaria);
+}
+
+.pagina-explorar__input--ativo {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.pagina-explorar__limpar-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--texto-muted);
+  display: flex;
+}
+
+.pagina-explorar__limpar-btn:hover {
+  color: var(--cor-perigo);
+}
+
+.pagina-explorar__dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  right: 0;
+  background: var(--fundo-card);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  padding: 16px;
+  border: 1px solid var(--borda-sutil);
+}
+
+.pagina-explorar__dropdown-estado {
+  color: var(--texto-secundario);
+  margin: 0;
+  font: var(--fonte-corpo);
+}
+
+/* --- Seções do dropdown --- */
+
+.secao-busca {
+  margin-bottom: 24px;
+}
+
+.secao-busca__titulo {
+  font: var(--fonte-micro);
+  font-weight: bold;
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.resultado-usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.resultado-usuario__nome {
+  font: var(--fonte-corpo);
+  font-weight: bold;
+  color: var(--texto-principal);
+}
+
+.resultado-usuario__username {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+.resultado-lugar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  color: inherit;
+}
+
+.resultado-lugar__icone {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--fundo-chip);
+  color: var(--texto-secundario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.resultado-lugar__nome {
+  font: var(--fonte-corpo);
+  font-weight: bold;
+  color: var(--texto-principal);
+}
+
+.resultado-lugar__endereco {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+.resultado-hashtag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.resultado-hashtag__icone {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.resultado-hashtag__nome {
+  font: var(--fonte-corpo);
+  font-weight: bold;
+  color: var(--texto-principal);
+}
+
+.resultado-hashtag__contagem {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+}
+
+/* --- Feed de itinerários recentes --- */
+
+.pagina-explorar__secao-titulo {
+  margin: 0 0 16px;
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.pagina-explorar__estado {
+  color: var(--texto-secundario);
+}
+
+.card-itinerario-explorar {
+  display: block;
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease;
+}
+
+.card-itinerario-explorar:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-itinerario-explorar__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.card-itinerario-explorar__titulo {
+  margin: 0 0 4px;
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.card-itinerario-explorar__lugar-principal {
+  margin: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-itinerario-explorar__tipo-badge {
+  font: var(--fonte-micro);
+  background: var(--fundo-chip);
+  border-radius: 4px;
+  padding: 2px 8px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+
+.card-itinerario-explorar__badges {
+  margin-top: 8px;
+}
+
+.card-itinerario-explorar__curtir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+}
+
+.card-itinerario-explorar__curtir--ativo {
+  color: var(--cor-perigo);
+}
+
+.card-itinerario-explorar__rodape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.card-itinerario-explorar__autor-link {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  text-decoration: none;
+}
+
+.card-itinerario-explorar__autor-link:hover {
+  color: var(--cor-primaria);
+}
+
+.card-itinerario-explorar__data {
+  font: var(--fonte-meta);
+  color: var(--texto-muted);
+  margin-left: auto;
+}

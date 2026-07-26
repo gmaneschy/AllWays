@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, cadastrar } from './api';
+import { IconeUsuario, IconeEmail, IconeSenha, IconeAlerta } from './icons';
+import './Login.css';
 
 function Login() {
   const navigate = useNavigate();
@@ -49,107 +51,153 @@ function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 360, margin: '60px auto', fontFamily: 'sans-serif' }}>
-      <h1>{modo === 'login' ? 'Entrar' : 'Criar conta'}</h1>
+    <div className="login-pagina">
+      <div className="login-card">
+        <h1 className="login-titulo">{modo === 'login' ? 'Entrar' : 'Criar conta'}</h1>
 
-      <form onSubmit={handleSubmit}>
-        <label>Usuário</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          style={{ width: '100%', padding: 8, marginBottom: 12 }}
-        />
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-campo">
+            <label htmlFor="username">Usuário</label>
+            <div className="login-input-wrapper">
+              <IconeUsuario size={16} />
+              <input
+                id="username"
+                className="login-input"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+          </div>
 
-        {modo === 'cadastro' && (
-          <>
-            <label>Nome de exibição</label>
-            <input
-              type="text"
-              value={nomeExibicao}
-              onChange={(e) => setNomeExibicao(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, marginBottom: 12 }}
-            />
+          {modo === 'cadastro' && (
+            <>
+              <div className="login-campo">
+                <label htmlFor="nomeExibicao">Nome de exibição</label>
+                <div className="login-input-wrapper">
+                  <IconeUsuario size={16} />
+                  <input
+                    id="nomeExibicao"
+                    className="login-input"
+                    type="text"
+                    value={nomeExibicao}
+                    onChange={(e) => setNomeExibicao(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-            <label>E-mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, marginBottom: 12 }}
-            />
+              <div className="login-campo">
+                <label htmlFor="email">E-mail</label>
+                <div className="login-input-wrapper">
+                  <IconeEmail size={16} />
+                  <input
+                    id="email"
+                    className="login-input"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-            <label>Gênero</label>
-            <select
-              value={genero}
-              onChange={(e) => setGenero(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, marginBottom: 12 }}
-            >
-              <option value="" disabled>Selecione...</option>
-              <option value="M">Masculino</option>
-              <option value="F">Feminino</option>
-              <option value="O">Outro</option>
-              <option value="N">Prefiro não informar</option>
-            </select>
+              <div className="login-campo">
+                <label htmlFor="genero">Gênero</label>
+                <select
+                  id="genero"
+                  className="login-select"
+                  value={genero}
+                  onChange={(e) => setGenero(e.target.value)}
+                  required
+                  style={{ paddingLeft: 12 }}
+                >
+                  <option value="" disabled>Selecione...</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                  <option value="O">Outro</option>
+                  <option value="N">Prefiro não informar</option>
+                </select>
+              </div>
 
-            <label>Data de nascimento</label>
-            <input
-              type="date"
-              value={dataNascimento}
-              onChange={(e) => setDataNascimento(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, marginBottom: 12 }}
-            />
-          </>
+              <div className="login-campo">
+                <label htmlFor="dataNascimento">Data de nascimento</label>
+                <input
+                  id="dataNascimento"
+                  className="login-input"
+                  type="date"
+                  value={dataNascimento}
+                  onChange={(e) => setDataNascimento(e.target.value)}
+                  required
+                  style={{ paddingLeft: 12 }}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="login-campo">
+            <label htmlFor="password">Senha</label>
+            <div className="login-input-wrapper">
+              <IconeSenha size={16} />
+              <input
+                id="password"
+                className="login-input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {modo === 'cadastro' && (
+            <div className="login-campo">
+              <label htmlFor="confirmarSenha">Confirmar senha</label>
+              <div className="login-input-wrapper">
+                <IconeSenha size={16} />
+                <input
+                  id="confirmarSenha"
+                  className="login-input"
+                  type="password"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          <button className="login-botao" type="submit" disabled={enviando}>
+            {enviando ? 'Aguarde...' : modo === 'login' ? 'Entrar' : 'Criar conta'}
+          </button>
+        </form>
+
+        {erro && (
+          <p className="login-erro">
+            <IconeAlerta size={14} />
+            {erro}
+          </p>
         )}
 
-        <label>Senha</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ width: '100%', padding: 8, marginBottom: modo === 'cadastro' ? 12 : 20 }}
-        />
-
-        {modo === 'cadastro' && (
-          <>
-            <label>Confirmar senha</label>
-            <input
-              type="password"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-              required
-              style={{ width: '100%', padding: 8, marginBottom: 20 }}
-            />
-          </>
-        )}
-
-        <button type="submit" disabled={enviando} style={{ width: '100%', padding: 10, fontSize: 16 }}>
-          {enviando ? 'Aguarde...' : modo === 'login' ? 'Entrar' : 'Criar conta'}
-        </button>
-      </form>
-
-      {erro && <p style={{ color: 'red', marginTop: 12 }}>{erro}</p>}
-
-      <p style={{ textAlign: 'center', marginTop: 20 }}>
-        {modo === 'login' ? (
-          <>Não tem conta? <button type="button" onClick={() => setModo('cadastro')} style={linkStyle}>Cadastre-se</button></>
-        ) : (
-          <>Já tem conta? <button type="button" onClick={() => setModo('login')} style={linkStyle}>Entrar</button></>
-        )}
-      </p>
+        <p className="login-rodape">
+          {modo === 'login' ? (
+            <>Não tem conta?{' '}
+              <button type="button" className="login-link" onClick={() => setModo('cadastro')}>
+                Cadastre-se
+              </button>
+            </>
+          ) : (
+            <>Já tem conta?{' '}
+              <button type="button" className="login-link" onClick={() => setModo('login')}>
+                Entrar
+              </button>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   );
 }
-
-const linkStyle = {
-  background: 'none', border: 'none', color: '#1a73e8',
-  textDecoration: 'underline', cursor: 'pointer', fontSize: 14,
-};
 
 export default Login;

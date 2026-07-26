@@ -1,0 +1,27 @@
+.badges-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--fundo-chip);
+  color: var(--texto-secundario);
+  border-radius: 12px;
+  padding: 4px 12px;
+  font: var(--fonte-meta);
+}
+
+.badge-tag--pequeno {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.badge-tag__icone {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}

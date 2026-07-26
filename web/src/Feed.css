@@ -1,0 +1,171 @@
+/*
+  Feed.css — estilos do componente Feed.
+  Consome os tokens de theme.css (importado globalmente em main.jsx).
+*/
+
+.feed-pagina {
+  max-width: 650px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.feed-titulo {
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+  margin: 0 0 20px;
+}
+
+.feed-estado {
+  text-align: center;
+  margin-top: 40px;
+  font: var(--fonte-corpo);
+  color: var(--texto-secundario);
+}
+
+.feed-estado.erro {
+  color: var(--cor-perigo);
+}
+
+.feed-vazio {
+  font: var(--fonte-corpo);
+  color: var(--texto-secundario);
+}
+
+.feed-card {
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.feed-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.feed-card-titulo {
+  text-decoration: none;
+  color: inherit;
+}
+
+.feed-card-titulo h2 {
+  font: var(--fonte-titulo-card);
+  color: var(--texto-principal);
+  margin: 0;
+}
+
+.feed-card-header-acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.feed-card-tipo {
+  font: var(--fonte-micro);
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+
+.feed-btn-compartilhar {
+  display: flex;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.feed-btn-compartilhar:hover {
+  color: var(--cor-primaria);
+}
+
+.feed-autor {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 4px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.feed-autor strong {
+  font: var(--fonte-nome-autor);
+  color: var(--texto-corpo);
+}
+
+.feed-badges {
+  margin-bottom: 12px;
+}
+
+.feed-curtir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  transition: color 0.15s ease;
+}
+
+.feed-curtir.ativo {
+  color: var(--cor-perigo);
+}
+
+.feed-lista {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.feed-ponto {
+  margin-bottom: 10px;
+}
+
+.feed-ponto-local {
+  font: var(--fonte-nome-autor);
+  text-decoration: none;
+  color: var(--texto-link);
+}
+
+.feed-ponto-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin-top: 2px;
+}
+
+.feed-ponto-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.feed-ponto-comentario {
+  font: var(--fonte-corpo);
+  font-style: italic;
+  color: var(--texto-corpo);
+  border-left: 3px solid var(--borda-padrao);
+  padding-left: 10px;
+  margin: 6px 0 0;
+}
+
+.feed-ponto-distancia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--fonte-micro);
+  color: var(--texto-muted);
+  margin: 4px 0 0;
+}

@@ -1,0 +1,57 @@
+@import './forms.css';
+
+.busca-local {
+  position: relative;
+}
+
+.busca-local__selecionado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-texto-em-fundo);
+  border-radius: 6px;
+  font: var(--fonte-corpo);
+}
+
+.busca-local__trocar {
+  font: var(--fonte-meta);
+  color: var(--cor-primaria-texto-em-fundo);
+  background: none;
+  border: 1px solid var(--cor-primaria-texto-em-fundo);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.busca-local__sugestoes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 6px;
+  width: 100%;
+  z-index: 10;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.busca-local__sugestao {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--borda-sutil);
+  cursor: pointer;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+}
+
+.busca-local__sugestao:last-child {
+  border-bottom: none;
+}
+
+.busca-local__sugestao:hover {
+  background: var(--fundo-hover);
+}

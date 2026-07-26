@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import api, { curtir } from './api';
+import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag, IconeLike } from './icons';
+import './PaginaExplorar.css';
 
 function useDebounce(valor, delay) {
   const [debouncado, setDebouncado] = useState(valor);
@@ -37,16 +39,15 @@ function LugarResultado({ lugar, onNavegar }) {
   return (
     <div
       onClick={!salvando ? handleClick : undefined}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0',
-        cursor: salvando ? 'wait' : 'pointer', color: 'inherit' }}
+      className="resultado-lugar"
+      style={{ cursor: salvando ? 'wait' : 'pointer' }}
     >
-      <div style={{ width: 32, height: 32, borderRadius: 6, background: '#f0f0f0',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-        {salvando ? '⏳' : '📍'}
+      <div className="resultado-lugar__icone">
+        {salvando ? <IconeCarregando size={16} className="icone-girando" /> : <IconePin size={16} />}
       </div>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 'bold' }}>{lugar.nome}</div>
-        {lugar.endereco && <div style={{ fontSize: 12, color: '#999' }}>{lugar.endereco}</div>}
+        <div className="resultado-lugar__nome">{lugar.nome}</div>
+        {lugar.endereco && <div className="resultado-lugar__endereco">{lugar.endereco}</div>}
       </div>
     </div>
   );
@@ -55,11 +56,8 @@ function LugarResultado({ lugar, onNavegar }) {
 function SecaoBusca({ titulo, itens, renderItem }) {
   if (itens.length === 0) return null;
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 12, fontWeight: 'bold', color: '#999',
-          textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-        {titulo}
-      </div>
+    <div className="secao-busca">
+      <div className="secao-busca__titulo">{titulo}</div>
       {itens.map(renderItem)}
     </div>
   );
@@ -73,75 +71,56 @@ function CardItinerario({ it, onCurtir }) {
   }
 
   return (
-    <Link
-      to={`/itinerario/${it.id}`}
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
-      <div style={{
-        border: '1px solid #eee', borderRadius: 10, padding: 16,
-        marginBottom: 12, transition: 'box-shadow 0.15s',
-      }}
-        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'}
-        onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+    <Link to={`/itinerario/${it.id}`} className="card-itinerario-explorar">
+      <div className="card-itinerario-explorar__topo">
+        <div>
+          <h3 className="card-itinerario-explorar__titulo">{it.titulo}</h3>
+          {it.lugar_principal && (
+            <p className="card-itinerario-explorar__lugar-principal">
+              <IconePin size={13} /> {it.lugar_principal.nome}
+              {it.total_pontos > 1 ? ` + ${it.total_pontos - 1} lugar${it.total_pontos > 2 ? 'es' : ''}` : ''}
+            </p>
+          )}
+        </div>
+        <span className="card-itinerario-explorar__tipo-badge">
+          {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
+        </span>
+      </div>
+
+      {it.badges?.length > 0 && (
+        <div className="card-itinerario-explorar__badges">
+          <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
+        </div>
+      )}
+
+      <button
+        onClick={handleClickCurtir}
+        className={`card-itinerario-explorar__curtir${it.curtido ? ' card-itinerario-explorar__curtir--ativo' : ''}`}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h3 style={{ margin: '0 0 4px' }}>{it.titulo}</h3>
-            {it.lugar_principal && (
-              <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
-                📍 {it.lugar_principal.nome}
-                {it.total_pontos > 1 ? ` + ${it.total_pontos - 1} lugar${it.total_pontos > 2 ? 'es' : ''}` : ''}
-              </p>
-            )}
-          </div>
-          <span style={{
-            fontSize: 11, background: '#f0f0f0', borderRadius: 4,
-            padding: '2px 8px', color: '#666', whiteSpace: 'nowrap',
-          }}>
-            {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
-          </span>
-        </div>
+        <IconeLike size={16} fill={it.curtido ? 'currentColor' : 'none'} />
+        {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
+      </button>
 
-        {it.badges?.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
-          </div>
-        )}
-
-        <button
-          onClick={handleClickCurtir}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
-            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-            fontSize: 13, color: it.curtido ? '#e53935' : '#888',
-          }}
+      <div className="card-itinerario-explorar__rodape">
+        {it.autor.foto_perfil
+          ? <img src={it.autor.foto_perfil} alt="" className="avatar-circulo" style={{ width: 24, height: 24 }} />
+          : <div className="avatar-circulo--vazio" style={{ width: 24, height: 24, fontSize: 10 }}>
+              {it.autor.username?.[0]?.toUpperCase()}
+            </div>
+        }
+        <Link
+          to={`/perfil/${it.autor.username}`}
+          onClick={(e) => e.stopPropagation()}
+          className="card-itinerario-explorar__autor-link"
         >
-          <span style={{ fontSize: 16 }}>{it.curtido ? '❤️' : '🤍'}</span>
-          {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-          {it.autor.foto_perfil
-            ? <img src={it.autor.foto_perfil} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-            : <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#ddd',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
-                {it.autor.username?.[0]?.toUpperCase()}
-              </div>
-          }
-          <Link
-            to={`/perfil/${it.autor.username}`}
-            onClick={(e) => e.stopPropagation()}
-            style={{ fontSize: 13, color: '#555', textDecoration: 'none' }}
-          >
-            {it.autor.username}
-          </Link>
-          <BadgeDestaque badge={it.autor.badge_destaque} size={14} />
-          <span style={{ fontSize: 12, color: '#bbb', marginLeft: 'auto' }}>
-            {it.publicado_em
-              ? new Date(it.publicado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-              : ''}
-          </span>
-        </div>
+          {it.autor.username}
+        </Link>
+        <BadgeDestaque badge={it.autor.badge_destaque} size={14} />
+        <span className="card-itinerario-explorar__data">
+          {it.publicado_em
+            ? new Date(it.publicado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+            : ''}
+        </span>
       </div>
     </Link>
   );
@@ -237,45 +216,34 @@ function PaginaExplorar() {
   );
 
   return (
-    <div style={{ maxWidth: 680, margin: '32px auto', fontFamily: 'sans-serif', padding: '0 16px' }}>
+    <div className="pagina-explorar">
 
       {/* Barra de busca */}
-      <div style={{ position: 'relative', marginBottom: 32 }}>
+      <div className="pagina-explorar__busca-wrapper">
+        <span className="pagina-explorar__busca-icone">
+          <IconeBuscar size={18} />
+        </span>
         <input
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleEnter}
-          placeholder="🔍  Buscar usuários, lugares ou hashtags..."
-          style={{
-            width: '100%', padding: '12px 16px', borderRadius: 12,
-            border: '1px solid #ddd', fontSize: 15, boxSizing: 'border-box',
-            outline: 'none', boxShadow: query ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
-          }}
+          placeholder="Buscar usuários, lugares ou hashtags..."
+          className={`pagina-explorar__input${query ? ' pagina-explorar__input--ativo' : ''}`}
         />
         {query && (
-          <button
-            onClick={() => setQuery('')}
-            style={{
-              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-              border: 'none', background: 'none', cursor: 'pointer', color: '#aaa', fontSize: 18,
-            }}
-          >
-            ×
+          <button onClick={() => setQuery('')} className="pagina-explorar__limpar-btn">
+            <IconeFechar size={18} />
           </button>
         )}
 
         {/* Dropdown de resultados */}
         {query && (
-          <div style={{
-            position: 'absolute', top: '110%', left: 0, right: 0,
-            background: '#fff', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-            zIndex: 50, padding: 16, border: '1px solid #eee',
-          }}>
-            {buscando && <p style={{ color: '#999', margin: 0, fontSize: 14 }}>Buscando...</p>}
+          <div className="pagina-explorar__dropdown">
+            {buscando && <p className="pagina-explorar__dropdown-estado">Buscando...</p>}
 
             {!buscando && !temResultados && (
-              <p style={{ color: '#999', margin: 0, fontSize: 14 }}>Nenhum resultado para "{query}"</p>
+              <p className="pagina-explorar__dropdown-estado">Nenhum resultado para "{query}"</p>
             )}
 
             {!buscando && temResultados && (
@@ -284,22 +252,16 @@ function PaginaExplorar() {
                   titulo="Usuários"
                   itens={resultados.usuarios}
                   renderItem={(u) => (
-                    <Link
-                      key={u.id}
-                      to={`/perfil/${u.username}`}
-                      onClick={() => setQuery('')}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', textDecoration: 'none', color: 'inherit' }}
-                    >
+                    <Link key={u.id} to={`/perfil/${u.username}`} onClick={() => setQuery('')} className="resultado-usuario">
                       {u.foto_perfil
-                        ? <img src={u.foto_perfil} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-                        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                        ? <img src={u.foto_perfil} alt="" className="avatar-circulo" style={{ width: 32, height: 32 }} />
+                        : <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
                             {u.username[0].toUpperCase()}
                           </div>
                       }
-                      <div style={{ fontSize: 14 }}>
-                        <div style={{ fontWeight: 'bold' }}>{u.nome_exibicao || u.username}</div>
-                        <div style={{ fontSize: 12, color: '#999' }}>@{u.username}</div>
+                      <div>
+                        <div className="resultado-usuario__nome">{u.nome_exibicao || u.username}</div>
+                        <div className="resultado-usuario__username">@{u.username}</div>
                       </div>
                     </Link>
                   )}
@@ -317,19 +279,15 @@ function PaginaExplorar() {
                   titulo="Hashtags"
                   itens={resultados.hashtags}
                   renderItem={(h) => (
-                    <Link
-                      key={h.id}
-                      to={`/hashtag/${h.nome}`}
-                      onClick={() => setQuery('')}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e8f0fe',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                        #
+                    <Link key={h.id} to={`/hashtag/${h.nome}`} onClick={() => setQuery('')} className="resultado-hashtag">
+                      <div className="resultado-hashtag__icone">
+                        <IconeHashtag size={16} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 'bold' }}>#{h.nome}</div>
-                        <div style={{ fontSize: 12, color: '#999' }}>{h.total_itinerarios} itinerário{h.total_itinerarios !== 1 ? 's' : ''}</div>
+                        <div className="resultado-hashtag__nome">#{h.nome}</div>
+                        <div className="resultado-hashtag__contagem">
+                          {h.total_itinerarios} itinerário{h.total_itinerarios !== 1 ? 's' : ''}
+                        </div>
                       </div>
                     </Link>
                   )}
@@ -343,10 +301,10 @@ function PaginaExplorar() {
       {/* Feed de itinerários */}
       {!query && (
         <>
-          <h2 style={{ margin: '0 0 16px', fontSize: 17, color: '#333' }}>Itinerários recentes</h2>
-          {carregandoFeed && <p style={{ color: '#999' }}>Carregando...</p>}
+          <h2 className="pagina-explorar__secao-titulo">Itinerários recentes</h2>
+          {carregandoFeed && <p className="pagina-explorar__estado">Carregando...</p>}
           {!carregandoFeed && feed.length === 0 && (
-            <p style={{ color: '#999' }}>Nenhum itinerário publicado ainda.</p>
+            <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>
           )}
           {feed.map((it) => <CardItinerario key={it.id} it={it} onCurtir={handleCurtir} />)}
         </>

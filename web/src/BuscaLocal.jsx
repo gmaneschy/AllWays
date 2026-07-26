@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import './BuscaLocal.css';
 
 const DEBOUNCE_MS = 400;
 
@@ -42,12 +43,12 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
 
   if (localSelecionado) {
     return (
-      <div style={{ padding: 8, background: '#e8f5e9', borderRadius: 4 }}>
+      <div className="busca-local__selecionado">
         ✓ {localSelecionado.nome}
         <button
           type="button"
           onClick={() => onSelecionar(null)}
-          style={{ marginLeft: 8, fontSize: 12 }}
+          className="busca-local__trocar"
         >
           trocar
         </button>
@@ -56,25 +57,21 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="busca-local">
       <input
         type="text"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Buscar local..."
-        style={{ width: '100%', padding: 8 }}
+        className="form-input"
       />
       {sugestoes.length > 0 && (
-        <ul style={{
-          listStyle: 'none', padding: 0, margin: 0,
-          position: 'absolute', background: '#fff', border: '1px solid #ddd',
-          width: '100%', zIndex: 10
-        }}>
+        <ul className="busca-local__sugestoes">
           {sugestoes.map((s) => (
             <li
               key={s.place_id}
               onClick={() => escolherSugestao(s.place_id, s.descricao)}
-              style={{ padding: 8, borderBottom: '1px solid #eee', cursor: 'pointer' }}
+              className="busca-local__sugestao"
             >
               {s.descricao}
             </li>

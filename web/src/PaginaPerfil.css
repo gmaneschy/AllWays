@@ -1,0 +1,515 @@
+@import './forms.css';
+
+.pagina-perfil {
+  max-width: 650px;
+  margin: 40px auto;
+  font-family: sans-serif;
+  color: var(--texto-principal);
+}
+
+.pagina-perfil__carregando,
+.pagina-perfil__erro {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.pagina-perfil__erro {
+  color: var(--cor-perigo);
+}
+
+/* --- Cabeçalho --- */
+
+.perfil-header {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.perfil-header__avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.perfil-header__avatar-vazio {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--fundo-avatar-vazio);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.perfil-header__info {
+  flex: 1;
+}
+
+.perfil-header__nome-exibicao {
+  font-size: 14px;
+  color: var(--texto-secundario);
+  margin-bottom: 2px;
+}
+
+.perfil-header__linha-username {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.perfil-header__username {
+  margin: 0;
+  color: var(--texto-principal);
+}
+
+.perfil-header__bio {
+  color: var(--texto-secundario);
+  margin: 4px 0;
+}
+
+.perfil-header__stats {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.perfil-header__stats-link {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.perfil-header__stats-link:hover {
+  text-decoration: underline;
+}
+
+.btn-seguir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  border: none;
+  background: var(--cor-primaria);
+  color: #fff;
+}
+
+.btn-seguir--seguindo {
+  border: 1px solid var(--borda-padrao);
+  background: var(--fundo-hover);
+  color: var(--texto-principal);
+}
+
+.btn-seguir:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.perfil-erro {
+  color: var(--cor-perigo);
+  font-size: 13px;
+}
+
+/* --- Painel de gerenciamento (dono do perfil) --- */
+
+.painel-gerenciamento {
+  border: 1px solid var(--borda-sutil);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.painel-gerenciamento__linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.painel-gerenciamento__linha--sem-margem {
+  margin-bottom: 0;
+}
+
+.painel-gerenciamento__titulo {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--texto-principal);
+}
+
+.painel-gerenciamento__exibir-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--texto-secundario);
+  cursor: pointer;
+}
+
+/* --- Badges do perfil (lista pública) --- */
+
+.perfil-badges-lista {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.perfil-badge-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background: var(--fundo-chip);
+  color: var(--texto-secundario);
+  padding: 4px 10px 4px 4px;
+  border-radius: 12px;
+}
+
+.perfil-badge-chip__icone {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+/* --- Abas --- */
+
+.perfil-abas {
+  display: flex;
+  border-bottom: 2px solid var(--borda-sutil);
+  margin-bottom: 20px;
+}
+
+.perfil-abas__botao {
+  padding: 8px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--texto-principal);
+}
+
+.perfil-abas__botao--ativa {
+  border-bottom: 2px solid var(--cor-primaria);
+  font-weight: bold;
+  color: var(--cor-primaria);
+}
+
+.perfil-lista-vazia {
+  color: var(--texto-secundario);
+}
+
+/* --- Card de itinerário --- */
+
+.itinerario-card {
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.itinerario-card__cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.itinerario-card__link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.itinerario-card__titulo {
+  margin: 0;
+  color: var(--texto-principal);
+}
+
+.itinerario-card__compartilhar {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--texto-secundario);
+  display: flex;
+  padding: 0;
+}
+
+.itinerario-card__meta {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  margin: 4px 0 0;
+}
+
+/* --- Modais (base compartilhada) --- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: var(--fundo-card);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.modal-box--pequena {
+  width: 320px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-box--media {
+  width: 360px;
+}
+
+.modal-box--grande {
+  width: 380px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.modal-box__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-box__fechar {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--texto-secundario);
+  display: flex;
+}
+
+/* --- Modal: lista de usuários --- */
+
+.modal-usuarios__vazio {
+  color: var(--texto-secundario);
+}
+
+.usuario-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.usuario-item__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.usuario-item__avatar-vazio {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fundo-avatar-vazio);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* --- Modal: seleção de badge de destaque --- */
+
+.modal-badge__opcao {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  border: 1px solid var(--borda-padrao);
+  background: var(--fundo-card);
+  color: var(--texto-principal);
+}
+
+.modal-badge__opcao--selecionada {
+  border: 2px solid var(--cor-primaria);
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-texto-em-fundo);
+}
+
+.modal-badge__vazio {
+  color: var(--texto-secundario);
+  font-size: 14px;
+}
+
+.modal-badge__grupo {
+  margin-bottom: 16px;
+}
+
+.modal-badge__grupo-titulo {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.modal-badge__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--borda-sutil);
+  background: var(--fundo-card);
+}
+
+.modal-badge__item--selecionada {
+  border: 2px solid var(--cor-primaria);
+  background: var(--cor-primaria-fundo);
+}
+
+.modal-badge__item-icone {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.modal-badge__item-nome {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--texto-principal);
+}
+
+.modal-badge__item-contexto {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+/* --- Modal: editar perfil --- */
+
+.modal-editar__avatar-linha {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.modal-editar__avatar-label {
+  cursor: pointer;
+  position: relative;
+}
+
+.modal-editar__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.modal-editar__avatar-vazio {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--fundo-avatar-vazio);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.modal-editar__avatar-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--fundo-card);
+}
+
+.modal-editar__input-arquivo {
+  display: none;
+}
+
+.modal-editar__label {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.modal-editar__input,
+.modal-editar__textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--borda-padrao);
+  box-sizing: border-box;
+}
+
+.modal-editar__textarea {
+  resize: vertical;
+  font: inherit;
+}
+
+.modal-editar__cooldown-aviso {
+  font-size: 12px;
+  color: var(--texto-secundario);
+  margin: 0 0 12px;
+}
+
+.modal-editar__cooldown-aviso--bloqueado {
+  color: var(--cor-perigo);
+}
+
+.modal-editar__espaco {
+  margin-bottom: 12px;
+}
+
+.modal-editar__contador-bio {
+  font-size: 11px;
+  color: var(--texto-muted);
+  margin: 0 0 12px;
+  text-align: right;
+}
+
+.modal-editar__erro {
+  color: var(--cor-perigo);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.modal-editar__salvar {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  background: var(--cor-primaria);
+  color: #fff;
+}
+
+.modal-editar__salvar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
