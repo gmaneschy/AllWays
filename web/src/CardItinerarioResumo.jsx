@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import { IconePin, IconeLike } from './icons';
@@ -7,14 +7,33 @@ import './CardItinerarioResumo.css';
 /** Card resumido de itinerário, usado em listas (Explorar, Hashtag, futuramente Perfil).
  * `onCurtir(id)` é opcional — se não for passado, o botão de curtir não aparece. */
 function CardItinerarioResumo({ it, onCurtir }) {
+  const navigate = useNavigate();
+
   function handleClickCurtir(e) {
     e.preventDefault();
     e.stopPropagation();
     onCurtir(it.id);
   }
 
+  function handleClickCard() {
+    navigate(`/itinerario/${it.id}`);
+  }
+
+  function handleKeyDownCard(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      navigate(`/itinerario/${it.id}`);
+    }
+  }
+
   return (
-    <Link to={`/itinerario/${it.id}`} className="card-itinerario-resumo">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={handleClickCard}
+      onKeyDown={handleKeyDownCard}
+      className="card-itinerario-resumo"
+    >
       <div className="card-itinerario-resumo__topo">
         <div>
           <h3 className="card-itinerario-resumo__titulo">{it.titulo}</h3>
@@ -67,7 +86,7 @@ function CardItinerarioResumo({ it, onCurtir }) {
             : ''}
         </span>
       </div>
-    </Link>
+    </div>
   );
 }
 
