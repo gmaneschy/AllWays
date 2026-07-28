@@ -57,7 +57,7 @@ function SeletorDestinatario({ onSelecionar }) {
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar usuário..."
+        placeholder="Buscar entre quem você segue..."
         className="form-input"
         style={{ marginBottom: 0 }}
       />
@@ -72,7 +72,6 @@ function SeletorDestinatario({ onSelecionar }) {
             <div>
               <div className="seletor-destinatario__nome">
                 {u.nome_exibicao || u.username}
-                {u.seguido && <span className="seletor-destinatario__seguindo">seguindo</span>}
               </div>
               <div className="seletor-destinatario__username">@{u.username}</div>
             </div>
@@ -436,7 +435,7 @@ function PaginaMensagens() {
         <div className="chat-painel">
           <div className="chat-painel__header">
             <Avatar usuario={interlocutorAtivo ?? { username: conversaAtiva }} tamanho={36} />
-            <strong className="chat-painel__header-nome">{conversaAtiva}</strong>
+            <Link to={`/perfil/${conversaAtiva}`} className="chat-painel__header-nome">{conversaAtiva}</Link>
           </div>
 
           <div className="mensagens-lista">

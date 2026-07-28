@@ -108,7 +108,7 @@ function Feed() {
           </div>
 
           <p className="feed-autor">
-            por <strong>{it.autor_nome}</strong>
+            por <Link to={`/perfil/${it.autor_nome}`} className="feed-autor">{it.autor_nome}</Link>
             <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
             {it.data_inicio && <span>· {formatarData(it.data_inicio)}</span>}
             {it.data_fim && it.data_fim !== it.data_inicio && <span>a {formatarData(it.data_fim)}</span>}

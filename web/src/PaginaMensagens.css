@@ -188,6 +188,7 @@
 .chat-painel__header-nome {
   font: var(--fonte-nome-autor);
   color: var(--texto-principal);
+  text-decoration: none;
 }
 
 .mensagens-lista {

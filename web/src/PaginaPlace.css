@@ -112,12 +112,14 @@
 .comentario-place__autor {
   font: var(--fonte-nome-autor);
   color: var(--texto-principal);
+  text-decoration: none;
 }
 
 .comentario-place__origem {
   font: var(--fonte-meta);
   color: var(--texto-secundario);
   margin: 2px 0 8px;
+  text-decoration: none;
 }
 
 .comentario-place__texto {

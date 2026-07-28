@@ -306,6 +306,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 0;
+  text-decoration: none;
 }
 
 .usuario-item__avatar {

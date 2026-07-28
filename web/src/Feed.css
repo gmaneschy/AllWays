@@ -87,11 +87,12 @@
 .feed-autor {
   font: var(--fonte-meta);
   color: var(--texto-secundario);
-  margin: 4px 0 8px;
+  margin: 4px 0 4px;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  text-decoration: none;
 }
 
 .feed-autor strong {

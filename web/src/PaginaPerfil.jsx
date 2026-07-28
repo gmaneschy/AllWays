@@ -6,7 +6,9 @@ import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 import { IconeFechar, IconeCompartilhar, IconeSeguir, IconeEditar } from './icons';
 import './PaginaPerfil.css';
 
-function ModalListaUsuarios({ titulo, usuarios, onFechar }) {
+function ModalListaUsuarios({ titulo, tipo, itens, onFechar }) {
+  const ehLugares = tipo === 'lugares';
+
   return (
     <div onClick={onFechar} className="modal-overlay">
       <div onClick={(e) => e.stopPropagation()} className="modal-box modal-box--pequena">
@@ -17,17 +19,29 @@ function ModalListaUsuarios({ titulo, usuarios, onFechar }) {
           </button>
         </div>
 
-        {usuarios.length === 0 && <p className="modal-usuarios__vazio">Ninguém por aqui ainda.</p>}
+        {itens.length === 0 && (
+          <p className="modal-usuarios__vazio">
+            {ehLugares ? 'Nenhum lugar seguido ainda.' : 'Ninguém por aqui ainda.'}
+          </p>
+        )}
 
-        {usuarios.map((u) => (
-          <div key={u.id} className="usuario-item">
-            {u.foto_perfil
-              ? <img src={u.foto_perfil} alt="" className="usuario-item__avatar" />
-              : <div className="usuario-item__avatar-vazio">{u.username[0].toUpperCase()}</div>
-            }
-            <span>{u.username}</span>
-          </div>
-        ))}
+        {ehLugares
+          ? itens.map((p) => (
+              <Link key={p.id} to={`/place/${p.id}`} onClick={onFechar} className="usuario-item">
+                <div className="usuario-item__avatar-vazio">{p.nome[0].toUpperCase()}</div>
+                <span>{p.nome}</span>
+              </Link>
+            ))
+          : itens.map((u) => (
+              <Link key={u.id} to={`/perfil/${u.username}`} onClick={onFechar} className="usuario-item">
+                {u.foto_perfil
+                  ? <img src={u.foto_perfil} alt="" className="usuario-item__avatar" />
+                  : <div className="usuario-item__avatar-vazio">{u.username[0].toUpperCase()}</div>
+                }
+                <span>{u.username}</span>
+              </Link>
+            ))
+        }
       </div>
     </div>
   );
@@ -258,6 +272,7 @@ function PaginaPerfil() {
 
   async function abrirModal(tipo) {
     setModalAberto(tipo);
+    setListaModal([]); // limpa antes de buscar, senão o formato antigo (usuário/lugar) fica incompatível com o novo 'tipo' até a resposta chegar
     try {
       const resposta = await api.get(`/social/usuarios/${username}/${tipo}/`);
       setListaModal(resposta.data);
@@ -396,7 +411,9 @@ function PaginaPerfil() {
             {perfil.total_seguindo_lugares > 0 && (
               <>
                 {' · '}
-                <strong>{perfil.total_seguindo_lugares}</strong> lugar{perfil.total_seguindo_lugares !== 1 ? 'es' : ''} seguido{perfil.total_seguindo_lugares !== 1 ? 's' : ''}
+                <button onClick={() => abrirModal('lugares')} className="perfil-header__stats-link">
+                  <strong>{perfil.total_seguindo_lugares}</strong> lugar{perfil.total_seguindo_lugares !== 1 ? 'es' : ''} seguido{perfil.total_seguindo_lugares !== 1 ? 's' : ''}
+                </button>
               </>
             )}
           </p>
@@ -486,8 +503,13 @@ function PaginaPerfil() {
 
       {modalAberto && (
         <ModalListaUsuarios
-          titulo={modalAberto === 'seguidores' ? 'Seguidores' : 'Seguindo'}
-          usuarios={listaModal}
+          titulo={
+            modalAberto === 'seguidores' ? 'Seguidores'
+              : modalAberto === 'seguindo' ? 'Seguindo'
+              : 'Lugares seguidos'
+          }
+          tipo={modalAberto}
+          itens={listaModal}
           onFechar={() => setModalAberto(null)}
         />
       )}

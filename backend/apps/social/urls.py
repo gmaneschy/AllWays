@@ -5,7 +5,7 @@ from .views import (
     ConversasView, MensagensConversaView, UsuariosParaMensagemView,
     BuscaView, ExplorarView, CurtidaToggleView,
     NotificacoesView, NotificacoesNaoLidasView,
-    MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView,
+    MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView, LugaresSeguidosView,
 )
 
 urlpatterns = [
@@ -14,7 +14,7 @@ urlpatterns = [
     path('follow/status/', StatusFollowView.as_view(), name='follow-status'),
     path('usuarios/<str:username>/seguidores/', SeguidoresUsuarioView.as_view(), name='seguidores'),
     path('usuarios/<str:username>/seguindo/', SeguindoUsuarioView.as_view(), name='seguindo'),
-
+    path('usuarios/<str:username>/lugares/', LugaresSeguidosView.as_view()),
     # Curtidas
     path('curtida/', CurtidaToggleView.as_view(), name='curtida-toggle'),
 

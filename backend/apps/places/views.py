@@ -79,6 +79,7 @@ class PlaceDetailView(APIView):
             {
                 'ponto_id': ponto.id,
                 'autor_nome': ponto.itinerario.autor.username if ponto.itinerario.autor else 'Usuário removido',
+                'autor_username': ponto.itinerario.autor.username if ponto.itinerario.autor else None,
                 'autor_badge_destaque': serializar_badge_destaque(ponto.itinerario.autor, context={'request': request}),
                 'itinerario_id': ponto.itinerario.id,
                 'itinerario_titulo': ponto.itinerario.titulo,

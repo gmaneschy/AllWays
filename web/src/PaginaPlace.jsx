@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import api, { estaLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import { IconeSeguir, IconeSucesso, IconeSeguranca, IconePreco, IconePin, IconeLike } from './icons';
@@ -152,11 +152,21 @@ function PaginaPlace() {
       {comentarios.map((c) => (
         <div key={c.ponto_id} className="comentario-place">
           <div className="comentario-place__topo">
-            <strong className="comentario-place__autor">{c.autor_nome}</strong>
+            {c.autor_username ? (
+              <Link to={`/perfil/${c.autor_username}`} className="comentario-place__autor">
+                {c.autor_nome}
+              </Link>
+            ) : (
+              <strong className="comentario-place__autor">{c.autor_nome}</strong>
+            )}
             <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
           </div>
           <p className="comentario-place__origem">
-            do itinerário "{c.itinerario_titulo}"
+            do itinerário "
+            <Link to={`/itinerario/${c.itinerario_id}`} className="comentario-place__origem">
+              {c.itinerario_titulo}
+            </Link>
+            "
           </p>
           <p className="comentario-place__texto">"{c.texto}"</p>
 

@@ -115,6 +115,22 @@ class SeguindoUsuarioView(generics.ListAPIView):
         return User.objects.filter(seguidores__seguidor=usuario)
 
 
+class LugaresSeguidosView(APIView):
+    """GET /api/social/usuarios/<username>/lugares/
+    Lugares que o usuário segue — mesma família de SeguidoresUsuarioView/
+    SeguindoUsuarioView, só que sobre Follow.seguido_local em vez de
+    seguido_usuario."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, username):
+        usuario = get_object_or_404(User, username=username)
+        place_ids = Follow.objects.filter(
+            seguidor=usuario, seguido_local__isnull=False
+        ).values_list('seguido_local_id', flat=True)
+        lugares = Place.objects.filter(id__in=place_ids)
+        return Response([{'id': p.id, 'nome': p.nome} for p in lugares])
+
+
 class StatusFollowView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -221,6 +237,7 @@ class HashtagFeedView(APIView):
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,
                 'total_pontos': it.pontos.count(),
+                **resumo_curtida(it, request.user),
             })
 
         return Response({
@@ -380,7 +397,9 @@ class UsuariosParaMensagemView(APIView):
             seguido_usuario__isnull=False,
         ).values_list('seguido_usuario_id', flat=True)
 
-        qs = User.objects.exclude(pk=user.pk)
+        # Só usuários seguidos aparecem aqui — mensagem só faz sentido pra
+        # quem já está na rede do usuário (diferente da busca geral em BuscaView).
+        qs = User.objects.filter(pk__in=seguidos_ids)
         if q:
             if q.startswith('@'):
                 termo = q[1:].strip()
@@ -389,13 +408,7 @@ class UsuariosParaMensagemView(APIView):
                 filtro = Q(username__icontains=q) | Q(nome_exibicao__icontains=q)
             qs = qs.filter(filtro)
 
-        qs = qs.annotate(
-            prioridade=Case(
-                When(pk__in=seguidos_ids, then=Value(0)),
-                default=Value(1),
-                output_field=IntegerField(),
-            )
-        ).order_by('prioridade', 'username')[:20]
+        qs = qs.order_by('username')[:20]
 
         return Response([
             {
@@ -403,7 +416,6 @@ class UsuariosParaMensagemView(APIView):
                 'username': u.username,
                 'nome_exibicao': u.nome_exibicao,
                 'foto_perfil': request.build_absolute_uri(u.foto_perfil.url) if u.foto_perfil else None,
-                'seguido': u.pk in seguidos_ids,
             }
             for u in qs
         ])
