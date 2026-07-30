@@ -401,19 +401,37 @@ function PaginaPerfil() {
           </div>
           {perfil.bio && <p className="perfil-header__bio">{perfil.bio}</p>}
           <p className="perfil-header__stats">
-            <button onClick={() => abrirModal('seguidores')} className="perfil-header__stats-link">
-              <strong>{perfil.total_seguidores}</strong> seguidores
-            </button>
+            {perfil.total_seguidores !== null ? (
+              <button onClick={() => abrirModal('seguidores')} className="perfil-header__stats-link">
+                <strong>{perfil.total_seguidores}</strong> seguidores
+              </button>
+            ) : (
+              <span className="perfil-header__stats-link" style={{ opacity: 0.6, cursor: 'default' }}>
+                <strong>--</strong> seguidores
+              </span>
+            )}
             {' · '}
-            <button onClick={() => abrirModal('seguindo')} className="perfil-header__stats-link">
-              <strong>{perfil.total_seguindo_usuarios}</strong> usuários seguidos
-            </button>
-            {perfil.total_seguindo_lugares > 0 && (
+            {perfil.total_seguindo_usuarios !== null ? (
+              <button onClick={() => abrirModal('seguindo')} className="perfil-header__stats-link">
+                <strong>{perfil.total_seguindo_usuarios}</strong> usuários seguidos
+              </button>
+            ) : (
+              <span className="perfil-header__stats-link" style={{ opacity: 0.6, cursor: 'default' }}>
+                <strong>--</strong> usuários seguidos
+              </span>
+            )}
+            {(perfil.total_seguindo_lugares > 0 || perfil.total_seguindo_lugares === null) && (
               <>
                 {' · '}
-                <button onClick={() => abrirModal('lugares')} className="perfil-header__stats-link">
-                  <strong>{perfil.total_seguindo_lugares}</strong> lugar{perfil.total_seguindo_lugares !== 1 ? 'es' : ''} seguido{perfil.total_seguindo_lugares !== 1 ? 's' : ''}
-                </button>
+                {perfil.total_seguindo_lugares !== null ? (
+                  <button onClick={() => abrirModal('lugares')} className="perfil-header__stats-link">
+                    <strong>{perfil.total_seguindo_lugares}</strong> lugar{perfil.total_seguindo_lugares !== 1 ? 'es' : ''} seguido{perfil.total_seguindo_lugares !== 1 ? 's' : ''}
+                  </button>
+                ) : (
+                  <span className="perfil-header__stats-link" style={{ opacity: 0.6, cursor: 'default' }}>
+                    <strong>--</strong> lugares seguidos
+                  </span>
+                )}
               </>
             )}
           </p>

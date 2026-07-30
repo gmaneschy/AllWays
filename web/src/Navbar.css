@@ -80,6 +80,19 @@
   font-weight: bold;
 }
 
+.navbar__configuracoes-btn {
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--texto-secundario);
+}
+
+.navbar__configuracoes-btn:hover {
+  color: var(--cor-perigo);
+}
+
 .navbar__logout-btn {
   margin-left: 8px;
   cursor: pointer;

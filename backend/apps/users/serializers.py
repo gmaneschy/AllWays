@@ -129,11 +129,42 @@ class EditarPerfilSerializer(serializers.ModelSerializer):
 
 
 class ConfiguracoesSerializer(serializers.ModelSerializer):
-    """Serializer dedicado às configurações de conta. Por ora só tem
-    'exibir_badges', mas fica isolado aqui pra crescer sem inchar o MeSerializer."""
+    """Serializer dedicado às configurações de conta: privacidade, notificações
+    e exibição. Tudo em um único endpoint (PATCH parcial) — a tela de
+    Configurações manda só o(s) campo(s) que o usuário mexeu."""
     class Meta:
         model = User
-        fields = ['exibir_badges']
+        fields = [
+            'exibir_badges',
+            'conta_privada',
+            'notif_seguiu', 'notif_comentou', 'notif_respondeu', 'notif_mensagem', 'notif_novo_post',
+            'ocultar_seguidores', 'ocultar_seguindo', 'ocultar_lugares_seguidos',
+        ]
+
+
+class AlterarSenhaSerializer(serializers.Serializer):
+    """Usado em PATCH /users/me/senha/. Exige a senha atual (evita que
+    alguém com uma sessão aberta na máquina de outra pessoa troque a senha
+    sem saber a original) e aplica os validators padrão do Django na nova."""
+    senha_atual = serializers.CharField(write_only=True)
+    nova_senha = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_senha_atual(self, value):
+        usuario = self.context['request'].user
+        if not usuario.check_password(value):
+            raise serializers.ValidationError('Senha atual incorreta.')
+        return value
+
+    def validate_nova_senha(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        validate_password(value, user=self.context['request'].user)
+        return value
+
+    def save(self):
+        usuario = self.context['request'].user
+        usuario.set_password(self.validated_data['nova_senha'])
+        usuario.save(update_fields=['password'])
+        return usuario
 
 
 class ItinerarioResumoSerializer(serializers.ModelSerializer):
@@ -175,30 +206,64 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
     badges = serializers.SerializerMethodField()
     badge_destaque = serializers.SerializerMethodField()
     voce_segue = serializers.SerializerMethodField()
+    solicitado = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'nome_exibicao', 'bio', 'foto_perfil', 'badge_destaque',
-            'total_seguidores', 'total_seguindo_usuarios', 'total_seguindo_lugares',
-            'itinerarios_publicados', 'badges', 'voce_segue',
+            'conta_privada', 'total_seguidores', 'total_seguindo_usuarios', 'total_seguindo_lugares',
+            'itinerarios_publicados', 'badges', 'voce_segue', 'solicitado',
         ]
 
     def get_badge_destaque(self, obj):
         return serializar_badge_destaque(obj, context=self.context)
 
     def get_total_seguidores(self, obj):
+        if self._oculto_para_visitante(obj, 'ocultar_seguidores'):
+            return None
         return obj.seguidores.count()
 
     def get_total_seguindo_usuarios(self, obj):
+        if self._oculto_para_visitante(obj, 'ocultar_seguindo'):
+            return None
         return obj.seguindo.filter(seguido_usuario__isnull=False).count()
 
     def get_total_seguindo_lugares(self, obj):
+        if self._oculto_para_visitante(obj, 'ocultar_lugares_seguidos'):
+            return None
         return obj.seguindo.filter(seguido_local__isnull=False).count()
 
+    def _oculto_para_visitante(self, obj, campo):
+        """True quando 'campo' (um dos ocultar_*) está ligado em obj E quem
+        está olhando não é o próprio dono do perfil. O dono sempre vê os
+        números reais na própria página — o toggle esconde só dos outros."""
+        if not getattr(obj, campo):
+            return False
+        request = self.context.get('request')
+        dono_esta_vendo = bool(
+            request and request.user.is_authenticated and request.user == obj
+        )
+        return not dono_esta_vendo
+
     def get_itinerarios_publicados(self, obj):
+        if not self._pode_ver_conteudo(obj):
+            return []
         qs = Itinerario.objects.filter(autor=obj, status='publicado')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
+
+    def _pode_ver_conteudo(self, obj):
+        """Conta pública: todo mundo vê os itinerários. Conta privada: só o
+        dono e quem já está aprovado como seguidor (Follow real — uma
+        SolicitacaoSeguir pendente ainda não dá acesso)."""
+        if not obj.conta_privada:
+            return True
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        if request.user == obj:
+            return True
+        return obj.seguidores.filter(seguidor=request.user).exists()
 
     def get_badges(self, obj):
         qs = obj.badges.select_related('badge', 'badge__tipo').order_by('badge__tipo__nome', 'badge__criterio_valor')
@@ -209,6 +274,15 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated or request.user == obj:
             return None
         return obj.seguidores.filter(seguidor=request.user).exists()
+
+    def get_solicitado(self, obj):
+        """True quando o visitante tem uma SolicitacaoSeguir pendente pra essa
+        conta privada — front usa isso pra mostrar 'Solicitado' em vez de 'Seguir'."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or request.user == obj:
+            return False
+        from apps.social.models import SolicitacaoSeguir
+        return SolicitacaoSeguir.objects.filter(solicitante=request.user, alvo=obj).exists()
 
 
 class PerfilProprioSerializer(PerfilPublicoSerializer):

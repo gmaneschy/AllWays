@@ -9,18 +9,19 @@ from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from core.video import probe_video, validar_video
 from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
-from .models import Follow, Hashtag, Message, Comment, Curtida, Notification
+from .models import Follow, Hashtag, Message, Comment, Curtida, Notification, SolicitacaoSeguir
 from .services import resumo_curtida
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
     MessageSerializer, CommentSerializer, NotificationSerializer,
+    SolicitacaoSeguirSerializer,
 )
 
 
@@ -75,26 +76,64 @@ class CurtidaToggleView(APIView):
 
 # ─── Follow ───────────────────────────────────────────────────────────────────
 
+def _checar_lista_visivel(request, dono, campo):
+    """Bloqueia (403) o acesso à lista de seguidores/seguindo/lugares quando
+    o dono ocultou essa lista (campo='ocultar_seguidores' etc.) — exceto para
+    o próprio dono vendo a sua. Espelha em nível de API a mesma regra que o
+    front usa pra decidir entre mostrar o número real ou "--"."""
+    if not getattr(dono, campo):
+        return
+    if request.user.is_authenticated and request.user == dono:
+        return
+    raise PermissionDenied('Esta lista foi ocultada pelo usuário.')
+
+
 class FollowToggleView(APIView):
+    """POST /api/social/follow/   body: {"tipo": "usuario"|"local", "alvo_id": <int>}
+
+    Alvo = local: sempre segue/deixa de seguir direto (sem aprovação).
+    Alvo = usuário: se a conta do alvo é pública, segue direto igual antes.
+    Se é privada, cria (ou cancela, se já pendente) uma SolicitacaoSeguir em
+    vez de um Follow — só vira Follow de verdade quando o alvo aceitar
+    (ver ResponderSolicitacaoSeguirView)."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         serializer = FollowSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
-        filtro = {'seguidor': request.user}
-        if 'seguido_usuario' in serializer.validated_data:
-            filtro['seguido_usuario'] = serializer.validated_data['seguido_usuario']
-        else:
-            filtro['seguido_local'] = serializer.validated_data['seguido_local']
+        alvo_usuario = serializer.validated_data.get('seguido_usuario')
 
-        existente = Follow.objects.filter(**filtro).first()
+        if alvo_usuario is None:
+            # --- alvo é um local: comportamento inalterado ---
+            local = serializer.validated_data['seguido_local']
+            existente = Follow.objects.filter(seguidor=request.user, seguido_local=local).first()
+            if existente:
+                existente.delete()
+                return Response({'seguindo': False})
+            serializer.save()
+            return Response({'seguindo': True}, status=status.HTTP_201_CREATED)
+
+        # --- alvo é um usuário ---
+        existente = Follow.objects.filter(seguidor=request.user, seguido_usuario=alvo_usuario).first()
         if existente:
             existente.delete()
-            return Response({'seguindo': False})
+            return Response({'seguindo': False, 'solicitado': False})
+
+        solicitacao_pendente = SolicitacaoSeguir.objects.filter(
+            solicitante=request.user, alvo=alvo_usuario
+        ).first()
+        if solicitacao_pendente:
+            # Clicar de novo com o pedido pendente cancela o próprio pedido.
+            solicitacao_pendente.delete()
+            return Response({'seguindo': False, 'solicitado': False})
+
+        if alvo_usuario.conta_privada:
+            SolicitacaoSeguir.objects.create(solicitante=request.user, alvo=alvo_usuario)
+            return Response({'seguindo': False, 'solicitado': True}, status=status.HTTP_201_CREATED)
 
         serializer.save()
-        return Response({'seguindo': True}, status=status.HTTP_201_CREATED)
+        return Response({'seguindo': True, 'solicitado': False}, status=status.HTTP_201_CREATED)
 
 
 class SeguidoresUsuarioView(generics.ListAPIView):
@@ -103,6 +142,7 @@ class SeguidoresUsuarioView(generics.ListAPIView):
 
     def get_queryset(self):
         usuario = get_object_or_404(User, username=self.kwargs['username'])
+        _checar_lista_visivel(self.request, usuario, 'ocultar_seguidores')
         return User.objects.filter(seguindo__seguido_usuario=usuario)
 
 
@@ -112,6 +152,7 @@ class SeguindoUsuarioView(generics.ListAPIView):
 
     def get_queryset(self):
         usuario = get_object_or_404(User, username=self.kwargs['username'])
+        _checar_lista_visivel(self.request, usuario, 'ocultar_seguindo')
         return User.objects.filter(seguidores__seguidor=usuario)
 
 
@@ -124,6 +165,7 @@ class LugaresSeguidosView(APIView):
 
     def get(self, request, username):
         usuario = get_object_or_404(User, username=username)
+        _checar_lista_visivel(request, usuario, 'ocultar_lugares_seguidos')
         place_ids = Follow.objects.filter(
             seguidor=usuario, seguido_local__isnull=False
         ).values_list('seguido_local_id', flat=True)
@@ -138,16 +180,51 @@ class StatusFollowView(APIView):
         tipo = request.query_params.get('tipo')
         alvo_id = request.query_params.get('alvo_id')
 
-        filtro = {'seguidor': request.user}
         if tipo == 'usuario':
-            filtro['seguido_usuario_id'] = alvo_id
+            seguindo = Follow.objects.filter(seguidor=request.user, seguido_usuario_id=alvo_id).exists()
+            solicitado = False
+            if not seguindo:
+                solicitado = SolicitacaoSeguir.objects.filter(
+                    solicitante=request.user, alvo_id=alvo_id
+                ).exists()
+            return Response({'seguindo': seguindo, 'solicitado': solicitado})
         elif tipo == 'local':
-            filtro['seguido_local_id'] = alvo_id
+            seguindo = Follow.objects.filter(seguidor=request.user, seguido_local_id=alvo_id).exists()
+            return Response({'seguindo': seguindo})
         else:
             return Response({'erro': 'tipo inválido (use usuario ou local)'}, status=status.HTTP_400_BAD_REQUEST)
 
-        seguindo = Follow.objects.filter(**filtro).exists()
-        return Response({'seguindo': seguindo})
+
+class SolicitacoesSeguirView(generics.ListAPIView):
+    """GET /api/social/solicitacoes-seguir/
+    Pedidos de follow pendentes PARA o usuário logado (ele é sempre o 'alvo')."""
+    serializer_class = SolicitacaoSeguirSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            SolicitacaoSeguir.objects.filter(alvo=self.request.user)
+            .select_related('solicitante')
+            .order_by('-criado_em')
+        )
+
+
+class ResponderSolicitacaoSeguirView(APIView):
+    """POST /api/social/solicitacoes-seguir/<id>/responder/   body: {"aceitar": true|false}
+    Aceitar cria o Follow de verdade (o que já dispara a notificação normal
+    de 'novo seguidor' via signal) e apaga o pedido; recusar só apaga."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        solicitacao = get_object_or_404(SolicitacaoSeguir, pk=pk, alvo=request.user)
+        aceitar = bool(request.data.get('aceitar'))
+
+        if aceitar:
+            Follow.objects.get_or_create(
+                seguidor=solicitacao.solicitante, seguido_usuario=solicitacao.alvo
+            )
+        solicitacao.delete()
+        return Response({'aceito': aceitar})
 
 
 # ─── Comentários sociais ──────────────────────────────────────────────────────

@@ -264,6 +264,9 @@ class Command(BaseCommand):
         self.stdout.write('Criando mensagens diretas...')
         total_mensagens = self._criar_mensagens(usuarios)
 
+        self.stdout.write("Disparando notificações de teste para 'fiodor_dostoievski' (se existir)...")
+        total_notif_fiodor = self._disparar_notificacoes_fiodor(usuarios, places)
+
         self.stdout.write('Gerando feed events (view/like/save/comment_post/use_as_base)...')
         total_eventos = self._criar_feed_events(usuarios, itinerarios, options['dias'])
 
@@ -280,6 +283,7 @@ class Command(BaseCommand):
             f'  curtidas:     {total_curtidas}\n'
             f'  comentários:  {total_comentarios}\n'
             f'  mensagens:    {total_mensagens}\n'
+            f'  notif. teste (fiodor_dostoievski): {total_notif_fiodor}\n'
             f'  feed events:  {total_eventos}\n'
         ))
 
@@ -591,6 +595,102 @@ class Command(BaseCommand):
                 enviada_em = timezone.now() - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))
                 Message.objects.filter(pk=msg.pk).update(enviada_em=enviada_em)
                 total += 1
+
+        return total
+
+    # ─── Notificações de teste para um usuário específico ───────────────────
+
+    def _disparar_notificacoes_fiodor(self, usuarios, places):
+        """Gera pelo menos 1 evento de CADA tipo de notificação apontando pro
+        usuário 'fiodor_dostoievski' (conta real, criada à mão — não faz parte
+        da leva de usuários demo). A ideia é poder logar como esse usuário
+        depois do seed e conferir, em Configurações > Notificações, que cada
+        toggle realmente corresponde a uma notificação chegando (ou não, se
+        desligado). Não mexe nas preferências dele — só gera as AÇÕES que,
+        se a preferência estiver ligada, disparam a notificação.
+
+        Fica de fora, de propósito: 'solicitacao_seguir' (só existe se ele
+        tiver 'conta_privada' ativado, o que não devemos forçar aqui como
+        efeito colateral do seed)."""
+        try:
+            fiodor = User.objects.get(username='fiodor_dostoievski')
+        except User.DoesNotExist:
+            self.stdout.write(self.style.WARNING(
+                "  usuário 'fiodor_dostoievski' não encontrado — pulando notificações de teste."
+            ))
+            return 0
+
+        if len(usuarios) < 2:
+            return 0
+
+        total = 0
+        ator_a, ator_b = usuarios[0], usuarios[1]
+
+        # 1) 'follow' — ator_a passa a seguir o fiodor.
+        _, criado = Follow.objects.get_or_create(seguidor=ator_a, seguido_usuario=fiodor)
+        if criado:
+            total += 1
+
+        # 'comentario' e 'curtida' precisam de 1 itinerário PUBLICADO de
+        # autoria do fiodor — cria um mínimo se ele ainda não tiver nenhum.
+        itinerario_fiodor = Itinerario.objects.filter(autor=fiodor, status='publicado').first()
+        if itinerario_fiodor is None:
+            itinerario_fiodor = Itinerario.objects.create(
+                autor=fiodor, titulo='Roteiro de teste (seed)', tipo='day_trip', status='publicado',
+            )
+            itinerario_fiodor.publicado_em = timezone.now()
+            itinerario_fiodor.save(update_fields=['publicado_em'])
+            PontoItinerario.objects.create(
+                itinerario=itinerario_fiodor, local=random.choice(places), ordem=1,
+                seguranca=5, entrada_gratuita=True,
+                comentario='Ponto de teste gerado pelo seed_demo_data.',
+            )
+
+        # 2) 'comentario' — ator_b comenta o itinerário do fiodor.
+        comentario_raiz = Comment.objects.create(
+            autor=ator_b, itinerario=itinerario_fiodor,
+            texto='Comentário de teste (seed) — adorei o roteiro!',
+        )
+        total += 1
+
+        # 3) 'resposta_comentario' — ator_a responde dentro da thread,
+        # mencionando o fiodor especificamente via responder_para.
+        Comment.objects.create(
+            autor=ator_a, itinerario=itinerario_fiodor,
+            texto='Resposta de teste (seed) — concordo, vale muito a pena!',
+            parent=comentario_raiz, responder_para=fiodor,
+        )
+        total += 1
+
+        # 4) 'mensagem' — ator_b manda uma mensagem direta pro fiodor.
+        Message.objects.create(
+            remetente=ator_b, destinatario=fiodor, tipo='texto',
+            texto='Mensagem de teste (seed) — oi, tudo bem?',
+        )
+        total += 1
+
+        # 5) 'curtida' — ator_a curte o itinerário do fiodor.
+        ct_itinerario = ContentType.objects.get_for_model(Itinerario)
+        _, criado = Curtida.objects.get_or_create(
+            usuario=ator_a, content_type=ct_itinerario, object_id=itinerario_fiodor.id,
+        )
+        if criado:
+            total += 1
+
+        # 6) 'novo_post' — só dispara na transição pra 'publicado', então o
+        # fiodor precisa JÁ seguir o ator ANTES da publicação acontecer.
+        Follow.objects.get_or_create(seguidor=fiodor, seguido_usuario=ator_b)
+        post_novo = Itinerario.objects.create(
+            autor=ator_b, titulo='Publicação de teste (seed)', tipo='day_trip', status='publicado',
+        )
+        post_novo.publicado_em = timezone.now()
+        post_novo.save(update_fields=['publicado_em'])
+        PontoItinerario.objects.create(
+            itinerario=post_novo, local=random.choice(places), ordem=1,
+            seguranca=5, entrada_gratuita=True,
+            comentario='Ponto de teste gerado pelo seed_demo_data.',
+        )
+        total += 1
 
         return total
 

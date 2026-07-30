@@ -1,10 +1,24 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+
+
+def _quer_notificacao(destinatario_id, campo_preferencia):
+    """Confere a preferência de notificação do destinatário (notif_seguiu,
+    notif_comentou, etc.) com uma query enxuta — sem carregar o User inteiro.
+    destinatario_id=None nunca deveria chegar aqui, mas retorna False por segurança."""
+    if not destinatario_id:
+        return False
+    from apps.users.models import User
+    return User.objects.filter(
+        pk=destinatario_id, **{campo_preferencia: True}
+    ).exists()
 
 
 @receiver(post_save, sender='social.Follow')
 def notificar_novo_seguidor(sender, instance, created, **kwargs):
     if not created or not instance.seguido_usuario_id:
+        return
+    if not _quer_notificacao(instance.seguido_usuario_id, 'notif_seguiu'):
         return
     from .tasks import criar_notificacao_task
     criar_notificacao_task.delay(
@@ -13,6 +27,22 @@ def notificar_novo_seguidor(sender, instance, created, **kwargs):
         ator_id=instance.seguidor_id,
         alvo_content_type='users.user',
         alvo_object_id=instance.seguidor_id,
+    )
+
+
+@receiver(post_save, sender='social.SolicitacaoSeguir')
+def notificar_solicitacao_seguir(sender, instance, created, **kwargs):
+    if not created:
+        return
+    if not _quer_notificacao(instance.alvo_id, 'notif_seguiu'):
+        return
+    from .tasks import criar_notificacao_task
+    criar_notificacao_task.delay(
+        tipo='solicitacao_seguir',
+        destinatario_id=instance.alvo_id,
+        ator_id=instance.solicitante_id,
+        alvo_content_type='users.user',
+        alvo_object_id=instance.solicitante_id,
     )
 
 
@@ -26,7 +56,10 @@ def notificar_comentario(sender, instance, created, **kwargs):
         # Resposta dentro de uma thread: notifica quem foi especificamente
         # mencionado (responder_para), não necessariamente o autor do comentário raiz.
         destinatario_id = instance.responder_para_id
-        if destinatario_id and destinatario_id != instance.autor_id:
+        if (
+            destinatario_id and destinatario_id != instance.autor_id
+            and _quer_notificacao(destinatario_id, 'notif_respondeu')
+        ):
             criar_notificacao_task.delay(
                 tipo='resposta_comentario',
                 destinatario_id=destinatario_id,
@@ -37,7 +70,10 @@ def notificar_comentario(sender, instance, created, **kwargs):
     else:
         # Comentário de primeiro nível: notifica o autor do itinerário.
         destinatario_id = instance.itinerario.autor_id
-        if destinatario_id and destinatario_id != instance.autor_id:
+        if (
+            destinatario_id and destinatario_id != instance.autor_id
+            and _quer_notificacao(destinatario_id, 'notif_comentou')
+        ):
             criar_notificacao_task.delay(
                 tipo='comentario',
                 destinatario_id=destinatario_id,
@@ -53,6 +89,8 @@ def notificar_mensagem(sender, instance, created, **kwargs):
         return
     if instance.destinatario_id == instance.remetente_id:
         return
+    if not _quer_notificacao(instance.destinatario_id, 'notif_mensagem'):
+        return
     from .tasks import criar_notificacao_task
     criar_notificacao_task.delay(
         tipo='mensagem',
@@ -61,6 +99,38 @@ def notificar_mensagem(sender, instance, created, **kwargs):
         alvo_content_type='social.message',
         alvo_object_id=instance.id,
     )
+
+
+@receiver(pre_save, sender='itineraries.Itinerario')
+def guardar_status_anterior_itinerario(sender, instance, **kwargs):
+    """Guarda o status ANTES de salvar, num atributo temporário na instância
+    (não persiste, só vive durante essa chamada de save()). É o que permite
+    ao post_save logo abaixo diferenciar 'acabou de publicar agora' de
+    'já estava publicado e só foi editado' — diferente do sinal de badges
+    (gamification/signals.py), que pode reavaliar toda vez sem problema
+    porque get_or_create é idempotente; notificação não pode, ou vira spam
+    a cada edição de um itinerário já publicado."""
+    if not instance.pk:
+        instance._status_anterior = None
+        return
+    from apps.itineraries.models import Itinerario
+    instance._status_anterior = (
+        Itinerario.objects.filter(pk=instance.pk).values_list('status', flat=True).first()
+    )
+
+
+@receiver(post_save, sender='itineraries.Itinerario')
+def notificar_seguidores_novo_post(sender, instance, created, **kwargs):
+    if instance.status != 'publicado' or not instance.autor_id:
+        return
+
+    status_anterior = getattr(instance, '_status_anterior', None)
+    acabou_de_publicar = created or status_anterior != 'publicado'
+    if not acabou_de_publicar:
+        return
+
+    from .tasks import notificar_seguidores_novo_post_task
+    notificar_seguidores_novo_post_task.delay(instance.id, instance.autor_id)
 
 
 @receiver(post_save, sender='social.Curtida')

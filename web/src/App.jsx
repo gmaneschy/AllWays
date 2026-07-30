@@ -12,6 +12,7 @@ import PaginaExplorar from './PaginaExplorar';
 import PaginaItinerario from './PaginaItinerario';
 import PaginaHashtag from './PaginaHashtag';
 import PaginaNotificacoes from './PaginaNotificacoes';
+import PaginaConfiguracoes from './PaginaConfiguracoes';
 
 function App() {
   return (
@@ -95,6 +96,14 @@ function App() {
           element={
             <RotaProtegida>
               <PaginaNotificacoes />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/configuracoes"
+          element={
+            <RotaProtegida>
+              <PaginaConfiguracoes />
             </RotaProtegida>
           }
         />

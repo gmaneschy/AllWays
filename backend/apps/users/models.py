@@ -56,6 +56,27 @@ class User(AbstractUser):
         help_text="Se desativado, oculta a badge de destaque no feed, posts e comentários (públicos)."
     )
 
+    # --- Privacidade ---
+    conta_privada = models.BooleanField(
+        default=False,
+        help_text=(
+            "Se ativado, itinerários e conteúdo completo do perfil só ficam "
+            "visíveis para quem segue; novos seguidores exigem aprovação manual."
+        ),
+    )
+
+    # --- Notificações (todas ligadas por padrão) ---
+    notif_seguiu = models.BooleanField(default=True, help_text='Notificar quando alguém seguir você.')
+    notif_comentou = models.BooleanField(default=True, help_text='Notificar quando comentarem no seu post.')
+    notif_respondeu = models.BooleanField(default=True, help_text='Notificar quando responderem seu comentário.')
+    notif_mensagem = models.BooleanField(default=True, help_text='Notificar quando alguém enviar mensagem.')
+    notif_novo_post = models.BooleanField(default=True, help_text='Notificar quando alguém que você segue publicar um novo itinerário.')
+
+    # --- Exibição (oculta a MINHA lista; não afeta o que vejo da lista dos outros) ---
+    ocultar_seguidores = models.BooleanField(default=False)
+    ocultar_seguindo = models.BooleanField(default=False)
+    ocultar_lugares_seguidos = models.BooleanField(default=False)
+
     def save(self, *args, **kwargs):
         # Rede de segurança: garante minúsculo mesmo se o registro não passar
         # pelo CadastroSerializer (ex.: criado via admin ou shell).

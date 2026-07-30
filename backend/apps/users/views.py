@@ -9,6 +9,7 @@ from .serializers import (
     CadastroSerializer, MeSerializer, ConfiguracoesSerializer,
     PerfilPublicoSerializer, PerfilProprioSerializer,
     SelecionarBadgeDestaqueSerializer, EditarPerfilSerializer,
+    AlterarSenhaSerializer,
 )
 
 
@@ -54,6 +55,20 @@ class ConfiguracoesView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class AlterarSenhaView(APIView):
+    """PATCH /api/users/me/senha/  body: {senha_atual, nova_senha}
+    Troca a senha exigindo confirmação da senha atual. Não desloga as outras
+    sessões/tokens já emitidos — se isso vier a importar, dá pra invalidar
+    refresh tokens ativos aqui depois."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        serializer = AlterarSenhaSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'ok': True})
 
 
 class SelecionarBadgeDestaqueView(APIView):

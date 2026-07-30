@@ -1,0 +1,202 @@
+@import './buttons.css';
+
+.pagina-config {
+  max-width: 650px;
+  margin: 40px auto;
+  padding: 0 16px;
+  color: var(--texto-principal);
+}
+
+.pagina-config__estado {
+  text-align: center;
+  margin-top: 40px;
+  color: var(--texto-secundario);
+  font: var(--fonte-corpo);
+}
+
+.pagina-config__estado--erro {
+  color: var(--cor-perigo);
+}
+
+.pagina-config__titulo {
+  font: var(--fonte-titulo-pagina);
+  color: var(--texto-principal);
+  margin: 0 0 24px;
+}
+
+/* --- Cartão de cada seção --- */
+
+.config-secao {
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.config-secao__titulo {
+  font: var(--fonte-titulo-secao);
+  font-weight: bold;
+  color: var(--texto-principal);
+  margin: 0 0 4px;
+}
+
+.config-secao__descricao {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 0 0 12px;
+}
+
+/* --- Linha de toggle --- */
+
+.config-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--borda-sutil);
+}
+
+.config-linha:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.config-linha--sem-divisor {
+  border-bottom: none;
+  padding: 4px 0;
+}
+
+.config-linha__texto {
+  flex: 1;
+}
+
+.config-linha__label {
+  font: var(--fonte-nome-autor);
+  color: var(--texto-principal);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.config-linha__ajuda {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 2px 0 0;
+}
+
+.config-chip-em-breve {
+  font: var(--fonte-micro);
+  color: var(--texto-secundario);
+  background: var(--fundo-chip);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* --- Switch on/off --- */
+
+.config-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.config-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.config-toggle__trilho {
+  position: absolute;
+  inset: 0;
+  background: var(--borda-padrao);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.config-toggle__trilho::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.config-toggle input:checked + .config-toggle__trilho {
+  background: var(--cor-primaria);
+}
+
+.config-toggle input:checked + .config-toggle__trilho::before {
+  transform: translateX(18px);
+}
+
+.config-toggle input:focus-visible + .config-toggle__trilho {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+.config-toggle--desabilitado .config-toggle__trilho {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* --- Form de alterar senha --- */
+
+.config-senha-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+  padding-bottom: 18px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--borda-sutil);
+}
+
+.config-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--borda-padrao);
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  box-sizing: border-box;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: var(--cor-primaria);
+}
+
+.config-senha-mensagem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--fonte-meta);
+  margin: 0;
+}
+
+.config-senha-mensagem--erro {
+  color: var(--cor-perigo);
+}
+
+.config-senha-mensagem--sucesso {
+  color: var(--cor-sucesso);
+}
+
+.config-senha-botao {
+  align-self: flex-start;
+  padding: 8px 18px;
+}

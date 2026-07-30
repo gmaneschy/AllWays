@@ -65,6 +65,39 @@ class Follow(models.Model):
         return f"{self.seguidor.username} segue {alvo}"
 
 
+class SolicitacaoSeguir(models.Model):
+    """Pedido de follow pendente — só existe quando o alvo tem conta_privada=True.
+    Ao ser aceito (ver ResponderSolicitacaoSeguirView), vira um Follow normal e
+    este registro é apagado; ao ser recusado, é só apagado, sem criar Follow.
+    Clicar 'Seguir' de novo enquanto pendente cancela o próprio pedido
+    (mesma lógica de toggle usada em Follow)."""
+
+    solicitante = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='solicitacoes_seguir_enviadas'
+    )
+    alvo = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='solicitacoes_seguir_recebidas'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['solicitante', 'alvo'],
+                name='solicitacao_seguir_unica',
+            ),
+            models.CheckConstraint(
+                name='nao_pode_solicitar_seguir_a_si_mesmo',
+                check=~Q(solicitante=F('alvo')),
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.solicitante.username} quer seguir {self.alvo.username}"
+
+
 class Message(models.Model):
     TIPO_CHOICES = [
         ('texto', 'Texto'),
@@ -211,10 +244,12 @@ class Notification(models.Model):
 
     TIPO_CHOICES = [
         ('follow', 'Novo seguidor'),
+        ('solicitacao_seguir', 'Solicitação de follow'),
         ('comentario', 'Comentário no seu post'),
         ('resposta_comentario', 'Resposta ao seu comentário'),
         ('mensagem', 'Nova mensagem'),
         ('curtida', 'Curtida'),
+        ('novo_post', 'Novo post de quem você segue'),
     ]
 
     destinatario = models.ForeignKey(

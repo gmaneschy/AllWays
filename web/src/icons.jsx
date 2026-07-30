@@ -46,6 +46,7 @@ import {
   Square,
   Loader2,
   Hash,
+  Settings,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -87,3 +88,4 @@ export const IconeMicrofone = criarIcone(Mic);
 export const IconePararGravacao = criarIcone(Square);
 export const IconeCarregando = criarIcone(Loader2);
 export const IconeHashtag = criarIcone(Hash);
+export const IconeConfiguracoes = criarIcone(Settings);

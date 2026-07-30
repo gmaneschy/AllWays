@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
-import { IconeNotificacao } from './icons';
+import { IconeNotificacao, IconeConfiguracoes } from './icons';
 import './Navbar.css';
 
 const LINKS_PUBLICOS = [
@@ -100,6 +100,9 @@ function Navbar() {
           <span className="navbar__usuario">
             <Link to={`/perfil/${usuario?.username}`} className="navbar__link-usuario">
               {usuario?.username}
+            </Link>
+            <Link to="/configuracoes" className="navbar__configuracoes-btn">
+              <IconeConfiguracoes size={18} strokeWidth={2} />
             </Link>
             <button onClick={handleLogout} className="navbar__logout-btn">
               Sair

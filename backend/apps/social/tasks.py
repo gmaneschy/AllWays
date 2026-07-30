@@ -83,3 +83,23 @@ def criar_notificacao_task(tipo, destinatario_id, ator_id=None, alvo_content_typ
         content_type=content_type,
         object_id=alvo_object_id,
     )
+
+@shared_task
+def notificar_seguidores_novo_post_task(itinerario_id, autor_id):
+    """Fanout: notifica cada seguidor do autor que ele publicou um itinerário
+    novo. Reavaliar/republicar não deveria disparar de novo — quem garante
+    isso é o signal (só chama esta task na transição pra 'publicado')."""
+    from .models import Follow
+
+    seguidores_ids = Follow.objects.filter(
+        seguido_usuario_id=autor_id
+    ).values_list('seguidor_id', flat=True)
+
+    for seguidor_id in seguidores_ids:
+        criar_notificacao_task.delay(
+            tipo='novo_post',
+            destinatario_id=seguidor_id,
+            ator_id=autor_id,
+            alvo_content_type='itineraries.itinerario',
+            alvo_object_id=itinerario_id,
+        )

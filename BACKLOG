@@ -10,20 +10,19 @@ social:
 Checklist:
 Criar tela de configurações:
 Configurações:
-    Usuário:
+    Privacidade:
         Alterar Senha
         Autenticação de dois fatores (futuro)
-        Privacidade de conta (perfil público ou privado)
+        Visibilidade de conta (atualmente, deixar o perfil fechado continua permitindo que o usuário veja quantidades de seguidores e seguidos. Se o perfil estiver oculto, essas informações devem aparecer como "--". Apenas usuários que seguem devem ser capazes de ver essas informações, isto é, se os toggles de exibição estiverem ativos)
+
+    Idioma:
+        Mudar idioma do aplicativo (futuro)
 
     Notificações: (toggle)
-        "Usuário X seguiu você"
-        "Usuário X comentou no seu post"
-        "Usuário X respondeu seu comentário"
-        "Usuário X enviou uma mensagem"
-        "Usuário X fez novo post"
+        "Usuário X enviou uma mensagem" (notificação de mensagem deve ficar em "mensagem" no navbar (substituir mensagem por ícone de mensagem) e na página de mensagem, usuário que enviou mensagem deve estar destacado)
 
     Exibição: (toggle)
-        Exibir badges de outros usuários
+        Exibir badges de outros usuários (desativar não está ocultando as badges em feed, detalhe de itinerario e comentários)
 
 
 Tela admin

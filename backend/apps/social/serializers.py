@@ -4,7 +4,7 @@ from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario
 from apps.gamification.serializers import serializar_badge_destaque
-from .models import Follow, Hashtag, Comment, Message, Notification
+from .models import Follow, Hashtag, Comment, Message, Notification, SolicitacaoSeguir
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -53,6 +53,16 @@ class FollowSerializer(serializers.ModelSerializer):
         validated_data.pop('alvo_id')
         validated_data['seguidor'] = self.context['request'].user
         return Follow.objects.create(**validated_data)
+
+
+class SolicitacaoSeguirSerializer(serializers.ModelSerializer):
+    """Usado em GET /social/solicitacoes-seguir/ — pedidos pendentes PARA o
+    usuário logado (ele é sempre o 'alvo'; não precisa serializar o próprio)."""
+    solicitante = UsuarioResumoSerializer(read_only=True)
+
+    class Meta:
+        model = SolicitacaoSeguir
+        fields = ['id', 'solicitante', 'criado_em']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -224,10 +234,12 @@ class NotificationSerializer(serializers.ModelSerializer):
         nome = obj.ator.username if obj.ator else 'Alguém'
         return {
             'follow': f'{nome} começou a seguir você',
+            'solicitacao_seguir': f'{nome} quer seguir você',
             'comentario': f'{nome} comentou no seu itinerário',
             'resposta_comentario': f'{nome} respondeu seu comentário',
             'mensagem': f'{nome} enviou uma mensagem',
             'curtida': f'{nome} curtiu algo seu',
+            'novo_post': f'{nome} publicou um novo itinerário',
         }.get(obj.tipo, '')
 
     def get_link(self, obj):
@@ -236,6 +248,11 @@ class NotificationSerializer(serializers.ModelSerializer):
         alvo = obj.alvo
 
         if obj.tipo == 'follow':
+            return f'/perfil/{obj.ator.username}' if obj.ator else None
+
+        if obj.tipo == 'solicitacao_seguir':
+            # Ainda não existe uma tela dedicada de "solicitações" — por ora
+            # leva pro perfil de quem pediu, pra decidir lá se aceita ou não.
             return f'/perfil/{obj.ator.username}' if obj.ator else None
 
         if obj.tipo == 'comentario':
@@ -248,6 +265,10 @@ class NotificationSerializer(serializers.ModelSerializer):
 
         if obj.tipo == 'mensagem':
             return f'/mensagens?usuario={obj.ator.username}' if obj.ator else None
+
+        if obj.tipo == 'novo_post':
+            # alvo é o próprio Itinerario publicado.
+            return f'/itinerario/{alvo.id}' if alvo else None
 
         if obj.tipo == 'curtida':
             if isinstance(alvo, Itinerario):

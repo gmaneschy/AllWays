@@ -136,6 +136,14 @@ export async function atualizarConfiguracoes(payload) {
   return data;
 }
 
+export async function alterarSenha(senhaAtual, novaSenha) {
+  const { data } = await api.patch('/users/me/senha/', {
+    senha_atual: senhaAtual,
+    nova_senha: novaSenha,
+  });
+  return data;
+}
+
 export async function getBadgesItinerarioDisponiveis() {
   const { data } = await api.get('/gamification/badges-itinerario/');
   return data;
