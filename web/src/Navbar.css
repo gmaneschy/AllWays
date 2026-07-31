@@ -25,6 +25,17 @@
   color: var(--cor-primaria);
 }
 
+.navbar__mensagens-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.navbar__mensagens-link {
+  display: flex;
+  align-items: center;
+}
+
 .navbar__right {
   display: flex;
   align-items: center;

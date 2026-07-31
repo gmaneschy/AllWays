@@ -6,7 +6,7 @@ from .views import (
     BuscaView, ExplorarView, CurtidaToggleView,
     NotificacoesView, NotificacoesNaoLidasView,
     MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView, LugaresSeguidosView,
-    SolicitacoesSeguirView, ResponderSolicitacaoSeguirView,
+    SolicitacoesSeguirView, ResponderSolicitacaoSeguirView, MensagensNaoLidasView,
 )
 
 urlpatterns = [
@@ -28,7 +28,8 @@ urlpatterns = [
     # Mensagens
     path('mensagens/', ConversasView.as_view(), name='conversas'),
     path('mensagens/destinatarios/', UsuariosParaMensagemView.as_view(), name='destinatarios'),
-    path('mensagens/<str:username>/', MensagensConversaView.as_view(), name='conversa'),
+    path('mensagens/nao-lidas/', MensagensNaoLidasView.as_view()),
+    path('mensagens/<str:username>/', MensagensConversaView.as_view()),
 
     # Busca e explorar
     path('busca/', BuscaView.as_view(), name='busca'),

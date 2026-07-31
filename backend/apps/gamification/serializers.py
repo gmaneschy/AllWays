@@ -32,11 +32,22 @@ class MinhaConquistaSerializer(serializers.ModelSerializer):
 def serializar_badge_destaque(usuario, context=None):
     """Ponto único de decisão sobre exibir ou não a badge_destaque de um usuário
     em contextos PÚBLICOS (feed, post, comentário de itinerário, comentário de
-    lugar). Respeita o toggle 'exibir_badges' das configurações do usuário.
+    lugar). Respeita o toggle 'exibir_badges' — mas de QUEM ESTÁ VENDO, não do
+    dono da badge: é a preferência 'Exibir badges de outros usuários', em
+    Configurações > Exibição, então quem desliga simplesmente para de ver
+    badge de qualquer pessoa (o dono da badge não perde nada ao ligar/desligar
+    o próprio toggle). Visitante anônimo (sem 'request' autenticado no
+    context) não tem preferência salva, então vê normalmente.
 
     Não usar isso na tela de configurações/edição do próprio perfil — lá o
     usuário deve sempre ver e poder gerenciar sua própria badge_destaque,
     independente do toggle (senão não conseguiria reativar depois)."""
-    if usuario is None or not usuario.exibir_badges or not usuario.badge_destaque_id:
+    if usuario is None or not usuario.badge_destaque_id:
         return None
-    return BadgeUsuarioSerializer(usuario.badge_destaque, context=context or {}).data
+
+    context = context or {}
+    request = context.get('request')
+    if request and request.user.is_authenticated and not request.user.exibir_badges:
+        return None
+
+    return BadgeUsuarioSerializer(usuario.badge_destaque, context=context).data

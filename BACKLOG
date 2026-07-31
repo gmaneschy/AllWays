@@ -13,16 +13,15 @@ Configurações:
     Privacidade:
         Alterar Senha
         Autenticação de dois fatores (futuro)
-        Visibilidade de conta (atualmente, deixar o perfil fechado continua permitindo que o usuário veja quantidades de seguidores e seguidos. Se o perfil estiver oculto, essas informações devem aparecer como "--". Apenas usuários que seguem devem ser capazes de ver essas informações, isto é, se os toggles de exibição estiverem ativos)
+        1 - Visibilidade de conta - seguir um perfil privado não configura uma "solicitação". Notificação apenas diz "usuário quer seguir você", não há nenhuma espécie de aprovação. Solicitação de follow devia gerar um processo de "aprovação" do lado do usuário seguido. Esse processo pode se dar no PainelNotificacoes e, consequentemente, no PaginaNotificacoes. Além disso, do lado do usuário que quer seguir, clicar no botão "seguir" inicia uma contagem "negativa" nos seguidores. A cada clique: "-- seguidores" -> "-1 seguidores" -> "-2 seguidores". Clicar em seguir deve colocar no botão uma mensagem de "Solicitação enviada"
 
     Idioma:
         Mudar idioma do aplicativo (futuro)
 
     Notificações: (toggle)
-        "Usuário X enviou uma mensagem" (notificação de mensagem deve ficar em "mensagem" no navbar (substituir mensagem por ícone de mensagem) e na página de mensagem, usuário que enviou mensagem deve estar destacado)
+        2 - "Usuário X enviou uma mensagem" - notificação de mensagem ainda aparece no sino de notificações. Como a notificação de mensagem agora aparece no ícone de mensagem, não é mais necessário que essa notificação apareça na página nem no painel de notificações.
 
     Exibição: (toggle)
-        Exibir badges de outros usuários (desativar não está ocultando as badges em feed, detalhe de itinerario e comentários)
 
 
 Tela admin

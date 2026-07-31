@@ -77,15 +77,26 @@ class CurtidaToggleView(APIView):
 # ─── Follow ───────────────────────────────────────────────────────────────────
 
 def _checar_lista_visivel(request, dono, campo):
-    """Bloqueia (403) o acesso à lista de seguidores/seguindo/lugares quando
-    o dono ocultou essa lista (campo='ocultar_seguidores' etc.) — exceto para
-    o próprio dono vendo a sua. Espelha em nível de API a mesma regra que o
-    front usa pra decidir entre mostrar o número real ou "--"."""
-    if not getattr(dono, campo):
-        return
+    """Bloqueia (403) o acesso à lista de seguidores/seguindo/lugares em duas
+    situações independentes — qualquer uma delas basta:
+    1) o dono ocultou essa lista especificamente (campo='ocultar_seguidores' etc);
+    2) a conta é privada e quem está pedindo não é seguidor aprovado dela.
+    Em ambos os casos, o próprio dono vendo a sua sempre passa. Espelha em
+    nível de API a mesma regra que o front usa pra decidir entre mostrar o
+    número real ou "--"."""
     if request.user.is_authenticated and request.user == dono:
         return
-    raise PermissionDenied('Esta lista foi ocultada pelo usuário.')
+
+    if dono.conta_privada:
+        eh_seguidor = (
+            request.user.is_authenticated
+            and Follow.objects.filter(seguidor=request.user, seguido_usuario=dono).exists()
+        )
+        if not eh_seguidor:
+            raise PermissionDenied('Esta conta é privada.')
+
+    if getattr(dono, campo):
+        raise PermissionDenied('Esta lista foi ocultada pelo usuário.')
 
 
 class FollowToggleView(APIView):
@@ -326,6 +337,16 @@ class HashtagFeedView(APIView):
 
 # ─── Mensagens ────────────────────────────────────────────────────────────────
 
+class MensagensNaoLidasView(APIView):
+    """GET /api/social/mensagens/nao-lidas/ — total de mensagens não lidas
+    (somando todas as conversas), pro badge do ícone de mensagens no Navbar."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        total = Message.objects.filter(destinatario=request.user, lida=False).count()
+        return Response({'total': total})
+
+
 class ConversasView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -370,6 +391,7 @@ class ConversasView(APIView):
                     'tipo': ultima.tipo,
                     'enviada_em': ultima.enviada_em,
                     'minha': ultima.remetente_id == user.id,
+                    'lida': ultima.lida,
                 },
             })
 
@@ -391,6 +413,14 @@ class MensagensConversaView(APIView):
             )
             .order_by('enviada_em')
         )
+
+        # Abrir a conversa = ler o que o outro mandou. Só as mensagens NA
+        # DIREÇÃO outro → eu; o que EU mandei pra ele não muda aqui (esse
+        # lado só muda quando ELE abrir a conversa dele comigo).
+        Message.objects.filter(
+            remetente=outro, destinatario=request.user, lida=False
+        ).update(lida=True)
+
         serializer = MessageSerializer(mensagens, many=True, context={'request': request})
         return Response(serializer.data)
 

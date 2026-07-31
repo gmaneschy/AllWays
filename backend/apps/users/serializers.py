@@ -235,16 +235,30 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
         return obj.seguindo.filter(seguido_local__isnull=False).count()
 
     def _oculto_para_visitante(self, obj, campo):
-        """True quando 'campo' (um dos ocultar_*) está ligado em obj E quem
-        está olhando não é o próprio dono do perfil. O dono sempre vê os
-        números reais na própria página — o toggle esconde só dos outros."""
-        if not getattr(obj, campo):
-            return False
+        """True quando o visitante não deveria ver esse número. Duas regras
+        independentes, qualquer uma delas basta pra ocultar:
+        1) o toggle específico (ocultar_seguidores/ocultar_seguindo/
+           ocultar_lugares_seguidos) está ligado;
+        2) a conta é privada e o visitante não é seguidor aprovado dela
+           (uma SolicitacaoSeguir pendente não conta como aprovado).
+        O dono sempre vê os números reais na própria página, independente
+        de qualquer uma das duas regras."""
         request = self.context.get('request')
         dono_esta_vendo = bool(
             request and request.user.is_authenticated and request.user == obj
         )
-        return not dono_esta_vendo
+        if dono_esta_vendo:
+            return False
+
+        if obj.conta_privada:
+            eh_seguidor = bool(
+                request and request.user.is_authenticated
+                and obj.seguidores.filter(seguidor=request.user).exists()
+            )
+            if not eh_seguidor:
+                return True
+
+        return bool(getattr(obj, campo))
 
     def get_itinerarios_publicados(self, obj):
         if not self._pode_ver_conteudo(obj):

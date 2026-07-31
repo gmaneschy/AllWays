@@ -135,6 +135,10 @@ class Message(models.Model):
         'itineraries.Itinerario', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='mensagens_compartilhado'
     )
+    lida = models.BooleanField(
+        default=False,
+        help_text="Marcada True quando o destinatário abre a conversa (ver MensagensConversaView.get)."
+    )
     enviada_em = models.DateTimeField(auto_now_add=True)
 
     def clean(self):

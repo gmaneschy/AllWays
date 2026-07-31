@@ -148,12 +148,14 @@ class MessageSerializer(serializers.ModelSerializer):
             'destinatario', 'destinatario_nome',
             'tipo', 'texto', 'imagem', 'audio',
             'video', 'video_thumbnail_url', 'video_status', 'duracao_segundos',
-            'itinerario_id', 'itinerario', 'enviada_em',
+            'itinerario_id', 'itinerario', 'enviada_em', 'lida',
             'total_curtidas', 'curtido',
         ]
         # video_status e duracao_segundos são preenchidos pelo servidor
-        # (upload seta duração; a task Celery seta status='pronto'/'erro')
-        read_only_fields = ['remetente', 'enviada_em', 'video_status', 'duracao_segundos']
+        # (upload seta duração; a task Celery seta status='pronto'/'erro').
+        # lida é preenchida só por MensagensConversaView.get (quando o
+        # destinatário abre a conversa) — nunca pelo cliente diretamente.
+        read_only_fields = ['remetente', 'enviada_em', 'video_status', 'duracao_segundos', 'lida']
 
     def get_video_thumbnail_url(self, obj):
         request = self.context.get('request')

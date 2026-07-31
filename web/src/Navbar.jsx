@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas } from './api';
+import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas, getMensagensNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
-import { IconeNotificacao, IconeConfiguracoes } from './icons';
+import { IconeNotificacao, IconeConfiguracoes, IconeMensagem } from './icons';
 import './Navbar.css';
 
 const LINKS_PUBLICOS = [
@@ -17,6 +17,7 @@ function Navbar() {
   const usuario = getUsuarioLogado();
   const [painelAberto, setPainelAberto] = useState(false);
   const [naoLidas, setNaoLidas] = useState(0);
+  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
   const sinoRef = useRef(null);
 
   useEffect(() => {
@@ -29,6 +30,19 @@ function Navbar() {
     }
     buscarContador();
     const intervalo = setInterval(buscarContador, 20000);
+    return () => clearInterval(intervalo);
+  }, [logado]);
+
+  useEffect(() => {
+    if (!logado) return;
+    async function buscarContadorMensagens() {
+      try {
+        const { total } = await getMensagensNaoLidas();
+        setMensagensNaoLidas(total);
+      } catch (_) {}
+    }
+    buscarContadorMensagens();
+    const intervalo = setInterval(buscarContadorMensagens, 20000);
     return () => clearInterval(intervalo);
   }, [logado]);
 
@@ -65,9 +79,16 @@ function Navbar() {
           </Link>
         )}
         {logado && (
-          <Link to="/mensagens" className={classeLink('/mensagens')}>
-            Mensagens
-          </Link>
+          <div className="navbar__mensagens-wrapper">
+            <Link to="/mensagens" className={`${classeLink('/mensagens')} navbar__mensagens-link`}>
+              <IconeMensagem size={20} strokeWidth={2} />
+            </Link>
+            {mensagensNaoLidas > 0 && (
+              <span className="navbar__sino-badge">
+                {mensagensNaoLidas > 9 ? '9+' : mensagensNaoLidas}
+              </span>
+            )}
+          </div>
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
 import {
   IconeLike,
@@ -11,6 +11,8 @@ import {
   IconeMicrofone,
   IconePararGravacao,
   IconeAdicionar,
+  IconeEnviado,
+  IconeLidoDuplo,
 } from './icons';
 import './PaginaMensagens.css';
 
@@ -82,33 +84,76 @@ function SeletorDestinatario({ onSelecionar }) {
   );
 }
 
-function BotaoCurtirMensagem({ m, minha, onCurtir }) {
+function StatusLeitura({ minha, lida }) {
+  // Só faz sentido pras MINHAS mensagens — é o "check duplo" de quem enviou.
+  if (!minha) return null;
+  return lida
+    ? <IconeLidoDuplo size={13} className="bolha-status-leitura bolha-status-leitura--lida" />
+    : <IconeEnviado size={13} className="bolha-status-leitura" />;
+}
+
+function SeloCurtida({ curtido, minha }) {
+  if (!curtido) return null;
   return (
-    <button
-      onClick={() => onCurtir(m.id)}
-      className={[
-        'btn-curtir-mensagem',
-        m.curtido && 'btn-curtir-mensagem--ativo',
-        minha ? 'btn-curtir-mensagem--minha' : 'btn-curtir-mensagem--deles',
-      ].filter(Boolean).join(' ')}
-    >
-      <IconeLike size={12} fill={m.curtido ? 'currentColor' : 'none'} />
-      {m.total_curtidas > 0 && <span>{m.total_curtidas}</span>}
-    </button>
+    <span className={`bolha-curtida-selo${minha ? ' bolha-curtida-selo--minha' : ' bolha-curtida-selo--deles'}`}>
+      <IconeLike size={10} fill="currentColor" />
+    </span>
   );
 }
 
+/** Distingue clique único de duplo-clique manualmente. Necessário porque as
+ * bolhas de imagem e itinerário já têm uma ação de clique único (abrir a
+ * imagem / navegar pro itinerário) — sem isso, um duplo-clique real
+ * dispararia as duas ações (a de clique único E a de curtir) juntas. */
+function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
+  const timerRef = useRef(null);
+  return function handleClick(e) {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      aoDuplo(e);
+    } else {
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        aoUnico?.(e);
+      }, atraso);
+    }
+  };
+}
+
 function BolhaMensagem({ m, minha, onCurtir }) {
+  const navigate = useNavigate();
   const wrapperClasse = `bolha-wrapper ${minha ? 'bolha-wrapper--minha' : 'bolha-wrapper--deles'}`;
   const horaFora = `bolha-hora-fora ${minha ? 'bolha-hora-fora--minha' : 'bolha-hora-fora--deles'}`;
   const hora = new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  function handleDuploClique() {
+    onCurtir(m.id);
+  }
+
+  // Ação de clique único: só existe de fato pra imagem (abrir em nova aba) e
+  // itinerário (navegar); pros outros tipos não faz nada — mas o hook
+  // precisa ser chamado incondicionalmente aqui em cima (Rules of Hooks),
+  // não dentro de cada `if` de tipo abaixo.
+  function handleCliqueUnico() {
+    if (m.tipo === 'imagem') {
+      window.open(m.imagem, '_blank');
+    } else if (m.tipo === 'itinerario' && m.itinerario?.disponivel) {
+      navigate(`/itinerario/${m.itinerario.id}`);
+    }
+  }
+
+  const handleClique = useCliqueDuplo(handleDuploClique, handleCliqueUnico);
 
   if (m.tipo === 'itinerario') {
     const preview = m.itinerario;
     return (
       <div className={wrapperClasse}>
         {preview?.disponivel ? (
-          <Link to={`/itinerario/${preview.id}`} className={`bolha-itinerario${minha ? ' bolha-itinerario--minha' : ''}`}>
+          <div
+            onClick={handleClique}
+            className={`bolha-itinerario${minha ? ' bolha-itinerario--minha' : ''}`}
+          >
             <div className="bolha-itinerario__label">
               <IconePin size={12} /> Itinerário compartilhado
             </div>
@@ -119,14 +164,14 @@ function BolhaMensagem({ m, minha, onCurtir }) {
                 {preview.total_pontos > 1 ? ` + ${preview.total_pontos - 1} lugar${preview.total_pontos > 2 ? 'es' : ''}` : ''}
               </div>
             )}
-          </Link>
+          </div>
         ) : (
           <div className="bolha-itinerario--indisponivel">
             <IconePin size={13} /> Itinerário indisponível
           </div>
         )}
-        <div className={horaFora}>{hora}</div>
-        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+        <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
+        <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
     );
   }
@@ -135,7 +180,13 @@ function BolhaMensagem({ m, minha, onCurtir }) {
     return (
       <div className={wrapperClasse}>
         {m.video_status === 'pronto' && m.video ? (
-          <video src={m.video} poster={m.video_thumbnail_url || undefined} controls className="bolha-video" />
+          <video
+            src={m.video}
+            poster={m.video_thumbnail_url || undefined}
+            controls
+            onDoubleClick={handleDuploClique}
+            className="bolha-video"
+          />
         ) : m.video_status === 'erro' ? (
           <div className="bolha-video-erro">Falha ao processar vídeo</div>
         ) : (
@@ -143,8 +194,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
             <IconeVideo size={14} /> Processando vídeo...
           </div>
         )}
-        <div className={horaFora}>{hora}</div>
-        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+        <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
+        <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
     );
   }
@@ -152,9 +203,9 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'imagem') {
     return (
       <div className={wrapperClasse}>
-        <img src={m.imagem} alt="imagem" className="bolha-imagem" onClick={() => window.open(m.imagem, '_blank')} />
-        <div className={horaFora}>{hora}</div>
-        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+        <img src={m.imagem} alt="imagem" onClick={handleClique} className="bolha-imagem" />
+        <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
+        <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
     );
   }
@@ -162,22 +213,30 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'audio') {
     return (
       <div className={wrapperClasse}>
-        <div className={`bolha-audio${minha ? ' bolha-audio--minha' : ''}`}>
+        <div
+          onDoubleClick={handleDuploClique}
+          className={`bolha-audio${minha ? ' bolha-audio--minha' : ''}`}
+        >
           <audio controls src={m.audio} className="bolha-audio__player" />
-          <div className={`bolha-audio__hora${minha ? ' bolha-audio__hora--minha' : ''}`}>{hora}</div>
+          <div className={`bolha-audio__hora${minha ? ' bolha-audio__hora--minha' : ''}`}>
+            {hora} <StatusLeitura minha={minha} lida={m.lida} />
+          </div>
         </div>
-        <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+        <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
     );
   }
 
   return (
     <div className={wrapperClasse}>
-      <div className={`bolha-texto${minha ? ' bolha-texto--minha' : ''}`}>
+      <div
+        onDoubleClick={handleDuploClique}
+        className={`bolha-texto${minha ? ' bolha-texto--minha' : ''}`}
+      >
         {m.texto}
-        <div className="bolha-texto__hora">{hora}</div>
+        <div className="bolha-texto__hora">{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
       </div>
-      <BotaoCurtirMensagem m={m} minha={minha} onCurtir={onCurtir} />
+      <SeloCurtida curtido={m.curtido} minha={minha} />
     </div>
   );
 }
@@ -257,6 +316,10 @@ function PaginaMensagens() {
     try {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
       setMensagens(res.data);
+      // A GET acima já marca como lidas (no backend) as mensagens que o
+      // outro me mandou — atualiza a lista de conversas pra refletir isso
+      // (tira o destaque de "não lida" no item dessa conversa).
+      buscarConversas();
     } catch (_) {} finally { if (inicial) setCarregandoMensagens(false); }
   }
 
@@ -407,21 +470,31 @@ function PaginaMensagens() {
           {!carregandoConversas && conversas.length === 0 && !mostraSeletor && (
             <p className="mensagens-inbox__estado">Nenhuma conversa ainda.</p>
           )}
-          {conversas.map((c) => (
-            <div
-              key={c.usuario.username}
-              onClick={() => { setConversaAtiva(c.usuario.username); setMostraSeletor(false); }}
-              className={`conversa-item${conversaAtiva === c.usuario.username ? ' conversa-item--ativa' : ''}`}
-            >
-              <Avatar usuario={c.usuario} tamanho={40} />
-              <div className="conversa-item__info">
-                <div className="conversa-item__nome">{c.usuario.username}</div>
-                <div className="conversa-item__preview">
-                  {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
+          {conversas.map((c) => {
+            const enviadaPorEle = !!(
+              c.ultima_mensagem?.texto && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
+            );
+            return (
+              <div
+                key={c.usuario.username}
+                onClick={() => { setConversaAtiva(c.usuario.username); setMostraSeletor(false); }}
+                className={`conversa-item${conversaAtiva === c.usuario.username ? ' conversa-item--ativa' : ''}`}
+              >
+                <Avatar usuario={c.usuario} tamanho={40} />
+                <div className="conversa-item__info">
+                  <div className="conversa-item__nome-linha">
+                    {enviadaPorEle && <span className="conversa-item__ponto-novo" />}
+                    <span className={`conversa-item__nome${enviadaPorEle ? ' conversa-item__nome--destaque' : ''}`}>
+                      {c.usuario.username}
+                    </span>
+                  </div>
+                  <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
+                    {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
