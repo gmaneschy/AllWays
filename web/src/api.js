@@ -200,6 +200,11 @@ export async function getNotificacoesNaoLidas() {
   return data; // { total }
 }
 
+export async function getMensagensNaoLidas() {
+  const { data } = await api.get('/social/mensagens/nao-lidas/');
+  return data; // { total }
+}
+
 export async function marcarNotificacaoLida(id) {
   const { data } = await api.patch(`/social/notificacoes/${id}/lida/`);
   return data;
