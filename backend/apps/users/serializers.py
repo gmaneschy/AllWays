@@ -137,7 +137,7 @@ class ConfiguracoesSerializer(serializers.ModelSerializer):
         fields = [
             'exibir_badges',
             'conta_privada',
-            'notif_seguiu', 'notif_comentou', 'notif_respondeu', 'notif_mensagem', 'notif_novo_post',
+            'notif_seguiu', 'notif_comentou', 'notif_respondeu', 'notif_novo_post',
             'ocultar_seguidores', 'ocultar_seguindo', 'ocultar_lugares_seguidos',
         ]
 

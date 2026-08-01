@@ -83,24 +83,6 @@ def notificar_comentario(sender, instance, created, **kwargs):
             )
 
 
-@receiver(post_save, sender='social.Message')
-def notificar_mensagem(sender, instance, created, **kwargs):
-    if not created or not instance.destinatario_id:
-        return
-    if instance.destinatario_id == instance.remetente_id:
-        return
-    if not _quer_notificacao(instance.destinatario_id, 'notif_mensagem'):
-        return
-    from .tasks import criar_notificacao_task
-    criar_notificacao_task.delay(
-        tipo='mensagem',
-        destinatario_id=instance.destinatario_id,
-        ator_id=instance.remetente_id,
-        alvo_content_type='social.message',
-        alvo_object_id=instance.id,
-    )
-
-
 @receiver(pre_save, sender='itineraries.Itinerario')
 def guardar_status_anterior_itinerario(sender, instance, **kwargs):
     """Guarda o status ANTES de salvar, num atributo temporário na instância

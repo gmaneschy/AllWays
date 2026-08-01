@@ -209,11 +209,6 @@ function PaginaConfiguracoes() {
           onChange={() => alternar('notif_respondeu')}
         />
         <LinhaToggle
-          label="Você recebeu uma mensagem"
-          checked={config.notif_mensagem}
-          onChange={() => alternar('notif_mensagem')}
-        />
-        <LinhaToggle
           label="Novo post de quem você segue"
           checked={config.notif_novo_post}
           onChange={() => alternar('notif_novo_post')}

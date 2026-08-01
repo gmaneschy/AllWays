@@ -215,4 +215,9 @@ export async function marcarTodasNotificacoesLidas() {
   return data;
 }
 
+export async function responderSolicitacaoSeguir(username, aceitar) {
+  const { data } = await api.post(`/social/solicitacoes-seguir/de/${username}/responder/`, { aceitar });
+  return data;
+}
+
 export default api;

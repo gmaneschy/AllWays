@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getNotificacoes, marcarNotificacaoLida, marcarTodasNotificacoesLidas } from './api';
+import { getNotificacoes, marcarNotificacaoLida, marcarTodasNotificacoesLidas, responderSolicitacaoSeguir } from './api';
 import {
   IconeNotificacao,
   IconeSeguir,
@@ -12,9 +12,9 @@ import './PainelNotificacoes.css';
 
 const ICONE_TIPO = {
   follow: IconeSeguir,
+  solicitacao_seguir: IconeSeguir,
   comentario: IconeMensagem,
   resposta_comentario: IconeResposta,
-  mensagem: IconeMensagem,
   curtida: IconeLike,
 };
 
@@ -34,12 +34,14 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
   const navigate = useNavigate();
   const [notificacoes, setNotificacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [respondendo, setRespondendo] = useState(null);
+  const [respondidas, setRespondidas] = useState({});
 
   useEffect(() => {
     async function buscar() {
       try {
         const data = await getNotificacoes();
-        setNotificacoes(data);
+        setNotificacoes(data.filter((n) => n.tipo !== 'mensagem'));
       } catch (_) {} finally { setCarregando(false); }
     }
     buscar();
@@ -54,6 +56,24 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
     }
     onFechar();
     if (n.link) navigate(n.link);
+  }
+
+  async function handleResponderSolicitacao(n, aceitar) {
+    if (respondendo) return;
+    setRespondendo(n.id);
+    try {
+      await responderSolicitacaoSeguir(n.ator_username, aceitar);
+      setRespondidas((prev) => ({ ...prev, [n.id]: aceitar ? 'aceito' : 'recusado' }));
+      if (!n.lida) {
+        const atualizadas = notificacoes.map((x) => (x.id === n.id ? { ...x, lida: true } : x));
+        setNotificacoes(atualizadas);
+        onMudouNaoLidas?.(atualizadas.filter((x) => !x.lida).length);
+        try { await marcarNotificacaoLida(n.id); } catch (_) {}
+      }
+    } catch (_) {
+    } finally {
+      setRespondendo(null);
+    }
   }
 
   async function handleMarcarTodas() {
@@ -82,6 +102,8 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
         )}
         {notificacoes.map((n) => {
           const IconeTipo = ICONE_TIPO[n.tipo] || IconeNotificacao;
+          const ehSolicitacao = n.tipo === 'solicitacao_seguir';
+          const resposta = respondidas[n.id];
           return (
             <div
               key={n.id}
@@ -97,6 +119,32 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
               <div className="painel-notificacoes__conteudo">
                 <div className="painel-notificacoes__mensagem">{n.mensagem}</div>
                 <div className="painel-notificacoes__tempo">{tempoRelativo(n.criado_em)}</div>
+
+                {ehSolicitacao && !resposta && (
+                  <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <button
+                      onClick={() => handleResponderSolicitacao(n, true)}
+                      disabled={respondendo === n.id}
+                      className="btn-primario"
+                      style={{ padding: '4px 12px', fontSize: 13 }}
+                    >
+                      Aceitar
+                    </button>
+                    <button
+                      onClick={() => handleResponderSolicitacao(n, false)}
+                      disabled={respondendo === n.id}
+                      className="btn-outline"
+                      style={{ padding: '4px 12px', fontSize: 13 }}
+                    >
+                      Recusar
+                    </button>
+                  </div>
+                )}
+                {ehSolicitacao && resposta && (
+                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texto-secundario)' }}>
+                    {resposta === 'aceito' ? 'Solicitação aceita' : 'Solicitação recusada'}
+                  </div>
+                )}
               </div>
               {!n.lida && <div className="painel-notificacoes__dot" />}
             </div>

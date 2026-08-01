@@ -238,6 +238,30 @@ class ResponderSolicitacaoSeguirView(APIView):
         return Response({'aceito': aceitar})
 
 
+class ResponderSolicitacaoSeguirPorUsernameView(APIView):
+    """POST /api/social/solicitacoes-seguir/de/<username>/responder/
+    body: {"aceitar": true|false}
+
+    Mesma ação de ResponderSolicitacaoSeguirView, mas localiza o pedido pelo
+    username de quem pediu, em vez do id interno da SolicitacaoSeguir — é o
+    que o painel/página de notificações têm à mão (ator_username), sem
+    precisar expor o id da solicitação em mais um campo da notificação."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, username):
+        solicitacao = get_object_or_404(
+            SolicitacaoSeguir, solicitante__username=username, alvo=request.user
+        )
+        aceitar = bool(request.data.get('aceitar'))
+
+        if aceitar:
+            Follow.objects.get_or_create(
+                seguidor=solicitacao.solicitante, seguido_usuario=solicitacao.alvo
+            )
+        solicitacao.delete()
+        return Response({'aceito': aceitar})
+
+
 # ─── Comentários sociais ──────────────────────────────────────────────────────
 
 class ComentariosItinerarioView(APIView):
@@ -650,6 +674,10 @@ class NotificacoesView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Notification.objects.filter(destinatario=self.request.user)
+            # 'mensagem' foi aposentado (ver social/signals.py) — mensagens
+            # têm indicador próprio no ícone do Navbar agora. Excluir aqui
+            # também cobre linhas antigas, criadas antes dessa mudança.
+            .exclude(tipo='mensagem')
             .select_related('ator', 'content_type')
             .order_by('-criado_em')[:100]
         )
@@ -660,7 +688,12 @@ class NotificacoesNaoLidasView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        total = Notification.objects.filter(destinatario=request.user, lida=False).count()
+        total = (
+            Notification.objects
+            .filter(destinatario=request.user, lida=False)
+            .exclude(tipo='mensagem')
+            .count()
+        )
         return Response({'total': total})
 
 

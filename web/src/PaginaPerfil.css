@@ -108,6 +108,14 @@
   color: var(--texto-principal);
 }
 
+.btn-seguir--solicitado {
+  border: 1px solid var(--borda-padrao);
+  background: var(--fundo-hover);
+  color: var(--texto-secundario);
+  font-weight: normal;
+  cursor: default;
+}
+
 .btn-seguir:disabled {
   opacity: 0.6;
   cursor: not-allowed;

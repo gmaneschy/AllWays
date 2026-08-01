@@ -258,10 +258,27 @@ function PaginaPerfil() {
     setEnviandoFollow(true);
     try {
       const resposta = await api.post('/social/follow/', { tipo: 'usuario', alvo_id: perfil.id });
-      setPerfil({
-        ...perfil,
-        voce_segue: resposta.data.seguindo,
-        total_seguidores: perfil.total_seguidores + (resposta.data.seguindo ? 1 : -1),
+      const { seguindo, solicitado } = resposta.data;
+
+      setPerfil((prev) => {
+        // A contagem de seguidores só muda de verdade quando um Follow é
+        // criado ou desfeito. Pedir pra seguir uma conta privada
+        // ('solicitado: true') ou cancelar esse pedido (volta a
+        // seguindo:false sem nunca ter sido true) não mexe no total real —
+        // é exatamente o caso que antes ficava subtraindo a cada clique.
+        const jaSeguia = prev.voce_segue === true;
+        let novoTotal = prev.total_seguidores;
+        if (typeof novoTotal === 'number') {
+          if (!jaSeguia && seguindo) novoTotal += 1;
+          else if (jaSeguia && !seguindo) novoTotal -= 1;
+        }
+
+        return {
+          ...prev,
+          voce_segue: seguindo,
+          solicitado: !!solicitado,
+          total_seguidores: novoTotal,
+        };
       });
     } catch (err) {
       setErro('Não foi possível atualizar o follow agora.');
@@ -392,10 +409,14 @@ function PaginaPerfil() {
               <button
                 onClick={alternarSeguir}
                 disabled={enviandoFollow}
-                className={`btn-seguir${perfil.voce_segue ? ' btn-seguir--seguindo' : ''}`}
+                className={[
+                  'btn-seguir',
+                  perfil.voce_segue && 'btn-seguir--seguindo',
+                  perfil.solicitado && 'btn-seguir--solicitado',
+                ].filter(Boolean).join(' ')}
               >
-                {!perfil.voce_segue && <IconeSeguir size={15} />}
-                {perfil.voce_segue ? 'Seguindo' : 'Seguir'}
+                {!perfil.voce_segue && !perfil.solicitado && <IconeSeguir size={15} />}
+                {perfil.voce_segue ? 'Seguindo' : perfil.solicitado ? 'Solicitação enviada' : 'Seguir'}
               </button>
             )}
           </div>
