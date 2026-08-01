@@ -48,6 +48,8 @@ import {
   Hash,
   Settings,
   CheckCheck,
+  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -92,3 +94,5 @@ export const IconeHashtag = criarIcone(Hash);
 export const IconeConfiguracoes = criarIcone(Settings);
 export const IconeEnviado = criarIcone(Check);
 export const IconeLidoDuplo = criarIcone(CheckCheck);
+export const IconeRemover = criarIcone(Trash2);
+export const IconeTrocar = criarIcone(RefreshCw);

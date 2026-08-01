@@ -1,7 +1,7 @@
 @import './forms.css';
 
 .criar-itinerario {
-  max-width: 600px;
+  max-width: 1100px;
   margin: 40px auto;
   font-family: sans-serif;
   color: var(--texto-principal);
@@ -21,8 +21,41 @@
   color: var(--texto-principal);
 }
 
+/* --- Dois painéis --- */
+
+.criar-itinerario__corpo {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.painel-esquerdo {
+  flex: 0 0 320px;
+  position: sticky;
+  top: 20px;
+}
+
+.painel-esquerdo__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.painel-esquerdo__acoes .btn-primario,
+.painel-esquerdo__acoes .btn-secundario {
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.painel-direito {
+  flex: 1;
+  min-width: 0;
+}
+
 .secao-pontos__titulo {
-  margin: 0;
+  margin: 0 0 12px;
   font: var(--fonte-titulo-card);
   color: var(--texto-principal);
 }
@@ -81,12 +114,16 @@
 }
 
 .btn-remover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--cor-perigo);
   background: none;
   border: none;
   cursor: pointer;
   font-size: 14px;
   padding: 0;
+  margin-top: 8px;
 }
 
 /* --- Modal "Carregar existente" --- */
@@ -187,12 +224,70 @@
 
 /* --- Ponto do itinerário --- */
 
+.pontos-stack {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
 .ponto-card {
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 16px;
   background: var(--fundo-card);
+}
+
+.ponto-card--ativo {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Card minimizado: uma tira estreita e clicável, com um "canto" colorido
+   do lado de FORA (mais distante do card ativo) — a borda esquerda pros
+   pontos anteriores, direita pros posteriores, exatamente como o clique
+   de "trazer pra frente" funciona. */
+.ponto-card-mini {
+  flex: 0 0 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 14px 6px;
+  border: 1px solid var(--borda-padrao);
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: background 0.15s ease, flex-basis 0.15s ease;
+}
+
+.ponto-card-mini:hover {
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-texto-em-fundo);
+}
+
+.ponto-card-mini--anterior {
+  border-left: 4px solid var(--cor-primaria);
+}
+
+.ponto-card-mini--posterior {
+  border-right: 4px solid var(--cor-primaria);
+}
+
+.ponto-card-mini__numero {
+  font: var(--fonte-nome-autor);
+  white-space: nowrap;
+}
+
+.ponto-card-mini__nome {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font: var(--fonte-meta);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 140px;
 }
 
 .ponto-card__titulo {
@@ -258,14 +353,7 @@
   padding: 0;
 }
 
-/* --- Rodapé de ações --- */
-
-.acoes-rodape {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-top: 8px;
-}
+/* --- Mensagens de estado --- */
 
 .msg-sucesso {
   display: inline-flex;
@@ -275,20 +363,31 @@
   font: var(--fonte-meta);
 }
 
+.msg-sucesso--publicado {
+  display: flex;
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: var(--cor-primaria-fundo);
+  border-radius: 8px;
+  color: var(--cor-sucesso);
+  font-weight: bold;
+}
+
 .msg-erro {
   color: var(--cor-perigo);
   margin-top: 16px;
 }
+/* --- Telas estreitas: painéis empilhados em vez de lado a lado --- */
 
-.resultado-box {
-  margin-top: 20px;
-  padding: 16px;
-  background: var(--fundo-hover);
-  border-radius: 8px;
-}
+@media (max-width: 800px) {
+  .criar-itinerario__corpo {
+    flex-direction: column;
+  }
 
-.resultado-box__json {
-  white-space: pre-wrap;
-  font: var(--fonte-meta);
-  color: var(--texto-corpo);
+  .painel-esquerdo {
+    flex: 1 1 auto;
+    width: 100%;
+    position: static;
+    box-sizing: border-box;
+  }
 }

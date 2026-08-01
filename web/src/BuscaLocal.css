@@ -16,6 +16,9 @@
 }
 
 .busca-local__trocar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font: var(--fonte-meta);
   color: var(--cor-primaria-texto-em-fundo);
   background: none;

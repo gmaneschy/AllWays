@@ -8,20 +8,77 @@ social:
 
 
 Checklist:
-Criar tela de configurações:
+frontend:
+    CriarItinerario.jsx:
+        - em vez de mover para baixo todo o conteúdo do painel esquerdo, janela do carregar existente deve abrir como um fade-in e fade-out suave sobre o painel (clicar no botão novamente deve fecha-lo, atualmente clicar nele o abre novamente).
+        - permitir reposicionamento de ordem de imagem e vídeo
+        - colocar limite de 500 caracteres no comentário do ponto (e incluir contador de caractere)
+        - conferir obrigatoriedade de imagem
+
+    ModalCompartilharItinerario.jsx:
+        - incluir: ativar deve ter animação fade-in.
+
+    Feed.jsx:
+        - mudar estética do itinerário, estilo swap de imagem:
+            descritivamente, o itinerário seria mais ou menos assim:
+
+            Título - day trip (ou multi-day trip)
+            por fulano_de_tal - 06/07/2067
+            Imagens e vídeos do itinerário (clicar na imagem abre ela em fullscreen; vídeos devem ser reproduzidos automaticamente, clicar no vídeo o pausa, deve haver botão fullscreen e botão de mutar conveniente; caso um vídeo seja mutado, todos os vídeos de todos os itinerários no Feed ou na PaginaItinerario são mutados UI de vídeo deve ter estética de acordo com o theme.css)
+            💗(curtir)💬(comentar)📤(compartilhar) (ícones meramente ilustrativos)
+            Representação visual dos pontos do itinerário. Ex:
+
+            -*-----------*-----------*
+             Museu de História da Paraíba - Palácio da Redenção
+             Populado - Entrada gratuita - Segurança 3/5 - 485m até o próximo (com seus respectivos ícones)
+             Comentário do usuário a respeito do local 1
+
+            -*-----------*
+             Museu e Cripta de Epitácio Pessoa
+             Vazio - Entrada gratuita - Segurança 2/5 - 2428m até o próximo (com seus respectivos ícones)
+             Comentário do usuário a respeito do local 2
+            -*
+             Theatro Santa Roza
+             Populado - Entrada gratuita - Segurança 3/5 - (com seus respectivos ícones)
+             Comentário do usuário a respeito do local 3
+
+            Likes e comentários ao fim do card.
+            Clicar em comentário abre um dropdown suave animado do campo de input para comentar + comentários feitos no itinerário.
+            Fim
+        - A representação visual dos pontos do itinerário funciona da seguinte forma. Digamos que o usuário tenha 3, 1, e 2 fotos para cada ponto, respectivamente. O nome do local, as avaliações e distância, e o comentário sobre o local do ponto 1 aparece até até a terceira foto. Quando o usuário passa para a foto pertencente ao ponto 2, as informações respectivas mudam.
+        - Deve haver uma animação tanto para o swap de imagem quanto para a passagem de pontos na representação visual dos pontos do itinerário, como uma barra de carregamento. "Ir" e "Voltar" no swap avança e retorna a barra nos pontos.
+
+
+    PaginaItinerario.jsx:
+        - modificar visualização do itinerário para estética de swap igual ao do feed
+        - corrigir: por mais que o usuário tenha um imagem no perfil, avatar-circulo--vazio ao lado do campo de input de comentário aparece sem imagem. Se ele faz um comentário, porém, sua imagem aparece ao lado do comentário feito.
+
+    PaginaExplorar.jsx, PaginaPerfil.jsx:
+        - mudar estética do itinerário (deve ser a mesma nas duas páginas, mas diferente da estética do feed)
+        - exibição de itinerários deve ser em grid de 3 colunas
+        - a estética do itinerário nessas duas páginas deve ser simples, da seguinte forma:
+        Título - 📍x lugares - day trip (ou multi-day trip)
+        primeira imagem/video do itinerário (video reproduzido automaticamente e mutado)
+        Clicar na imagem/video leva para a PaginaItinerario
+
+        - no caso do rascunho, exibir valor vazio se não houver nenhum desses itens
+
+
+Backend e Frontend:
+    Criar opções para excluir itinerários publicados, salvos e rascunhos
+    Criar opção de excluir comentário (excluir comentário apaga respostas desse comentário em cascata)
+
+
 Configurações:
     Privacidade:
-        Alterar Senha
+        Alterar Senha (testar)
         Autenticação de dois fatores (futuro)
-        1 - Visibilidade de conta - seguir um perfil privado não configura uma "solicitação". Notificação apenas diz "usuário quer seguir você", não há nenhuma espécie de aprovação. Solicitação de follow devia gerar um processo de "aprovação" do lado do usuário seguido. Esse processo pode se dar no PainelNotificacoes e, consequentemente, no PaginaNotificacoes. Além disso, do lado do usuário que quer seguir, clicar no botão "seguir" inicia uma contagem "negativa" nos seguidores. A cada clique: "-- seguidores" -> "-1 seguidores" -> "-2 seguidores". Clicar em seguir deve colocar no botão uma mensagem de "Solicitação enviada"
 
     Idioma:
         Mudar idioma do aplicativo (futuro)
 
-    Notificações: (toggle)
-        2 - "Usuário X enviou uma mensagem" - notificação de mensagem ainda aparece no sino de notificações. Como a notificação de mensagem agora aparece no ícone de mensagem, não é mais necessário que essa notificação apareça na página nem no painel de notificações.
-
-    Exibição: (toggle)
+    Notificações:
+    Exibição:
 
 
 Tela admin

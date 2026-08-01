@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import { IconeSucesso, IconeTrocar } from './icons';
 import './BuscaLocal.css';
 
 const DEBOUNCE_MS = 400;
@@ -44,13 +45,14 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
   if (localSelecionado) {
     return (
       <div className="busca-local__selecionado">
-        ✓ {localSelecionado.nome}
+        <IconeSucesso size={16} />
+        {localSelecionado.nome}
         <button
           type="button"
           onClick={() => onSelecionar(null)}
           className="busca-local__trocar"
         >
-          trocar
+          <IconeTrocar size={13} /> trocar
         </button>
       </div>
     );

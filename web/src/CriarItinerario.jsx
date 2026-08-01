@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
-import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar } from './icons';
+import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover } from './icons';
 import './CriarItinerario.css';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
@@ -54,6 +54,13 @@ function CriarItinerario() {
   const [carregandoSalvos, setCarregandoSalvos] = useState(false);
   const [badgesDisponiveis, setBadgesDisponiveis] = useState([]);
   const [badgesSelecionadas, setBadgesSelecionadas] = useState([]);
+  const [pontoAtivo, setPontoAtivo] = useState(0);
+  // Incrementado toda vez que `pontos` é totalmente substituído (publicar
+  // com sucesso, carregar itinerário existente) — usado no `key` de cada
+  // card pra forçar o React a desmontar/remontar o BuscaLocal em vez de
+  // reaproveitar a instância antiga, que senão mantém o texto do local
+  // selecionado anteriormente mesmo com `localSelecionado` voltando a null.
+  const [formVersion, setFormVersion] = useState(0);
 
   // Se veio de "Usar como base" na PaginaItinerario, carrega automaticamente
   useEffect(() => {
@@ -141,6 +148,8 @@ function CriarItinerario() {
       setMostraCarregar(false);
       setResultado(null);
       setErro(null);
+      setPontoAtivo(0);
+      setFormVersion((v) => v + 1);
     } catch (_) {
       setErro('Não foi possível carregar o itinerário.');
     }
@@ -213,11 +222,20 @@ function CriarItinerario() {
   }
 
   function adicionarPonto() {
-    setPontos([...pontos, pontoVazio()]);
+    setPontos((prev) => {
+      const novos = [...prev, pontoVazio()];
+      setPontoAtivo(novos.length - 1); // o recém-adicionado vira o card expandido
+      return novos;
+    });
   }
 
   function removerPonto(index) {
-    setPontos(pontos.filter((_, i) => i !== index));
+    setPontos((prev) => prev.filter((_, i) => i !== index));
+    setPontoAtivo((prev) => {
+      if (index < prev) return prev - 1;
+      if (index === prev) return Math.max(0, prev - 1);
+      return prev;
+    });
   }
 
   async function enviarFotosDoPonto(pontoId, arquivos) {
@@ -296,6 +314,8 @@ function CriarItinerario() {
       setDataFim('');
       setBadgesSelecionadas([]);
       setPontos([pontoVazio()]);
+      setPontoAtivo(0);
+      setFormVersion((v) => v + 1);
 
       const avisos = [];
       if (uploadsComFalha.length > 0) {
@@ -354,236 +374,265 @@ function CriarItinerario() {
         </div>
       )}
 
-      <label className="form-label">Título</label>
-      <input
-        type="text"
-        value={titulo}
-        onChange={(e) => setTitulo(e.target.value)}
-        className="form-input"
-      />
-
-      <label className="form-label">Tipo</label>
-      <select
-        value={tipo}
-        onChange={(e) => setTipo(e.target.value)}
-        className="form-select"
-      >
-        <option value="day_trip">Day Trip</option>
-        <option value="multi_day">Multi-Day Trip</option>
-      </select>
-
-      <label className="form-label">Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
-      <input
-        type="date"
-        value={dataInicio}
-        onChange={(e) => setDataInicio(e.target.value)}
-        className="form-input"
-      />
-
-      {tipo === 'multi_day' && (
-        <>
-          <label className="form-label">Data de término</label>
+      <div className="criar-itinerario__corpo">
+        {/* ─── Painel esquerdo: dados gerais + ações ─── */}
+        <div className="painel-esquerdo">
+          <label className="form-label">Título</label>
           <input
-            type="date"
-            value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
+            type="text"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
             className="form-input"
           />
-        </>
-      )}
 
-      <label className="form-label">Categorias do itinerário</label>
-      <div className="badges-lista">
-        {badgesDisponiveis.map((b) => {
-          const selecionada = badgesSelecionadas.includes(b.id);
-          return (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => alternarBadge(b.id)}
-              className={`badge-chip${selecionada ? ' badge-chip--selecionada' : ''}`}
-            >
-              {b.icone && <img src={b.icone} alt="" className="badge-chip__icone" />}
-              {b.nome}
-            </button>
-          );
-        })}
-        {badgesDisponiveis.length === 0 && (
-          <span className="badges-lista__vazio">Nenhuma categoria cadastrada ainda.</span>
-        )}
-      </div>
-
-      <h2 className="secao-pontos__titulo">Pontos</h2>
-
-      {pontos.map((ponto, index) => (
-        <div key={index} className="ponto-card">
-          <strong className="ponto-card__titulo">Ponto #{index + 1}</strong>
-
-          <div className="ponto-card__busca-local">
-            <BuscaLocal
-              localSelecionado={ponto.local}
-              onSelecionar={(local) => atualizarPonto(index, 'local', local)}
-            />
-          </div>
-
-          <label className="form-label">Movimentação</label>
+          <label className="form-label">Tipo</label>
           <select
-            value={ponto.movimentacao}
-            onChange={(e) => atualizarPonto(index, 'movimentacao', e.target.value)}
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
             className="form-select"
           >
-            {MOVIMENTACAO_OPCOES.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+            <option value="day_trip">Day Trip</option>
+            <option value="multi_day">Multi-Day Trip</option>
           </select>
 
-          <label className="form-label">Segurança (1-5)</label>
+          <label className="form-label">Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
           <input
-            type="number"
-            min="1"
-            max="5"
-            value={ponto.seguranca}
-            onChange={(e) => atualizarPonto(index, 'seguranca', e.target.value)}
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
             className="form-input"
           />
 
-          <label className="form-checkbox-label">
-            <input
-              type="checkbox"
-              checked={ponto.entrada_gratuita}
-              onChange={(e) => atualizarPonto(index, 'entrada_gratuita', e.target.checked)}
-            />
-            Entrada gratuita
-          </label>
-
-          {!ponto.entrada_gratuita && (
+          {tipo === 'multi_day' && (
             <>
-              <label className="form-label">Avaliação de preço (1-5)</label>
+              <label className="form-label">Data de término</label>
               <input
-                type="number"
-                min="1"
-                max="5"
-                value={ponto.preco_medio}
-                onChange={(e) => atualizarPonto(index, 'preco_medio', e.target.value)}
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
                 className="form-input"
               />
             </>
           )}
 
-          <label className="form-label">Meio de deslocamento até aqui</label>
-          <select
-            value={ponto.meio_deslocamento}
-            onChange={(e) => atualizarPonto(index, 'meio_deslocamento', e.target.value)}
-            className="form-select"
-          >
-            {MEIO_DESLOCAMENTO_OPCOES.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <label className="form-label">Categorias do itinerário</label>
+          <div className="badges-lista">
+            {badgesDisponiveis.map((b) => {
+              const selecionada = badgesSelecionadas.includes(b.id);
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => alternarBadge(b.id)}
+                  className={`badge-chip${selecionada ? ' badge-chip--selecionada' : ''}`}
+                >
+                  {b.icone && <img src={b.icone} alt="" className="badge-chip__icone" />}
+                  {b.nome}
+                </button>
+              );
+            })}
+            {badgesDisponiveis.length === 0 && (
+              <span className="badges-lista__vazio">Nenhuma categoria cadastrada ainda.</span>
+            )}
+          </div>
 
-          <label className="form-label">Horário estimado</label>
-          <input
-            type="time"
-            value={ponto.horario_estimado}
-            onChange={(e) => atualizarPonto(index, 'horario_estimado', e.target.value)}
-            className="form-input"
-          />
-
-          <label className="form-label">Comentário</label>
-          <textarea
-            value={ponto.comentario}
-            onChange={(e) => atualizarPonto(index, 'comentario', e.target.value)}
-            className="form-textarea"
-          />
-
-          <label className="form-label">
-            Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
-          </label>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={(e) => { adicionarMidia(index, e.target.files); e.target.value = ''; }}
-            className="midia-input"
-          />
-          {(ponto.arquivos.length > 0 || ponto.videos.length > 0) && (
-            <div className="midia-lista">
-              {ponto.arquivos.map((arquivo, iArq) => (
-                <div key={`foto-${iArq}`} className="midia-item">
-                  <img
-                    src={URL.createObjectURL(arquivo)}
-                    alt={`foto ${iArq + 1}`}
-                    className="midia-item__thumb"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removerArquivo(index, iArq)}
-                    className="midia-item__remover"
-                  >
-                    <IconeFechar size={12} />
-                  </button>
-                </div>
-              ))}
-              {ponto.videos.map((video, iVid) => (
-                <div key={`video-${iVid}`} className="midia-item">
-                  <video
-                    src={URL.createObjectURL(video)}
-                    muted
-                    className="midia-item__thumb midia-item__thumb--video"
-                  />
-                  <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
-                  <button
-                    type="button"
-                    onClick={() => removerVideo(index, iVid)}
-                    className="midia-item__remover"
-                  >
-                    <IconeFechar size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {pontos.length > 1 && (
-            <button type="button" onClick={() => removerPonto(index)} className="btn-remover">
-              Remover ponto
+          <div className="painel-esquerdo__acoes">
+            <button
+              type="button"
+              onClick={publicar}
+              disabled={enviando}
+              className="btn-primario"
+            >
+              {enviando ? 'Publicando...' : 'Publicar Itinerário'}
             </button>
+            <button
+              type="button"
+              onClick={salvarRascunho}
+              disabled={salvandoRascunho}
+              className="btn-secundario"
+            >
+              {salvandoRascunho ? 'Salvando...' : <><IconeSalvar size={16} /> Salvar rascunho</>}
+            </button>
+            <button type="button" onClick={adicionarPonto} className="btn-secundario">
+              <IconeAdicionar size={16} /> Adicionar ponto
+            </button>
+          </div>
+
+          {rascunhoSalvo && <p className="msg-sucesso"><IconeSucesso size={14} /> Rascunho salvo!</p>}
+          {erro && <p className="msg-erro">{erro}</p>}
+          {resultado && (
+            <p className="msg-sucesso msg-sucesso--publicado">
+              <IconeSucesso size={16} /> Itinerário "{resultado.titulo}" publicado com sucesso!
+            </p>
           )}
         </div>
-      ))}
 
-      <button type="button" onClick={adicionarPonto} className="btn-secundario" style={{ marginBottom: 20 }}>
-        <IconeAdicionar size={16} /> Adicionar ponto
-      </button>
+        {/* ─── Painel direito: pontos, em pilha (só o ativo fica expandido) ─── */}
+        <div className="painel-direito">
+          <h2 className="secao-pontos__titulo">Pontos</h2>
 
-      <div className="acoes-rodape">
-        <button
-          type="button"
-          onClick={publicar}
-          disabled={enviando}
-          className="btn-primario"
-        >
-          {enviando ? 'Publicando...' : 'Publicar Itinerário'}
-        </button>
-        <button
-          type="button"
-          onClick={salvarRascunho}
-          disabled={salvandoRascunho}
-          className="btn-secundario"
-        >
-          {salvandoRascunho ? 'Salvando...' : <><IconeSalvar size={16} /> Salvar rascunho</>}
-        </button>
-        {rascunhoSalvo && <span className="msg-sucesso"><IconeSucesso size={14} /> Rascunho salvo!</span>}
-      </div>
+          <div className="pontos-stack">
+            {pontos.map((ponto, index) => {
+              const chaveCard = `${formVersion}-${index}`;
 
-      {erro && <p className="msg-erro">{erro}</p>}
+              if (index !== pontoAtivo) {
+                const antesDoAtivo = index < pontoAtivo;
+                return (
+                  <button
+                    key={chaveCard}
+                    type="button"
+                    onClick={() => setPontoAtivo(index)}
+                    className={`ponto-card-mini${antesDoAtivo ? ' ponto-card-mini--anterior' : ' ponto-card-mini--posterior'}`}
+                    title={ponto.local?.nome ? `Ponto #${index + 1} — ${ponto.local.nome}` : `Ponto #${index + 1}`}
+                  >
+                    <span className="ponto-card-mini__numero">#{index + 1}</span>
+                    {ponto.local?.nome && (
+                      <span className="ponto-card-mini__nome">{ponto.local.nome}</span>
+                    )}
+                  </button>
+                );
+              }
 
-      {resultado && (
-        <div className="resultado-box">
-          <h3>Itinerário criado:</h3>
-          <pre className="resultado-box__json">{JSON.stringify(resultado, null, 2)}</pre>
+              return (
+                <div key={chaveCard} className="ponto-card ponto-card--ativo">
+                  <strong className="ponto-card__titulo">Ponto #{index + 1}</strong>
+
+                  <div className="ponto-card__busca-local">
+                    <BuscaLocal
+                      localSelecionado={ponto.local}
+                      onSelecionar={(local) => atualizarPonto(index, 'local', local)}
+                    />
+                  </div>
+
+                  <label className="form-label">Movimentação</label>
+                  <select
+                    value={ponto.movimentacao}
+                    onChange={(e) => atualizarPonto(index, 'movimentacao', e.target.value)}
+                    className="form-select"
+                  >
+                    {MOVIMENTACAO_OPCOES.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+
+                  <label className="form-label">Segurança (1-5)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={ponto.seguranca}
+                    onChange={(e) => atualizarPonto(index, 'seguranca', e.target.value)}
+                    className="form-input"
+                  />
+
+                  <label className="form-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={ponto.entrada_gratuita}
+                      onChange={(e) => atualizarPonto(index, 'entrada_gratuita', e.target.checked)}
+                    />
+                    Entrada gratuita
+                  </label>
+
+                  {!ponto.entrada_gratuita && (
+                    <>
+                      <label className="form-label">Avaliação de preço (1-5)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={ponto.preco_medio}
+                        onChange={(e) => atualizarPonto(index, 'preco_medio', e.target.value)}
+                        className="form-input"
+                      />
+                    </>
+                  )}
+
+                  <label className="form-label">Meio de deslocamento até aqui</label>
+                  <select
+                    value={ponto.meio_deslocamento}
+                    onChange={(e) => atualizarPonto(index, 'meio_deslocamento', e.target.value)}
+                    className="form-select"
+                  >
+                    {MEIO_DESLOCAMENTO_OPCOES.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+
+                  <label className="form-label">Horário estimado</label>
+                  <input
+                    type="time"
+                    value={ponto.horario_estimado}
+                    onChange={(e) => atualizarPonto(index, 'horario_estimado', e.target.value)}
+                    className="form-input"
+                  />
+
+                  <label className="form-label">Comentário</label>
+                  <textarea
+                    value={ponto.comentario}
+                    onChange={(e) => atualizarPonto(index, 'comentario', e.target.value)}
+                    className="form-textarea"
+                  />
+
+                  <label className="form-label">
+                    Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => { adicionarMidia(index, e.target.files); e.target.value = ''; }}
+                    className="midia-input"
+                  />
+                  {(ponto.arquivos.length > 0 || ponto.videos.length > 0) && (
+                    <div className="midia-lista">
+                      {ponto.arquivos.map((arquivo, iArq) => (
+                        <div key={`foto-${iArq}`} className="midia-item">
+                          <img
+                            src={URL.createObjectURL(arquivo)}
+                            alt={`foto ${iArq + 1}`}
+                            className="midia-item__thumb"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removerArquivo(index, iArq)}
+                            className="midia-item__remover"
+                          >
+                            <IconeFechar size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {ponto.videos.map((video, iVid) => (
+                        <div key={`video-${iVid}`} className="midia-item">
+                          <video
+                            src={URL.createObjectURL(video)}
+                            muted
+                            className="midia-item__thumb midia-item__thumb--video"
+                          />
+                          <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
+                          <button
+                            type="button"
+                            onClick={() => removerVideo(index, iVid)}
+                            className="midia-item__remover"
+                          >
+                            <IconeFechar size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {pontos.length > 1 && (
+                    <button type="button" onClick={() => removerPonto(index)} className="btn-remover">
+                      <IconeRemover size={14} /> Remover ponto
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
