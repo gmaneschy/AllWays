@@ -9,15 +9,18 @@
 }
 
 .criar-itinerario__header {
+  position: relative;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .criar-itinerario__titulo {
   margin: 0;
-  font: var(--fonte-titulo-pagina);
+  font: var(--fonte-titulo-card);
   color: var(--texto-principal);
 }
 
@@ -136,6 +139,25 @@
   background: var(--fundo-hover);
 }
 
+/* Overlay: flutua por cima do resto do painel esquerdo em vez de empurrar
+   o conteúdo abaixo — só a lista de itinerários rola, o resto do card fica
+   fixo. */
+.modal-carregar--overlay {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-bottom: 0;
+  background: var(--fundo-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-carregar__lista {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 .modal-carregar__header {
   display: flex;
   justify-content: space-between;
@@ -224,12 +246,6 @@
 
 /* --- Ponto do itinerário --- */
 
-.pontos-stack {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-}
-
 .ponto-card {
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
@@ -238,56 +254,63 @@
 }
 
 .ponto-card--ativo {
-  flex: 1;
-  min-width: 0;
+  margin-bottom: 6px;
 }
 
-/* Card minimizado: uma tira estreita e clicável, com um "canto" colorido
-   do lado de FORA (mais distante do card ativo) — a borda esquerda pros
-   pontos anteriores, direita pros posteriores, exatamente como o clique
-   de "trazer pra frente" funciona. */
-.ponto-card-mini {
-  flex: 0 0 44px;
+/* Abas dos pontos — ficam literalmente ABAIXO do card ativo (não é mais
+   uma coluna lateral). A aba do ponto ativo também aparece aqui,
+   destacada, igual uma barra de abas — clicar em qualquer uma troca o
+   card exibido acima (com animação de swap via framer-motion). */
+.pontos-abas {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 8px;
-  padding: 14px 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding-bottom: 6px; /* espaço pra barra de rolagem não colar nas abas */
+  padding-top: 4px;
+  scrollbar-width: thin;
+}
+
+.ponto-aba {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
   border: 1px solid var(--borda-padrao);
-  border-radius: 8px;
   background: var(--fundo-hover);
   color: var(--texto-secundario);
   cursor: pointer;
-  transition: background 0.15s ease, flex-basis 0.15s ease;
-}
-
-.ponto-card-mini:hover {
-  background: var(--cor-primaria-fundo);
-  color: var(--cor-primaria-texto-em-fundo);
-}
-
-.ponto-card-mini--anterior {
-  border-left: 4px solid var(--cor-primaria);
-}
-
-.ponto-card-mini--posterior {
-  border-right: 4px solid var(--cor-primaria);
-}
-
-.ponto-card-mini__numero {
-  font: var(--fonte-nome-autor);
-  white-space: nowrap;
-}
-
-.ponto-card-mini__nome {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
   font: var(--fonte-meta);
   white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ponto-aba:hover {
+  background: var(--cor-primaria-fundo);
+  border-color: var(--cor-primaria);
+  transform: translateY(-1px);
+}
+
+.ponto-aba--ativa {
+  background: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: #fff;
+  font-weight: bold;
+}
+
+.ponto-aba__numero {
+  white-space: nowrap;
+}
+
+.ponto-aba__nome {
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-height: 140px;
+  white-space: nowrap;
 }
 
 .ponto-card__titulo {
@@ -303,6 +326,13 @@
   margin-bottom: 8px;
 }
 
+.contador-caracteres {
+  margin: 2px 0 8px;
+  text-align: right;
+  font: var(--fonte-micro);
+  color: var(--texto-muted);
+}
+
 .midia-lista {
   display: flex;
   flex-wrap: wrap;
@@ -312,6 +342,17 @@
 
 .midia-item {
   position: relative;
+  cursor: grab;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.midia-item:active {
+  cursor: grabbing;
+}
+
+.midia-item--arrastando {
+  opacity: 0.4;
+  transform: scale(0.95);
 }
 
 .midia-item__thumb {
@@ -390,4 +431,38 @@
     position: static;
     box-sizing: border-box;
   }
+}
+
+/* --- Scrollbars customizadas: simples, sem setas, cantos arredondados,
+   na cor primária — usadas na barra de abas e na lista do "carregar
+   existente" --- */
+
+.pontos-abas,
+.modal-carregar__lista {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--cor-primaria) transparent; /* Firefox */
+}
+
+.pontos-abas::-webkit-scrollbar,
+.modal-carregar__lista::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pontos-abas::-webkit-scrollbar-track,
+.modal-carregar__lista::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pontos-abas::-webkit-scrollbar-thumb,
+.modal-carregar__lista::-webkit-scrollbar-thumb {
+  background: var(--cor-primaria);
+  border-radius: 999px;
+}
+
+.pontos-abas::-webkit-scrollbar-button,
+.modal-carregar__lista::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
