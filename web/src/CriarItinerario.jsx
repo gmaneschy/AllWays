@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
@@ -46,9 +46,13 @@ function MidiaThumb({ midia }) {
     return <div className="midia-item__thumb midia-item__thumb--carregando" />;
   }
   if (midia.tipo === 'foto') {
-    return <img src={url} alt="" className="midia-item__thumb" />;
+    // draggable={false}: <img> é arrastável por padrão no navegador — sem
+    // isso, o drag nativo da imagem competia com o drag customizado da div
+    // que a envolve (era o "agarra e solta" que persistia mesmo depois do
+    // fix do blob).
+    return <img src={url} alt="" draggable={false} className="midia-item__thumb" />;
   }
-  return <video src={url} muted className="midia-item__thumb midia-item__thumb--video" />;
+  return <video src={url} muted draggable={false} className="midia-item__thumb midia-item__thumb--video" />;
 }
 
 function pontoVazio() {
@@ -87,7 +91,6 @@ function CriarItinerario() {
   const [badgesDisponiveis, setBadgesDisponiveis] = useState([]);
   const [badgesSelecionadas, setBadgesSelecionadas] = useState([]);
   const [pontoAtivo, setPontoAtivo] = useState(0);
-  const [midiaArrastando, setMidiaArrastando] = useState(null); // índice da mídia sendo arrastada, dentro do ponto ativo
   // Incrementado toda vez que `pontos` é totalmente substituído (publicar
   // com sucesso, carregar itinerário existente) — usado no `key` de cada
   // card pra forçar o React a desmontar/remontar o BuscaLocal em vez de
@@ -211,12 +214,12 @@ function CriarItinerario() {
       if (file.type.startsWith('video/')) {
         const resultado = await validarVideoLocal(file);
         if (resultado.valido) {
-          novasMidias.push({ tipo: 'video', arquivo: file });
+          novasMidias.push({ id: crypto.randomUUID(), tipo: 'video', arquivo: file });
         } else {
           erros.push(`${file.name}: ${resultado.erro}`);
         }
       } else if (file.type.startsWith('image/')) {
-        novasMidias.push({ tipo: 'foto', arquivo: file });
+        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file });
       } else {
         erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
       }
@@ -237,23 +240,22 @@ function CriarItinerario() {
     }
   }
 
-  function removerMidia(indexPonto, indexMidia) {
+  function removerMidia(indexPonto, midiaId) {
     const novosPontos = [...pontos];
     novosPontos[indexPonto] = {
       ...novosPontos[indexPonto],
-      midias: novosPontos[indexPonto].midias.filter((_, i) => i !== indexMidia),
+      midias: novosPontos[indexPonto].midias.filter((m) => m.id !== midiaId),
     };
     setPontos(novosPontos);
   }
 
-  function reordenarMidia(indexPonto, origem, destino) {
-    if (origem === destino) return;
+  // Chamado pelo onReorder do Reorder.Group — o framer-motion já entrega o
+  // array na nova ordem (arrastando via Reorder.Item), então só precisamos
+  // gravá-lo de volta no ponto correspondente.
+  function reordenarMidia(indexPonto, novaOrdem) {
     setPontos((prev) => {
       const novosPontos = [...prev];
-      const midias = [...novosPontos[indexPonto].midias];
-      const [item] = midias.splice(origem, 1);
-      midias.splice(destino, 0, item);
-      novosPontos[indexPonto] = { ...novosPontos[indexPonto], midias };
+      novosPontos[indexPonto] = { ...novosPontos[indexPonto], midias: novaOrdem };
       return novosPontos;
     });
   }
@@ -628,34 +630,19 @@ function CriarItinerario() {
                 className="midia-input"
               />
               {pontos[pontoAtivo].midias.length > 0 && (
-                <div className="midia-lista">
-                  {pontos[pontoAtivo].midias.map((midia, iMidia) => (
-                    <div
-                      key={iMidia}
-                      draggable
-                      onDragStart={(e) => {
-                        // Essencial pro Firefox (e alguns Chrome): sem
-                        // dataTransfer.setData, o navegador cancela a
-                        // sessão de drag quase que na hora — era exatamente
-                        // o "agarra e solta" que você viu.
-                        e.dataTransfer.effectAllowed = 'move';
-                        e.dataTransfer.setData('text/plain', String(iMidia));
-                        setMidiaArrastando(iMidia);
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const origem = Number(e.dataTransfer.getData('text/plain'));
-                        if (!Number.isNaN(origem) && origem !== iMidia) {
-                          reordenarMidia(pontoAtivo, origem, iMidia);
-                        }
-                        setMidiaArrastando(null);
-                      }}
-                      onDragEnd={() => setMidiaArrastando(null)}
-                      className={`midia-item${midiaArrastando === iMidia ? ' midia-item--arrastando' : ''}`}
+                <Reorder.Group
+                  as="div"
+                  axis="x"
+                  values={pontos[pontoAtivo].midias}
+                  onReorder={(novaOrdem) => reordenarMidia(pontoAtivo, novaOrdem)}
+                  className="midia-lista"
+                >
+                  {pontos[pontoAtivo].midias.map((midia) => (
+                    <Reorder.Item
+                      key={midia.id}
+                      value={midia}
+                      as="div"
+                      className="midia-item"
                       title="Arraste para reordenar"
                     >
                       <MidiaThumb midia={midia} />
@@ -664,14 +651,14 @@ function CriarItinerario() {
                       )}
                       <button
                         type="button"
-                        onClick={() => removerMidia(pontoAtivo, iMidia)}
+                        onClick={() => removerMidia(pontoAtivo, midia.id)}
                         className="midia-item__remover"
                       >
                         <IconeFechar size={12} />
                       </button>
-                    </div>
+                    </Reorder.Item>
                   ))}
-                </div>
+                </Reorder.Group>
               )}
 
               {pontos.length > 1 && (

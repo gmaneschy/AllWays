@@ -254,7 +254,7 @@
 }
 
 .ponto-card--ativo {
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
 /* Abas dos pontos — ficam literalmente ABAIXO do card ativo (não é mais
@@ -333,26 +333,50 @@
   color: var(--texto-muted);
 }
 
+/* nowrap + overflow-x: o Reorder.Group (axis="x") calcula a posição de troca
+   com base no deslocamento horizontal dos itens — numa lista quebrando em
+   várias linhas essa conta fica errada (arrastar "pra baixo" também conta
+   como avanço). Uma única linha rolável evita a ambiguidade, igual à
+   .pontos-abas logo abaixo. */
 .midia-lista {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 8px;
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cor-primaria) transparent;
+}
+
+.midia-lista::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.midia-lista::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.midia-lista::-webkit-scrollbar-thumb {
+  background: var(--cor-primaria);
+  border-radius: 999px;
+}
+
+.midia-lista::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .midia-item {
   position: relative;
+  flex-shrink: 0;
   cursor: grab;
-  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .midia-item:active {
   cursor: grabbing;
-}
-
-.midia-item--arrastando {
-  opacity: 0.4;
-  transform: scale(0.95);
 }
 
 .midia-item__thumb {
@@ -365,6 +389,10 @@
 
 .midia-item__thumb--video {
   background: #000;
+}
+
+.midia-item__thumb--carregando {
+  background: var(--fundo-hover);
 }
 
 .midia-item__badge-video {
