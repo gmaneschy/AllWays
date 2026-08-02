@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import api, { compartilharItinerario } from './api';
 import { IconeFechar, IconeSucesso } from './icons';
 import './ModalCompartilharItinerario.css';
@@ -59,8 +60,22 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
   }
 
   return (
-    <div onClick={onFechar} className="modal-compartilhar-overlay">
-      <div onClick={(e) => e.stopPropagation()} className="modal-compartilhar">
+    <motion.div
+      onClick={onFechar}
+      className="modal-compartilhar-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+    >
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        className="modal-compartilhar"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
+      >
         <div className="modal-compartilhar__header">
           <strong className="modal-compartilhar__titulo">Compartilhar itinerário</strong>
           <button onClick={onFechar} className="modal-compartilhar__fechar">
@@ -109,8 +124,8 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
             );
           })}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
