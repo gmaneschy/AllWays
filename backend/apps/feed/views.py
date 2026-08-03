@@ -3,30 +3,69 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from django.shortcuts import get_object_or_404
 from apps.itineraries.models import Itinerario
-from apps.gamification.models import BadgeItinerario
+from apps.itineraries.serializers import PontoDetalheSerializer
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
-from apps.social.services import resumo_curtida
+from apps.social.services import resumo_curtidas_em_lote
 from apps.social.views import ExplorarView  # reutiliza o feed público
 from . import services
 from .models import FeedEvent
 
 
+# Cap defensivo pro tamanho de página pedido pelo cliente — evita que um
+# ?por_pagina=99999 force o mesmo gargalo que a paginação existe pra evitar.
+POR_PAGINA_PADRAO = 10
+POR_PAGINA_MAXIMO = 50
+
+
+def _parse_paginacao(request):
+    """Lê e sanitiza os parâmetros de paginação da querystring."""
+    try:
+        pagina = int(request.query_params.get('pagina', 1))
+    except (TypeError, ValueError):
+        pagina = 1
+    try:
+        por_pagina = int(request.query_params.get('por_pagina', POR_PAGINA_PADRAO))
+    except (TypeError, ValueError):
+        por_pagina = POR_PAGINA_PADRAO
+
+    pagina = max(pagina, 1)
+    por_pagina = min(max(por_pagina, 1), POR_PAGINA_MAXIMO)
+    return pagina, por_pagina
+
+
 class FeedPrincipalView(APIView):
-    """GET /api/feed/principal/
-    Retorna feed personalizado para usuários autenticados,
-    ou feed cronológico para não autenticados."""
+    """GET /api/feed/principal/?pagina=1&por_pagina=10
+    Retorna feed personalizado para usuários autenticados (paginado por
+    score, via FeedCache), ou feed cronológico para não autenticados
+    (paginado por LIMIT/OFFSET). Um lote de cada vez, nunca o feed inteiro
+    — ver feed/services.py pra detalhes de como cada página já vem com o
+    prefetch_related completo (pontos__local, pontos__fotos,
+    pontos__videos, hashtags, badges__badge)."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        pagina, por_pagina = _parse_paginacao(request)
+
         if request.user.is_authenticated:
-            itinerarios = services.gerar_feed_usuario(request.user)
+            itinerarios, tem_mais = services.gerar_feed_usuario(
+                request.user, pagina=pagina, por_pagina=por_pagina,
+            )
         else:
-            itinerarios = services.gerar_feed_principal()
+            itinerarios, tem_mais = services.gerar_feed_principal(
+                pagina=pagina, por_pagina=por_pagina,
+            )
+
+        # Materializa a página (ela já é pequena — no máximo POR_PAGINA_MAXIMO
+        # itens) pra poder passar a lista inteira pra resumo_curtidas_em_lote
+        # de uma vez, em vez de resolver curtida item a item dentro do loop.
+        itinerarios = list(itinerarios)
+        curtidas_por_id = resumo_curtidas_em_lote(itinerarios, request.user)
 
         resultado = []
         for it in itinerarios:
-            badges_ids = it.badges.values_list('badge_id', flat=True)
-            badges_itinerario = BadgeItinerario.objects.filter(id__in=badges_ids)
+            # it.badges já vem prefetched (com 'badge' junto, via
+            # 'badges__badge') — nada disso dispara query nova por item.
+            badges_itinerario = [ib.badge for ib in it.badges.all()]
 
             resultado.append({
                 'id': it.id,
@@ -37,24 +76,17 @@ class FeedPrincipalView(APIView):
                 'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
                 'data_inicio': it.data_inicio,
                 'data_fim': it.data_fim,
-                **resumo_curtida(it, request.user),
-                'pontos': [
-                    {
-                        'id': ponto.id,
-                        'local': ponto.local_id,
-                        'local_nome': ponto.local.nome,
-                        'movimentacao': ponto.movimentacao or None,
-                        'entrada_gratuita': ponto.entrada_gratuita,
-                        'preco_medio': ponto.preco_medio,
-                        'seguranca': ponto.seguranca,
-                        'comentario': ponto.comentario or None,
-                        'distancia_ate_proximo': ponto.distancia_ate_proximo,
-                    }
-                    for ponto in it.pontos.all()
-                ],
+                **curtidas_por_id.get(it.id, {'total_curtidas': 0, 'curtido': False}),
+                'pontos': PontoDetalheSerializer(
+                    it.pontos.all(), many=True, context={'request': request},
+                ).data,
             })
 
-        return Response(resultado)
+        return Response({
+            'resultados': resultado,
+            'pagina': pagina,
+            'tem_mais': tem_mais,
+        })
 
 
 class FeedEventView(APIView):

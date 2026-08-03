@@ -1,39 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
+import CarrosselItinerario from './CarrosselItinerario';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 import {
   IconeLike,
+  IconeComentario,
   IconeCompartilhar,
   IconeSucesso,
   IconeAdicionar,
-  IconeHorario,
-  IconeMovimentacao,
-  IconeSeguranca,
-  IconePreco,
-  IconePin,
-  IconeVideo,
   IconeFechar,
 } from './icons';
 import './PaginaItinerario.css';
-
-const LABEL_MOVIMENTACAO = { vazio: 'Vazio', populado: 'Populado', cheio: 'Cheio' };
-const LABEL_DESLOCAMENTO = {
-  a_pe: 'A pé', carro: 'Carro', taxi_app: 'Táxi/App',
-  transporte_publico: 'Transporte público', bicicleta: 'Bicicleta',
-};
-
-function Estrelas({ valor, max = 5 }) {
-  return (
-    <span>
-      {Array.from({ length: max }, (_, i) => (
-        <span key={i} className={`tag-info__estrela${i < valor ? ' tag-info__estrela--preenchida' : ''}`}>★</span>
-      ))}
-    </span>
-  );
-}
 
 function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApagar, onResponder }) {
   return (
@@ -104,6 +84,7 @@ function PaginaItinerario() {
   const [textoResposta, setTextoResposta] = useState({}); // { [raizId]: rascunho }
   const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
   const [compartilhando, setCompartilhando] = useState(false);
+  const painelComentariosRef = useRef(null);
 
   useEffect(() => {
     async function buscar() {
@@ -170,6 +151,13 @@ function PaginaItinerario() {
   function usarComoBase() {
     // Redireciona para criar itinerário passando o ID para carregar como base
     navigate(`/criar?base=${id}`);
+  }
+
+  function focarComentarios() {
+    // Em telas largas os comentários já estão visíveis ao lado; em telas
+    // estreitas (coluna empilhada) isso rola até o painel — mesmo clique,
+    // dois comportamentos conforme o layout.
+    painelComentariosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ─── Helpers pra navegar a árvore de comentários (raiz + respostas, 1 nível) ───
@@ -271,264 +259,183 @@ function PaginaItinerario() {
 
   return (
     <div className="pagina-itinerario">
+      <div className="pagina-itinerario__corpo">
 
-      {/* Cabeçalho */}
-      <div className="pagina-itinerario__topo">
-        <div className="pagina-itinerario__linha-topo">
-          <div>
-            <h1 className="pagina-itinerario__titulo">{it.titulo}</h1>
-            <div className="pagina-itinerario__badges-wrapper">
-              <BadgesItinerarioTags badges={it.badges} />
-            </div>
-            <div className="pagina-itinerario__meta">
-              {it.autor_foto
-                ? <img src={it.autor_foto} alt="" className="avatar-circulo" style={{ width: 28, height: 28 }} />
-                : <div className="avatar-circulo--vazio" style={{ width: 28, height: 28, fontSize: 12 }}>
-                    {it.autor_username?.[0]?.toUpperCase()}
-                  </div>
-              }
-              <Link to={`/perfil/${it.autor_username}`} className="pagina-itinerario__autor-link">
-                {it.autor_username}
-              </Link>
-              <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
-              <span className="pagina-itinerario__meta-separador">·</span>
-              <span className="pagina-itinerario__meta-texto">
-                {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
-              </span>
-              {it.data_inicio && (
-                <>
-                  <span className="pagina-itinerario__meta-separador">·</span>
-                  <span className="pagina-itinerario__meta-texto">
-                    {it.data_inicio}{it.data_fim ? ` → ${it.data_fim}` : ''}
-                  </span>
-                </>
-              )}
-              {it.status === 'rascunho' && (
-                <span className="pagina-itinerario__badge-rascunho">Rascunho</span>
-              )}
-            </div>
+        {/* ─── Post — mesma forma do FeedCard ─── */}
+        <div className="pagina-itinerario__post">
+          <div className="pagina-itinerario__post-header">
+            <h1 className="pagina-itinerario__post-titulo">{it.titulo}</h1>
+            <span className="pagina-itinerario__post-tipo">
+              {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
+            </span>
           </div>
 
-          {/* Ações */}
-          {usuarioLogado && (
-            <div className="pagina-itinerario__acoes">
-              <button
-                onClick={handleCurtir}
-                className={`btn-outline${it.curtido ? ' btn-outline--curtido' : ''}`}
-              >
-                <IconeLike size={16} fill={it.curtido ? 'currentColor' : 'none'} />
-                {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
-              </button>
-              {it.status === 'publicado' && (
-                <button onClick={() => setCompartilhando(true)} title="Compartilhar" className="btn-outline">
-                  <IconeCompartilhar size={16} />
-                  Compartilhar
-                </button>
-              )}
-              {!ehAutor && (
-                <>
-                  <button
-                    onClick={alternarSalvar}
-                    disabled={salvando}
-                    className={`btn-outline${it.salvo_por_mim ? ' btn-outline--ativo' : ''}`}
-                  >
-                    {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
-                    {it.salvo_por_mim ? 'Salvo' : 'Salvar'}
-                  </button>
-                  <button onClick={usarComoBase} className="btn-primario">
-                    Usar como base
-                  </button>
-                </>
-              )}
+          <div className="pagina-itinerario__post-autor">
+            {it.autor_foto
+              ? <img src={it.autor_foto} alt="" className="avatar-circulo" style={{ width: 28, height: 28 }} />
+              : <div className="avatar-circulo--vazio" style={{ width: 28, height: 28, fontSize: 12 }}>
+                  {it.autor_username?.[0]?.toUpperCase()}
+                </div>
+            }
+            <Link to={`/perfil/${it.autor_username}`} className="pagina-itinerario__post-autor-link">
+              {it.autor_username}
+            </Link>
+            <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
+            {it.data_inicio && (
+              <span className="pagina-itinerario__post-data">
+                · {it.data_inicio}{it.data_fim ? ` a ${it.data_fim}` : ''}
+              </span>
+            )}
+            {it.status === 'rascunho' && (
+              <span className="pagina-itinerario__badge-rascunho">Rascunho</span>
+            )}
+          </div>
+
+          {it.badges?.length > 0 && (
+            <div className="pagina-itinerario__post-badges">
+              <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
             </div>
+          )}
+
+          <CarrosselItinerario pontos={it.pontos} />
+
+          <div className="pagina-itinerario__post-acoes">
+            <button
+              onClick={handleCurtir}
+              className={`pagina-itinerario__post-acao${it.curtido ? ' pagina-itinerario__post-acao--curtido' : ''}`}
+              title="Curtir"
+            >
+              <IconeLike size={22} fill={it.curtido ? 'currentColor' : 'none'} />
+            </button>
+            <button onClick={focarComentarios} className="pagina-itinerario__post-acao" title="Comentar">
+              <IconeComentario size={22} />
+            </button>
+            {it.status === 'publicado' && (
+              <button onClick={() => setCompartilhando(true)} className="pagina-itinerario__post-acao" title="Compartilhar">
+                <IconeCompartilhar size={22} />
+              </button>
+            )}
+
+            {usuarioLogado && !ehAutor && (
+              <button
+                onClick={alternarSalvar}
+                disabled={salvando}
+                className={`btn-outline pagina-itinerario__post-salvar${it.salvo_por_mim ? ' btn-outline--ativo' : ''}`}
+              >
+                {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
+                {it.salvo_por_mim ? 'Salvo' : 'Salvar'}
+              </button>
+            )}
+            {usuarioLogado && (
+              <button onClick={usarComoBase} className="btn-primario pagina-itinerario__post-usar-base">
+                Usar como base
+              </button>
+            )}
+          </div>
+
+          {it.total_curtidas > 0 && (
+            <p className="pagina-itinerario__post-contagem-curtidas">
+              {it.total_curtidas} curtida{it.total_curtidas !== 1 ? 's' : ''}
+            </p>
+          )}
+
+          {salvoMsg && (
+            <p className="pagina-itinerario__msg-salvo">
+              <IconeSucesso size={14} /> {salvoMsg}
+            </p>
           )}
         </div>
-        {salvoMsg && (
-          <p className="pagina-itinerario__msg-salvo">
-            <IconeSucesso size={14} /> {salvoMsg}
-          </p>
-        )}
-      </div>
 
-      {/* Pontos */}
-      <div>
-        {it.pontos.map((ponto, idx) => (
-          <div key={ponto.id} className="ponto-linha">
+        {/* ─── Comentários — coluna da direita, como o modal de post do Instagram ─── */}
+        {it.status === 'publicado' && (
+          <div ref={painelComentariosRef} className="pagina-itinerario__comentarios-painel">
+            <h2 className="comentarios-secao__titulo">
+              Comentários {comentarios.length > 0 && <span className="comentarios-secao__contagem">({comentarios.length})</span>}
+            </h2>
 
-            {/* Linha vertical de progresso */}
-            <div className="ponto-linha__marcador-col">
-              <div className="ponto-linha__numero">{ponto.ordem}</div>
-              {idx < it.pontos.length - 1 && <div className="ponto-linha__conector" />}
-            </div>
-
-            <div className="ponto-linha__conteudo">
-              <Link to={`/place/${ponto.local_id}`} className="ponto-linha__nome-link">
-                <h3 className="ponto-linha__nome">{ponto.local_nome}</h3>
-              </Link>
-              {ponto.local_endereco && (
-                <p className="ponto-linha__endereco">
-                  <IconePin size={13} /> {ponto.local_endereco}
-                </p>
-              )}
-
-              <div className="tags-info">
-                {ponto.horario_estimado && (
-                  <span className="tag-info"><IconeHorario size={13} /> {ponto.horario_estimado.slice(0, 5)}</span>
-                )}
-                {ponto.movimentacao && (
-                  <span className="tag-info">
-                    <IconeMovimentacao size={13} /> {LABEL_MOVIMENTACAO[ponto.movimentacao] || ponto.movimentacao}
-                  </span>
-                )}
-                {ponto.seguranca && (
-                  <span className="tag-info">
-                    <IconeSeguranca size={13} /> Segurança <Estrelas valor={ponto.seguranca} />
-                  </span>
-                )}
-                {ponto.entrada_gratuita ? (
-                  <span className="tag-info tag-info--gratuito"><IconeSucesso size={13} /> Gratuito</span>
-                ) : ponto.preco_medio ? (
-                  <span className="tag-info"><IconePreco size={13} /> Custo <Estrelas valor={ponto.preco_medio} /></span>
-                ) : null}
-              </div>
-
-              {ponto.comentario && (
-                <p className="ponto-linha__comentario">"{ponto.comentario}"</p>
-              )}
-
-              {ponto.fotos?.length > 0 && (
-                <div className="ponto-linha__midia-lista">
-                  {ponto.fotos.map((f) => (
-                    <img key={f.id} src={f.url} alt="" className="ponto-linha__foto" />
-                  ))}
+            {usuarioLogado && (
+              <div className="novo-comentario">
+                <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
+                  {usuarioLogado.username?.[0]?.toUpperCase()}
                 </div>
-              )}
-
-              {ponto.videos?.length > 0 && (
-                <div className="ponto-linha__midia-lista">
-                  {ponto.videos.map((v) => (
-                    <div key={v.id}>
-                      {v.status === 'pronto' && v.url ? (
-                        <video
-                          src={v.url}
-                          poster={v.thumbnail_url || undefined}
-                          controls
-                          className="ponto-linha__video"
-                        />
-                      ) : v.status === 'erro' ? (
-                        <div className="ponto-linha__video-erro">
-                          Falha ao processar vídeo
-                        </div>
-                      ) : (
-                        <div className="ponto-linha__video-processando">
-                          <IconeVideo size={14} /> Processando vídeo...
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {idx < it.pontos.length - 1 && ponto.distancia_ate_proximo && (
-                <div className="ponto-linha__distancia">
-                  ↓ {(ponto.distancia_ate_proximo / 1000).toFixed(1)} km
-                  {ponto.meio_deslocamento && ` · ${LABEL_DESLOCAMENTO[ponto.meio_deslocamento] || ponto.meio_deslocamento}`}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Comentários sociais */}
-      {it.status === 'publicado' && (
-        <div className="comentarios-secao">
-          <h2 className="comentarios-secao__titulo">
-            Comentários {comentarios.length > 0 && <span className="comentarios-secao__contagem">({comentarios.length})</span>}
-          </h2>
-
-          {/* Input de novo comentário */}
-          {usuarioLogado && (
-            <div className="novo-comentario">
-              <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
-                {usuarioLogado.username?.[0]?.toUpperCase()}
-              </div>
-              <div className="novo-comentario__campo">
-                <textarea
-                  value={textoComentario}
-                  onChange={(e) => setTextoComentario(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), postarComentario())}
-                  placeholder="Adicione um comentário..."
-                  rows={2}
-                  className="novo-comentario__textarea"
-                />
-                <button
-                  onClick={postarComentario}
-                  disabled={!textoComentario.trim() || enviandoComentario}
-                  className="btn-primario"
-                  style={{ marginTop: 6 }}
-                >
-                  {enviandoComentario ? 'Postando...' : 'Comentar'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Lista de comentários */}
-          {comentarios.length === 0 && (
-            <p className="comentarios-vazio">Nenhum comentário ainda. Seja o primeiro!</p>
-          )}
-          {comentarios.map((c) => (
-            <div key={c.id}>
-              <LinhaComentario
-                c={c}
-                raizId={c.id}
-                isResposta={false}
-                usuarioLogado={usuarioLogado}
-                onCurtir={handleCurtirComentario}
-                onApagar={apagarComentario}
-                onResponder={abrirResposta}
-              />
-
-              {c.respostas?.map((r) => (
-                <LinhaComentario
-                  key={r.id}
-                  c={r}
-                  raizId={c.id}
-                  isResposta
-                  usuarioLogado={usuarioLogado}
-                  onCurtir={handleCurtirComentario}
-                  onApagar={apagarComentario}
-                  onResponder={abrirResposta}
-                />
-              ))}
-
-              {respondendoA?.raizId === c.id && (
-                <div className="resposta-form">
-                  <input
-                    autoFocus
-                    value={textoResposta[c.id] || ''}
-                    onChange={(e) => setTextoResposta((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta(c.id))}
-                    placeholder={`Respondendo a @${respondendoA.usuario?.username}...`}
-                    className="resposta-form__input"
+                <div className="novo-comentario__campo">
+                  <textarea
+                    value={textoComentario}
+                    onChange={(e) => setTextoComentario(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), postarComentario())}
+                    placeholder="Adicione um comentário..."
+                    rows={2}
+                    className="novo-comentario__textarea"
                   />
                   <button
-                    onClick={() => postarResposta(c.id)}
-                    disabled={!textoResposta[c.id]?.trim()}
+                    onClick={postarComentario}
+                    disabled={!textoComentario.trim() || enviandoComentario}
                     className="btn-primario"
+                    style={{ marginTop: 6 }}
                   >
-                    Enviar
-                  </button>
-                  <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar">
-                    Cancelar
+                    {enviandoComentario ? 'Postando...' : 'Comentar'}
                   </button>
                 </div>
+              </div>
+            )}
+
+            <div className="pagina-itinerario__comentarios-lista">
+              {comentarios.length === 0 && (
+                <p className="comentarios-vazio">Nenhum comentário ainda. Seja o primeiro!</p>
               )}
+              {comentarios.map((c) => (
+                <div key={c.id}>
+                  <LinhaComentario
+                    c={c}
+                    raizId={c.id}
+                    isResposta={false}
+                    usuarioLogado={usuarioLogado}
+                    onCurtir={handleCurtirComentario}
+                    onApagar={apagarComentario}
+                    onResponder={abrirResposta}
+                  />
+
+                  {c.respostas?.map((r) => (
+                    <LinhaComentario
+                      key={r.id}
+                      c={r}
+                      raizId={c.id}
+                      isResposta
+                      usuarioLogado={usuarioLogado}
+                      onCurtir={handleCurtirComentario}
+                      onApagar={apagarComentario}
+                      onResponder={abrirResposta}
+                    />
+                  ))}
+
+                  {respondendoA?.raizId === c.id && (
+                    <div className="resposta-form">
+                      <input
+                        autoFocus
+                        value={textoResposta[c.id] || ''}
+                        onChange={(e) => setTextoResposta((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta(c.id))}
+                        placeholder={`Respondendo a @${respondendoA.usuario?.username}...`}
+                        className="resposta-form__input"
+                      />
+                      <button
+                        onClick={() => postarResposta(c.id)}
+                        disabled={!textoResposta[c.id]?.trim()}
+                        className="btn-primario"
+                      >
+                        Enviar
+                      </button>
+                      <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar">
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {compartilhando && (
         <ModalCompartilharItinerario

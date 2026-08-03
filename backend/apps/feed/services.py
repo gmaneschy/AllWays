@@ -7,6 +7,12 @@ Arquitetura híbrida:
   Camada 3 — Decaimento temporal:   posts muito velhos perdem relevância
 
 O feed de usuários não autenticados é simplesmente cronológico.
+
+Paginação: o feed personalizado guarda no FeedCache só a lista de IDs
+ordenada por score (leve — são só inteiros). Cada página busca e faz
+prefetch_related APENAS dos itinerários daquela página, nunca do feed
+inteiro. Isso resolve dois problemas de uma vez: o gargalo de carregar
+tudo de uma vez, e o N+1 de servir uma página sem os prefetches certos.
 """
 
 import math
@@ -29,6 +35,17 @@ PESO_COLABORATIVO = 15          # multiplicado pelo score de similaridade (0-1)
 PESO_PROPRIO_SALVO = 0          # posts já salvos não são rebaixados, só não ganham boost
 BOOST_POPULARIDADE_MAX = 10     # cap do boost por saves totais
 DECAIMENTO_MEIA_VIDA_HORAS = 72 # post perde metade do score a cada 72h
+
+# Tamanho do "banco" de candidatos guardado no cache (não é o tamanho da
+# página — é o total de itinerários pré-ranqueados disponíveis pra paginar).
+FEED_CACHE_MAX_ITEMS = getattr(settings, 'FEED_MAX_ITEMS', 200)
+
+# Prefetch padrão pra servir uma página do feed já pronta pra serialização
+# (pontos + local + fotos + vídeos + hashtags + badges do itinerário).
+# Obs.: autor.badge_destaque NÃO entra aqui — é FK simples, então quem monta
+# o queryset deve puxar via select_related('autor', 'autor__badge_destaque'),
+# senão serializar_badge_destaque() dispara uma query por itinerário.
+PREFETCH_SERIALIZACAO = ('pontos__local', 'pontos__fotos', 'pontos__videos', 'hashtags', 'badges__badge')
 
 
 # ─── Decaimento temporal ──────────────────────────────────────────────────────
@@ -140,42 +157,32 @@ def montar_contexto(usuario):
 
 # ─── Geração do feed ──────────────────────────────────────────────────────────
 
-def gerar_feed_usuario(usuario, forcar_recalculo=False):
-    """Retorna queryset de itinerários ordenados por relevância para o usuário.
+def _queryset_pagina(ids, preservar_ordem=True):
+    """Monta o queryset de uma única página de itinerários já com todo o
+    prefetch necessário pra serialização (pontos + local + fotos + vídeos +
+    hashtags + badges), sem tocar nenhum itinerário fora da página."""
+    if not ids:
+        return Itinerario.objects.none()
 
-    Fluxo:
-      1. Verifica FeedCache — se fresco, usa direto
-      2. Se stale ou ausente, calcula scores e atualiza o cache
-      3. Retorna queryset na ordem do cache
-    """
-    ttl = getattr(settings, 'FEED_CACHE_TTL_MINUTES', 30)
-    max_items = getattr(settings, 'FEED_MAX_ITEMS', 50)
+    qs = (
+        Itinerario.objects
+        .filter(pk__in=ids, status='publicado')
+        .select_related('autor', 'autor__badge_destaque')
+        .prefetch_related(*PREFETCH_SERIALIZACAO)
+    )
 
-    # Tenta cache
-    if not forcar_recalculo:
-        try:
-            cache = usuario.feed_cache
-            if cache.esta_fresco(ttl):
-                ids_ordenados = cache.itinerario_ids
-                # Preserva a ordem do cache via Case/When
-                from django.db.models import Case, When
-                preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids_ordenados)])
-                return (
-                    Itinerario.objects
-                    .filter(status='publicado')
-                    .select_related('autor')
-                    .prefetch_related('pontos__local', 'hashtags')
-                    .order_by('-publicado_em')
-                )
-        except FeedCache.DoesNotExist:
-            pass
+    if preservar_ordem:
+        from django.db.models import Case, When
+        preservada = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
+        qs = qs.order_by(preservada)
 
-    # Recalcula
-    return recalcular_feed_usuario(usuario, max_items)
+    return qs
 
 
-def recalcular_feed_usuario(usuario, max_items=50):
-    """Calcula scores para todos os itinerários publicados e salva no FeedCache."""
+def _calcular_e_ordenar_ids(usuario, max_items=FEED_CACHE_MAX_ITEMS):
+    """Calcula scores para todos os itinerários publicados, salva a ordem
+    no FeedCache e retorna só a lista de IDs ordenada (não busca os objetos
+    completos — isso é responsabilidade de quem for paginar/servir)."""
     logger.info(f"Recalculando feed para {usuario.username}")
 
     candidatos = (
@@ -203,27 +210,74 @@ def recalcular_feed_usuario(usuario, max_items=50):
         defaults={'itinerario_ids': ids_ordenados},
     )
 
-    from django.db.models import Case, When
-    preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids_ordenados)])
-    return (
-        Itinerario.objects
-        .filter(pk__in=ids_ordenados, status='publicado')
-        .select_related('autor')
-        .prefetch_related('pontos__local', 'hashtags')
-        .order_by(preserved)
-    )
+    return ids_ordenados
 
 
-def gerar_feed_principal():
-    """Feed público (sem usuário logado) — simplesmente cronológico.
-    Mantido para compatibilidade com o código existente."""
-    return (
-        Itinerario.objects
-        .filter(status='publicado')
-        .select_related('autor')
-        .prefetch_related('pontos')
-        .order_by('-publicado_em')
-    )
+def gerar_feed_usuario(usuario, pagina=1, por_pagina=10, forcar_recalculo=False):
+    """Retorna (queryset_da_pagina, tem_mais) — feed personalizado paginado.
+
+    Fluxo:
+      1. Verifica FeedCache — se fresco, usa a lista de IDs direto
+      2. Se stale/ausente/forçado, recalcula os scores (isso também
+         atualiza o cache) e usa a lista de IDs resultante
+      3. Fatiа essa lista em memória pra pegar só os IDs da página pedida
+      4. Busca (com prefetch completo) só os itinerários daquela página
+    """
+    ttl = getattr(settings, 'FEED_CACHE_TTL_MINUTES', 30)
+
+    ids_ordenados = None
+    if not forcar_recalculo:
+        try:
+            cache = usuario.feed_cache
+            if cache.esta_fresco(ttl):
+                ids_ordenados = cache.itinerario_ids
+        except FeedCache.DoesNotExist:
+            pass
+
+    if ids_ordenados is None:
+        ids_ordenados = _calcular_e_ordenar_ids(usuario, FEED_CACHE_MAX_ITEMS)
+
+    pagina = max(pagina, 1)
+    inicio = (pagina - 1) * por_pagina
+    fim = inicio + por_pagina
+    ids_pagina = ids_ordenados[inicio:fim]
+    tem_mais = fim < len(ids_ordenados)
+
+    return _queryset_pagina(ids_pagina), tem_mais
+
+
+def recalcular_feed_usuario(usuario, max_items=50):
+    """Força o recálculo do feed personalizado e devolve o queryset
+    completo (ordenado por score), já com o prefetch de serialização.
+
+    Mantido com essa assinatura/retorno pra não quebrar quem já chama isso
+    esperando um queryset pronto (ex.: tasks periódicas de recálculo) — a
+    diferença interna é que agora delega o cálculo de scores/cache pra
+    _calcular_e_ordenar_ids e só depois monta o queryset com prefetch.
+    """
+    ids_ordenados = _calcular_e_ordenar_ids(usuario, max_items)
+    return _queryset_pagina(ids_ordenados)
+
+
+def gerar_feed_principal(pagina=1, por_pagina=10):
+    """Feed público (sem usuário logado) — cronológico, paginado.
+    Usa slicing direto no queryset (LIMIT/OFFSET), já que a ordem aqui é
+    só '-publicado_em' e não depende de uma lista de scores em cache."""
+    pagina = max(pagina, 1)
+    inicio = (pagina - 1) * por_pagina
+    fim = inicio + por_pagina
+
+    base = Itinerario.objects.filter(status='publicado').order_by('-publicado_em')
+
+    itens_pagina = (
+        base
+        .select_related('autor', 'autor__badge_destaque')
+        .prefetch_related(*PREFETCH_SERIALIZACAO)
+    )[inicio:fim]
+
+    tem_mais = base[fim:fim + 1].exists()
+
+    return itens_pagina, tem_mais
 
 
 # ─── Camada 2: Filtragem colaborativa ─────────────────────────────────────────

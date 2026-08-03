@@ -10,13 +10,10 @@ social:
 Checklist:
 frontend:
     CriarItinerario.jsx:
-        - em vez de mover para baixo todo o conteúdo do painel esquerdo, janela do carregar existente deve abrir como um fade-in e fade-out suave sobre o painel (clicar no botão novamente deve fecha-lo, atualmente clicar nele o abre novamente).
-        - permitir reposicionamento de ordem de imagem e vídeo
-        - colocar limite de 500 caracteres no comentário do ponto (e incluir contador de caractere)
-        - conferir obrigatoriedade de imagem
-
-    ModalCompartilharItinerario.jsx:
-        - incluir: ativar deve ter animação fade-in.
+        - obrigatório para a publicação:
+            - pelo menos 1 imagem por ponto
+            - título
+            - data do itinerário (data de início e término se multi-day trip)
 
     Feed.jsx:
         - mudar estética do itinerário, estilo swap de imagem:
@@ -24,7 +21,10 @@ frontend:
 
             Título - day trip (ou multi-day trip)
             por fulano_de_tal - 06/07/2067
-            Imagens e vídeos do itinerário (clicar na imagem abre ela em fullscreen; vídeos devem ser reproduzidos automaticamente, clicar no vídeo o pausa, deve haver botão fullscreen e botão de mutar conveniente; caso um vídeo seja mutado, todos os vídeos de todos os itinerários no Feed ou na PaginaItinerario são mutados UI de vídeo deve ter estética de acordo com o theme.css)
+            Imagens e vídeos do itinerário
+            (clicar na imagem abre ela em fullscreen;
+            vídeos devem ser reproduzidos automaticamente, clicar no vídeo o pausa, deve haver botão fullscreen e botão de mutar conveniente;
+            caso um vídeo seja mutado, todos os vídeos de todos os itinerários no Feed ou na PaginaItinerario são mutados UI de vídeo deve ter estética de acordo com o theme.css)
             💗(curtir)💬(comentar)📤(compartilhar) (ícones meramente ilustrativos)
             Representação visual dos pontos do itinerário. Ex:
 
@@ -47,10 +47,9 @@ frontend:
             Fim
         - A representação visual dos pontos do itinerário funciona da seguinte forma. Digamos que o usuário tenha 3, 1, e 2 fotos para cada ponto, respectivamente. O nome do local, as avaliações e distância, e o comentário sobre o local do ponto 1 aparece até até a terceira foto. Quando o usuário passa para a foto pertencente ao ponto 2, as informações respectivas mudam.
         - Deve haver uma animação tanto para o swap de imagem quanto para a passagem de pontos na representação visual dos pontos do itinerário, como uma barra de carregamento. "Ir" e "Voltar" no swap avança e retorna a barra nos pontos.
-
+        - Criar loading de feed por batch para evitar gargalo.
 
     PaginaItinerario.jsx:
-        - modificar visualização do itinerário para estética de swap igual ao do feed
         - corrigir: por mais que o usuário tenha um imagem no perfil, avatar-circulo--vazio ao lado do campo de input de comentário aparece sem imagem. Se ele faz um comentário, porém, sua imagem aparece ao lado do comentário feito.
 
     PaginaExplorar.jsx, PaginaPerfil.jsx:

@@ -1,163 +1,99 @@
-import { useState, useEffect, useCallback, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api, { curtir } from './api';
-import BadgeDestaque from './BadgeDestaque';
-import BadgesItinerarioTags from './BadgesItinerarioTags';
+import FeedCard from './FeedCard';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
-import {
-  IconeCompartilhar,
-  IconeLike,
-  IconeMovimentacao,
-  IconePreco,
-  IconeSeguranca,
-  IconeSucesso,
-  IconeProximaParada,
-} from './icons';
 import './Feed.css';
 
-const TIPO_LABEL = {
-  day_trip: 'Day Trip',
-  multi_day: 'Multi-Day Trip',
-};
-
-const MOVIMENTACAO_LABEL = {
-  vazio: 'Vazio',
-  populado: 'Populado',
-  cheio: 'Cheio',
-};
-
-function formatarData(dataIso) {
-  if (!dataIso) return null;
-  const [ano, mes, dia] = dataIso.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
-
-/** Card individual do feed, isolado num componente memoizado. Sem isso,
- * abrir o modal de compartilhar (que é um `useState` lá em cima no `Feed`)
- * fazia o React re-renderizar TODOS os cards — incluindo o .map() de
- * `pontos` de cada um — só pra montar um modal que nem depende dos outros
- * itinerários. `onCurtir` e `onCompartilhar` precisam ter identidade
- * estável (useCallback / setState direto) pra esse memo realmente evitar
- * o re-render dos cards que não mudaram. */
-const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }) {
-  const it = itinerario;
-
-  return (
-    <div className="feed-card">
-      <div className="feed-card-header">
-        <Link to={`/itinerario/${it.id}`} className="feed-card-titulo">
-          <h2>{it.titulo}</h2>
-        </Link>
-        <div className="feed-card-header-acoes">
-          <span className="feed-card-tipo">{TIPO_LABEL[it.tipo]}</span>
-          <button
-            className="feed-btn-compartilhar"
-            onClick={() => onCompartilhar(it)}
-            title="Compartilhar"
-          >
-            <IconeCompartilhar size={16} />
-          </button>
-        </div>
-      </div>
-
-      <p className="feed-autor">
-        por <Link to={`/perfil/${it.autor_nome}`} className="feed-autor">{it.autor_nome}</Link>
-        <BadgeDestaque badge={it.autor_badge_destaque} size={16} />
-        {it.data_inicio && <span>· {formatarData(it.data_inicio)}</span>}
-        {it.data_fim && it.data_fim !== it.data_inicio && <span>a {formatarData(it.data_fim)}</span>}
-      </p>
-
-      {it.badges?.length > 0 && (
-        <div className="feed-badges">
-          <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
-        </div>
-      )}
-
-      <button
-        className={`feed-curtir${it.curtido ? ' ativo' : ''}`}
-        onClick={() => onCurtir(it.id)}
-      >
-        <IconeLike size={18} fill={it.curtido ? 'currentColor' : 'none'} />
-        {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
-      </button>
-
-      <ol className="feed-lista">
-        {it.pontos.map((ponto) => (
-          <li key={ponto.id} className="feed-ponto">
-            <Link to={`/place/${ponto.local}`} className="feed-ponto-local">
-              {ponto.local_nome}
-            </Link>
-
-            <div className="feed-ponto-meta">
-              {ponto.movimentacao && (
-                <span className="feed-ponto-meta-item">
-                  <IconeMovimentacao size={13} />
-                  {MOVIMENTACAO_LABEL[ponto.movimentacao]}
-                </span>
-              )}
-              {ponto.entrada_gratuita ? (
-                <span className="feed-ponto-meta-item">
-                  <IconeSucesso size={13} />
-                  Entrada gratuita
-                </span>
-              ) : ponto.preco_medio && (
-                <span className="feed-ponto-meta-item">
-                  <IconePreco size={13} />
-                  Custo-benefício {ponto.preco_medio}/5
-                </span>
-              )}
-              {ponto.seguranca && (
-                <span className="feed-ponto-meta-item">
-                  <IconeSeguranca size={13} />
-                  Segurança {ponto.seguranca}/5
-                </span>
-              )}
-            </div>
-
-            {ponto.comentario && (
-              <p className="feed-ponto-comentario">"{ponto.comentario}"</p>
-            )}
-
-            {ponto.distancia_ate_proximo != null && (
-              <p className="feed-ponto-distancia">
-                <IconeProximaParada size={12} />
-                {Math.round(ponto.distancia_ate_proximo)}m até o próximo
-              </p>
-            )}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-});
+const POR_PAGINA = 10;
 
 function Feed() {
   const [itinerarios, setItinerarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [temMais, setTemMais] = useState(true);
   const [erro, setErro] = useState(null);
   const [compartilhando, setCompartilhando] = useState(null); // itinerário sendo compartilhado
 
+  // Refs em vez de state pro controle de paginação/guarda de disparo duplo:
+  // o callback do IntersectionObserver é registrado uma vez por efeito e
+  // fecha sobre valores antigos de state se a gente depender só de state
+  // aqui — ref sempre lê o valor atual no momento da chamada.
+  const paginaRef = useRef(1);
+  const carregandoMaisRef = useRef(false);
+  const sentinelaRef = useRef(null);
+
+  // Carga do primeiro lote
   useEffect(() => {
-    async function buscar() {
+    let cancelado = false;
+
+    async function buscarPrimeiroLote() {
       setCarregando(true);
       setErro(null);
       try {
-        const resposta = await api.get('/feed/principal/');
-        setItinerarios(resposta.data);
+        const resposta = await api.get('/feed/principal/', {
+          params: { pagina: 1, por_pagina: POR_PAGINA },
+        });
+        if (cancelado) return;
+        setItinerarios(resposta.data.resultados);
+        setTemMais(resposta.data.tem_mais);
+        paginaRef.current = 1;
       } catch (err) {
-        setErro('Erro ao carregar o feed.');
+        if (!cancelado) setErro('Erro ao carregar o feed.');
       } finally {
-        setCarregando(false);
+        if (!cancelado) setCarregando(false);
       }
     }
-    buscar();
+
+    buscarPrimeiroLote();
+    return () => { cancelado = true; };
   }, []);
+
+  const carregarProximoLote = useCallback(async () => {
+    if (carregandoMaisRef.current || !temMais) return;
+    carregandoMaisRef.current = true;
+    setCarregandoMais(true);
+
+    try {
+      const proximaPagina = paginaRef.current + 1;
+      const resposta = await api.get('/feed/principal/', {
+        params: { pagina: proximaPagina, por_pagina: POR_PAGINA },
+      });
+      setItinerarios((prev) => [...prev, ...resposta.data.resultados]);
+      setTemMais(resposta.data.tem_mais);
+      paginaRef.current = proximaPagina;
+    } catch (_) {
+      // Silencioso — a sentinela continua na tela e uma nova rolagem
+      // até ela dispara uma nova tentativa de carregar o mesmo lote.
+    } finally {
+      carregandoMaisRef.current = false;
+      setCarregandoMais(false);
+    }
+  }, [temMais]);
+
+  // Observa a sentinela no fim da lista: quando ela entra na viewport,
+  // busca o próximo lote. rootMargin adianta o disparo pra o próximo lote
+  // já estar carregando antes do usuário efetivamente bater no fim.
+  useEffect(() => {
+    if (carregando || !temMais) return undefined;
+    const alvo = sentinelaRef.current;
+    if (!alvo) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) carregarProximoLote();
+      },
+      { rootMargin: '600px' },
+    );
+
+    observer.observe(alvo);
+    return () => observer.disconnect();
+  }, [carregando, temMais, carregarProximoLote]);
 
   // useCallback com deps vazias + updater funcional: mantém a mesma
   // identidade de função entre renders, o que é o que permite o
   // React.memo do FeedCard funcionar de verdade. Se essa função fosse
-  // recriada a cada render do Feed (como antes), todo card re-renderizaria
-  // de qualquer forma, memo ou não.
+  // recriada a cada render do Feed, todo card re-renderizaria de qualquer
+  // forma, memo ou não.
   const handleCurtir = useCallback(async (id) => {
     let alvoAntes = null;
     setItinerarios((prev) => prev.map((it) => {
@@ -174,12 +110,10 @@ function Feed() {
 
     try {
       const resultado = await curtir('post', id);
-      // Sincroniza com a fonte de verdade do servidor (ex: se outra aba já mudou o total)
       setItinerarios((prev) => prev.map((it) => (it.id === id
         ? { ...it, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
         : it)));
     } catch (_) {
-      // Reverte em caso de erro de rede
       setItinerarios((prev) => prev.map((it) => (it.id === id
         ? { ...it, curtido: alvoAntes.curtido, total_curtidas: alvoAntes.total_curtidas }
         : it)));
@@ -205,6 +139,12 @@ function Feed() {
           onCompartilhar={setCompartilhando}
         />
       ))}
+
+      {/* Elemento-sentinela: invisível, só existe pro IntersectionObserver
+          ter algo pra vigiar. Some quando não há mais lotes pra buscar. */}
+      {temMais && <div ref={sentinelaRef} className="feed-sentinela" aria-hidden="true" />}
+
+      {carregandoMais && <p className="feed-estado feed-estado--carregando-mais">Carregando mais...</p>}
 
       {compartilhando && (
         <ModalCompartilharItinerario

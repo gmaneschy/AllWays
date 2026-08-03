@@ -50,6 +50,12 @@ import {
   CheckCheck,
   Trash2,
   RefreshCw,
+  Maximize2,
+  Volume2,
+  VolumeX,
+  Play,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -96,3 +102,10 @@ export const IconeEnviado = criarIcone(Check);
 export const IconeLidoDuplo = criarIcone(CheckCheck);
 export const IconeRemover = criarIcone(Trash2);
 export const IconeTrocar = criarIcone(RefreshCw);
+export const IconeComentario = criarIcone(MessageCircle);
+export const IconeExpandir = criarIcone(Maximize2);
+export const IconeSom = criarIcone(Volume2);
+export const IconeSomMudo = criarIcone(VolumeX);
+export const IconePlay = criarIcone(Play);
+export const IconeSetaEsquerda = criarIcone(ChevronLeft);
+export const IconeSetaDireita = criarIcone(ChevronRight);
