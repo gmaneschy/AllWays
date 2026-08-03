@@ -11,6 +11,12 @@
   --cor-primaria-fundo: #FAECE7;
   --cor-primaria-texto-em-fundo: #712B13;
 
+  /* Mesmo tom de --cor-primaria-hover, mas com semântica própria: usado pra
+     estados "inativo/ainda não visitado" (ex: marcadores do carrossel de
+     itinerário antes do usuário chegar neles) — não é hover de verdade,
+     então merece o próprio nome pra não confundir os dois usos. */
+  --cor-primaria-clara: #F0997B;
+
   /* 1.2 — Perigo / erro */
   --cor-perigo: #e53935;
 

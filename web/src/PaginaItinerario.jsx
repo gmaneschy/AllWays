@@ -355,9 +355,12 @@ function PaginaItinerario() {
 
             {usuarioLogado && (
               <div className="novo-comentario">
-                <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
-                  {usuarioLogado.username?.[0]?.toUpperCase()}
-                </div>
+                {usuarioLogado.foto_perfil
+                  ? <img src={usuarioLogado.foto_perfil} alt="" className="avatar-circulo" style={{ width: 32, height: 32 }} />
+                  : <div className="avatar-circulo--vazio" style={{ width: 32, height: 32, fontSize: 13 }}>
+                      {usuarioLogado.username?.[0]?.toUpperCase()}
+                    </div>
+                }
                 <div className="novo-comentario__campo">
                   <textarea
                     value={textoComentario}

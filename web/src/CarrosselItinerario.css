@@ -8,34 +8,49 @@
 }
 
 .carrossel-itin__barra-segmentos {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 5;
+  position: relative;
   display: flex;
-  gap: 8px;
+  align-items: flex-end;
+  height: 20px; /* espaço suficiente pra centralizar o pin (15px) sobre a trilha fina */
+  margin-top: 10px;
 }
 
-.carrossel-itin__segmento-grupo {
-  flex: 1;
-  display: flex;
-  gap: 3px;
-}
-
-.carrossel-itin__segmento {
-  flex: 1;
+.carrossel-itin__trilha {
+  position: relative;
+  width: 100%;
   height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.35);
+  border-radius: 30px;
+  background: var(--cor-primaria-clara);
   overflow: hidden;
 }
 
-.carrossel-itin__segmento-preenchimento {
+.carrossel-itin__preenchimento {
   height: 100%;
-  width: 0%;
-  background: #fff;
   border-radius: 2px;
+  background: var(--cor-primaria);
+}
+
+.carrossel-itin__marcador-pin {
+  position: absolute;
+  top: 50%;
+  /* -50% no eixo X centraliza o pin sobre o ponto de transição; o ajuste
+     fino no Y (em vez de -50% puro) compensa o mesmo "peso" visual do
+     ícone de pin que já existia na versão anterior (ponta pra baixo). */
+  transform: translate(-50%, calc(-50% - 1px));
+  color: var(--cor-primaria-clara);
+  transition: color 0.25s ease-in-out;
+  pointer-events: none;
+}
+
+.carrossel-itin__marcador-pin--ativo {
+  color: var(--cor-primaria);
+}
+
+.carrossel-itin__marcador-chegada {
+  /* O Flag do lucide não é simétrico (a bandeirola concentra o peso
+     visual do lado direito do mastro) — desloca um pouco à esquerda
+     pra o centro óptico bater certinho com o fim da trilha em 100%. */
+  transform: translate(calc(-50% - 1px), calc(-50% - 1px));
 }
 
 .carrossel-itin__slide {

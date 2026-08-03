@@ -17,6 +17,8 @@ import {
   IconeSetaDireita,
   IconePin,
   IconeHorario,
+  IconeCarrosselPin,
+  IconeChegada,
 } from './icons';
 import './CarrosselItinerario.css';
 
@@ -68,6 +70,22 @@ function CarrosselItinerario({ pontos }) {
   const slideAtualObj = slides[slideAtual] || null;
   const pontoAtivo = slideAtualObj ? pontos[slideAtualObj.pontoIdx] : pontos[0];
 
+  // Índice do primeiro slide de cada ponto — é onde um pin fica
+  // ancorado na trilha contínua (ponto de transição pra o próximo local).
+  // Ver montarSlides: os demais slides do mesmo ponto (fotos/vídeos
+  // extras) não geram marcador próprio, só avançam o preenchimento.
+  const indicesPin = useMemo(() => {
+    const vistos = new Set();
+    const resultado = new Set();
+    slides.forEach((s, i) => {
+      if (!vistos.has(s.pontoIdx)) {
+        vistos.add(s.pontoIdx);
+        resultado.add(i);
+      }
+    });
+    return resultado;
+  }, [slides]);
+
   // Novo vídeo sempre começa tocando (autoPlay) — zera o overlay de pausa
   // toda vez que o slide muda, senão o estado do vídeo anterior "vaza"
   // visualmente pro próximo por uma fração de segundo.
@@ -94,31 +112,6 @@ function CarrosselItinerario({ pontos }) {
   return (
     <>
       <div className="carrossel-itin">
-        {totalSlides > 1 && (
-          <div className="carrossel-itin__barra-segmentos">
-            {pontos.map((ponto, pIdx) => {
-              const indices = slides.reduce((acc, s, i) => (s.pontoIdx === pIdx ? [...acc, i] : acc), []);
-              if (indices.length === 0) return null;
-              return (
-                <div key={ponto.id} className="carrossel-itin__segmento-grupo">
-                  {indices.map((idxGlobal) => {
-                    const estado = idxGlobal < slideAtual ? 'passado' : idxGlobal === slideAtual ? 'atual' : 'futuro';
-                    return (
-                      <div key={idxGlobal} className="carrossel-itin__segmento">
-                        <motion.div
-                          className="carrossel-itin__segmento-preenchimento"
-                          animate={{ width: estado === 'futuro' ? '0%' : '100%' }}
-                          transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         <AnimatePresence initial={false}>
           {slideAtualObj && (
             <motion.div
@@ -210,6 +203,43 @@ function CarrosselItinerario({ pontos }) {
           </button>
         )}
       </div>
+
+      {totalSlides > 1 && (
+        <div className="carrossel-itin__barra-segmentos">
+          <div className="carrossel-itin__trilha">
+            <motion.div
+              className="carrossel-itin__preenchimento"
+              animate={{ width: `${((slideAtual + 1) / totalSlides) * 100}%` }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            />
+          </div>
+
+          {[...indicesPin].map((i) => {
+            const ativo = i <= slideAtual;
+            return (
+              <IconeCarrosselPin
+                key={slides[i]._key}
+                size={15}
+                fill="currentColor"
+                strokeWidth={1.5}
+                className={`carrossel-itin__marcador-pin${ativo ? ' carrossel-itin__marcador-pin--ativo' : ''}`}
+                style={{ left: `${(i / totalSlides) * 100}%` }}
+              />
+            );
+          })}
+
+          {/* Marca o fim do roteiro, fixo em 100% da trilha — só fica
+              "ativo" quando o usuário chega de fato ao último slide,
+              mesmo tratamento visual de progresso dos pins intermediários. */}
+          <IconeChegada
+            size={15}
+            fill="currentColor"
+            strokeWidth={1.5}
+            className={`carrossel-itin__marcador-pin carrossel-itin__marcador-chegada${slideAtual === totalSlides - 1 ? ' carrossel-itin__marcador-pin--ativo' : ''}`}
+            style={{ left: '100%' }}
+          />
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div

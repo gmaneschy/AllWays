@@ -56,6 +56,9 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
+  Circle,
+  Pin,
+  Flag,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -109,3 +112,6 @@ export const IconeSomMudo = criarIcone(VolumeX);
 export const IconePlay = criarIcone(Play);
 export const IconeSetaEsquerda = criarIcone(ChevronLeft);
 export const IconeSetaDireita = criarIcone(ChevronRight);
+export const IconeDot = criarIcone(Circle);
+export const IconeCarrosselPin = criarIcone(Pin);
+export const IconeChegada = criarIcone(Flag);
