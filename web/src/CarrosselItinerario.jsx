@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import LightboxMidia from './LightboxMidia';
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
+import { usePlayVideoControlado } from './usePlayVideoControlado';
 import {
   IconeMovimentacao,
   IconePreco,
@@ -66,9 +67,19 @@ function CarrosselItinerario({ pontos }) {
   const [slideAtual, setSlideAtual] = useState(0);
   const [videoPausado, setVideoPausado] = useState(false);
   const [lightboxAberto, setLightboxAberto] = useState(null);
+  const videoRef = useRef(null);
 
   const slideAtualObj = slides[slideAtual] || null;
   const pontoAtivo = slideAtualObj ? pontos[slideAtualObj.pontoIdx] : pontos[0];
+
+  const videoDoSlidePronto = slideAtualObj?.tipo === 'video'
+    && (!slideAtualObj.status || slideAtualObj.status === 'pronto');
+
+  // Enquanto o Lightbox está aberto (pra ESTE mesmo vídeo, já que é o único
+  // jeito de abri-lo), o vídeo do carrossel por trás precisa ficar pausado
+  // — dois <video> com a mesma fonte tocando ao mesmo tempo é o que causa
+  // a inconsistência entre a reprodução em tela cheia e a normal.
+  usePlayVideoControlado(videoRef, videoDoSlidePronto && !lightboxAberto, slideAtualObj?._key);
 
   // Índice do primeiro slide de cada ponto — é onde um pin fica
   // ancorado na trilha contínua (ponto de transição pra o próximo local).
@@ -127,6 +138,12 @@ function CarrosselItinerario({ pontos }) {
                   src={slideAtualObj.url}
                   alt=""
                   className="carrossel-itin__slide-midia"
+                  // posicao_x/posicao_y vêm do enquadramento escolhido no
+                  // ModalCentralizarMidia (CriarItinerario). Ainda não
+                  // persistidos pelo backend — ver observação na resposta —
+                  // então por enquanto isso sempre cai no fallback 50/50
+                  // (centro), idêntico ao comportamento anterior.
+                  style={{ objectPosition: `${slideAtualObj.posicao_x ?? 50}% ${slideAtualObj.posicao_y ?? 50}%` }}
                   onClick={() => setLightboxAberto(slideAtualObj)}
                   title="Clique para abrir em tela cheia"
                 />
@@ -142,17 +159,22 @@ function CarrosselItinerario({ pontos }) {
                   ) : (
                     <>
                       <video
+                        ref={videoRef}
                         src={slideAtualObj.url}
                         poster={slideAtualObj.thumbnail_url || undefined}
                         muted={mudo}
-                        autoPlay
                         loop
                         playsInline
                         onPlay={() => setVideoPausado(false)}
                         onPause={() => setVideoPausado(true)}
                         onClick={(e) => {
                           const v = e.currentTarget;
-                          v.paused ? v.play() : v.pause();
+                          if (v.paused) {
+                            const promessa = v.play();
+                            if (promessa) promessa.catch(() => {});
+                          } else {
+                            v.pause();
+                          }
                         }}
                         className="carrossel-itin__slide-midia carrossel-itin__slide-midia--video"
                       />

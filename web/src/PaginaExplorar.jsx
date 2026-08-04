@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CardItinerarioResumo from './CardItinerarioResumo';
-import api, { curtir } from './api';
+import api from './api';
 import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag } from './icons';
 import './PaginaExplorar.css';
 
@@ -104,27 +104,9 @@ function PaginaExplorar() {
     buscarFeed();
   }, []);
 
-  async function handleCurtir(id) {
-    const alvo = feed.find((it) => it.id === id);
-    if (!alvo) return;
+  // handleCurtir removido — CardItinerarioResumo não tem mais botão de
+  // curtir (card simplificado, sem essa ação).
 
-    const otimista = {
-      curtido: !alvo.curtido,
-      total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
-    };
-    setFeed((prev) => prev.map((it) => (it.id === id ? { ...it, ...otimista } : it)));
-
-    try {
-      const resultado = await curtir('post', id);
-      setFeed((prev) => prev.map((it) => (it.id === id
-        ? { ...it, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
-        : it)));
-    } catch (_) {
-      setFeed((prev) => prev.map((it) => (it.id === id
-        ? { ...it, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
-        : it)));
-    }
-  }
 
   // Busca ao digitar (debounced)
   useEffect(() => {
@@ -242,7 +224,9 @@ function PaginaExplorar() {
           {!carregandoFeed && feed.length === 0 && (
             <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>
           )}
-          {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} onCurtir={handleCurtir} />)}
+          <div className="grid-itinerarios">
+            {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} />)}
+          </div>
         </>
       )}
     </div>

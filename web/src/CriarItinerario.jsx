@@ -4,7 +4,8 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
-import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover } from './icons';
+import ModalCentralizarMidia from './ModalCentralizarMidia';
+import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover, IconeExpandir } from './icons';
 import './CriarItinerario.css';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
@@ -28,7 +29,7 @@ const MOVIMENTACAO_OPCOES = [
  * chamado a cada re-render do formulário inteiro (ex: cada tecla digitada
  * em qualquer campo do card), recriando a miniatura sem necessidade e
  * gerando um blob novo (vazado) a cada vez. */
-function MidiaThumb({ midia }) {
+function MidiaThumb({ midia, aoClicarParaCentralizar }) {
   const [url, setUrl] = useState(null);
 
   useEffect(() => {
@@ -50,7 +51,21 @@ function MidiaThumb({ midia }) {
     // isso, o drag nativo da imagem competia com o drag customizado da div
     // que a envolve (era o "agarra e solta" que persistia mesmo depois do
     // fix do blob).
-    return <img src={url} alt="" draggable={false} className="midia-item__thumb" />;
+    //
+    // objectPosition reflete o enquadramento escolhido no
+    // ModalCentralizarMidia — mesmo valor que vai aparecer no card de
+    // verdade, então a miniatura já dá um preview fiel.
+    return (
+      <img
+        src={url}
+        alt=""
+        draggable={false}
+        onClick={(e) => { e.stopPropagation(); aoClicarParaCentralizar?.(); }}
+        style={{ objectPosition: midia.posicao ? `${midia.posicao.x}% ${midia.posicao.y}%` : undefined }}
+        title="Clique para ajustar o enquadramento"
+        className="midia-item__thumb"
+      />
+    );
   }
   return <video src={url} muted draggable={false} className="midia-item__thumb midia-item__thumb--video" />;
 }
@@ -219,7 +234,9 @@ function CriarItinerario() {
           erros.push(`${file.name}: ${resultado.erro}`);
         }
       } else if (file.type.startsWith('image/')) {
-        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file });
+        // posicao começa centralizada — o usuário só precisa mexer se
+        // quiser um enquadramento diferente do padrão via ModalCentralizarMidia.
+        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, posicao: { x: 50, y: 50 } });
       } else {
         erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
       }
@@ -277,10 +294,43 @@ function CriarItinerario() {
     });
   }
 
-  async function enviarFotosDoPonto(pontoId, arquivos) {
+  // Índice do ponto + midia sendo centralizada no momento; null = modal fechado.
+  const [centralizando, setCentralizando] = useState(null);
+
+  function abrirCentralizacao(pontoIndex, midia) {
+    setCentralizando({ pontoIndex, midia });
+  }
+
+  function fecharCentralizacao() {
+    setCentralizando(null);
+  }
+
+  function salvarCentralizacao(posicao) {
+    if (!centralizando) return;
+    const { pontoIndex, midia } = centralizando;
+    setPontos((prev) => {
+      const novosPontos = [...prev];
+      novosPontos[pontoIndex] = {
+        ...novosPontos[pontoIndex],
+        midias: novosPontos[pontoIndex].midias.map((m) => (
+          m.id === midia.id ? { ...m, posicao } : m
+        )),
+      };
+      return novosPontos;
+    });
+    setCentralizando(null);
+  }
+
+  async function enviarFotosDoPonto(pontoId, fotos) {
     const formData = new FormData();
     formData.append('ponto', pontoId);
-    arquivos.forEach((arquivo) => formData.append('imagens', arquivo));
+    fotos.forEach((foto) => formData.append('imagens', foto.arquivo));
+    // Enquadramento escolhido no ModalCentralizarMidia, no MESMO índice de
+    // 'imagens' — pra o backend casar cada posição com o arquivo certo.
+    // NOTA: o backend ainda não tem campo pra guardar isso (ver observação
+    // na resposta) — por ora essa lista chega no servidor mas é ignorada
+    // com segurança, sem quebrar o upload.
+    formData.append('posicoes', JSON.stringify(fotos.map((f) => f.posicao || { x: 50, y: 50 })));
 
     await api.post('/itineraries/fotos/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -332,15 +382,15 @@ function CriarItinerario() {
         // hoje), mas um intercalado exato foto/vídeo/foto não sobrevive à
         // publicação. Se isso vier a importar, precisaríamos de um campo de
         // ordem único no backend.
-        const arquivos = midias.filter((m) => m.tipo === 'foto').map((m) => m.arquivo);
+        const fotosDoPonto = midias.filter((m) => m.tipo === 'foto');
         const videos = midias.filter((m) => m.tipo === 'video').map((m) => m.arquivo);
 
         const pontoCriado = pontosCriados.find((pc) => pc.ordem === i + 1);
         if (!pontoCriado) continue;
 
-        if (arquivos.length > 0) {
+        if (fotosDoPonto.length > 0) {
           try {
-            await enviarFotosDoPonto(pontoCriado.id, arquivos);
+            await enviarFotosDoPonto(pontoCriado.id, fotosDoPonto);
           } catch (err) {
             uploadsComFalha.push(i + 1);
           }
@@ -645,9 +695,17 @@ function CriarItinerario() {
                       className="midia-item"
                       title="Arraste para reordenar"
                     >
-                      <MidiaThumb midia={midia} />
+                      <MidiaThumb
+                        midia={midia}
+                        aoClicarParaCentralizar={() => abrirCentralizacao(pontoAtivo, midia)}
+                      />
                       {midia.tipo === 'video' && (
                         <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
+                      )}
+                      {midia.tipo === 'foto' && (
+                        <span className="midia-item__badge-centralizar" title="Ajustar enquadramento">
+                          <IconeExpandir size={12} />
+                        </span>
                       )}
                       <button
                         type="button"
@@ -693,6 +751,16 @@ function CriarItinerario() {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {centralizando && (
+          <ModalCentralizarMidia
+            midia={centralizando.midia}
+            onSalvar={salvarCentralizacao}
+            onFechar={fecharCentralizacao}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

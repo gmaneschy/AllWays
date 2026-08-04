@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes, editarPerfil, getMe } from './api';
 import BadgeDestaque from './BadgeDestaque';
-import ModalCompartilharItinerario from './ModalCompartilharItinerario';
-import { IconeFechar, IconeCompartilhar, IconeSeguir, IconeEditar } from './icons';
+import CardItinerarioResumo from './CardItinerarioResumo';
+import { IconeFechar, IconeSeguir, IconeEditar } from './icons';
 import './PaginaPerfil.css';
 
 function ModalListaUsuarios({ titulo, tipo, itens, onFechar }) {
@@ -210,7 +210,6 @@ function PaginaPerfil() {
   const [aba, setAba] = useState('publicados');
   const [enviandoFollow, setEnviandoFollow] = useState(false);
   const [modalAberto, setModalAberto] = useState(null); // 'seguidores' | 'seguindo' | null
-  const [compartilhando, setCompartilhando] = useState(null); // itinerário sendo compartilhado
   const [listaModal, setListaModal] = useState([]);
 
   // Badge de destaque
@@ -519,26 +518,11 @@ function PaginaPerfil() {
         <p className="perfil-lista-vazia">Nenhum itinerário aqui ainda.</p>
       )}
 
-      {itinerariosAba.map((it) => (
-        <div key={it.id} className="itinerario-card">
-          <div className="itinerario-card__cabecalho">
-            <Link to={`/itinerario/${it.id}`} className="itinerario-card__link">
-              <h3 className="itinerario-card__titulo">{it.titulo}</h3>
-            </Link>
-            <button
-              onClick={() => setCompartilhando(it)}
-              title="Compartilhar"
-              className="itinerario-card__compartilhar"
-            >
-              <IconeCompartilhar size={16} />
-            </button>
-          </div>
-          <p className="itinerario-card__meta">
-            {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
-            {it.data_inicio && ` · ${it.data_inicio}`}
-          </p>
-        </div>
-      ))}
+      <div className="grid-itinerarios">
+        {itinerariosAba.map((it) => (
+          <CardItinerarioResumo key={it.id} it={it} />
+        ))}
+      </div>
 
       {modalAberto && (
         <ModalListaUsuarios
@@ -570,14 +554,6 @@ function PaginaPerfil() {
           erro={erroEdicao}
           onSalvar={handleSalvarPerfil}
           onFechar={() => setModalEditarAberto(false)}
-        />
-      )}
-
-      {compartilhando && (
-        <ModalCompartilharItinerario
-          itinerarioId={compartilhando.id}
-          itinerarioTitulo={compartilhando.titulo}
-          onFechar={() => setCompartilhando(null)}
         />
       )}
     </div>

@@ -1,91 +1,78 @@
-@import './avatar.css';
+/* Grid de 3 colunas compartilhado pelas três páginas que listam
+   itinerários de forma resumida (Explorar, Hashtag, Perfil). Fica aqui,
+   junto do card, porque todo lugar que usa o card usa esse wrapper — não
+   faz sentido duplicar a regra em três CSS de página diferentes. */
+.grid-itinerarios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .grid-itinerarios {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 .card-itinerario-resumo {
   display: block;
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  overflow: hidden;
+  background: var(--fundo-card);
   text-decoration: none;
   color: inherit;
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .card-itinerario-resumo:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
-.card-itinerario-resumo__topo {
+.card-itinerario-resumo__midia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.card-itinerario-resumo__midia-el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-itinerario-resumo__midia-vazia {
+  width: 100%;
+  height: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  color: var(--texto-muted);
+  background: var(--fundo-hover);
+}
+
+.card-itinerario-resumo__corpo {
+  padding: 10px 12px 12px;
 }
 
 .card-itinerario-resumo__titulo {
   margin: 0 0 4px;
-  font: var(--fonte-titulo-secao);
+  font: var(--fonte-nome-autor);
   color: var(--texto-principal);
-}
-
-.card-itinerario-resumo__lugar-principal {
-  margin: 0;
-  font: var(--fonte-meta);
-  color: var(--texto-secundario);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.card-itinerario-resumo__tipo-badge {
-  font: var(--fonte-micro);
-  background: var(--fundo-chip);
-  border-radius: 4px;
-  padding: 2px 8px;
-  color: var(--texto-secundario);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-itinerario-resumo__badges {
-  margin-top: 8px;
-}
-
-.card-itinerario-resumo__curtir {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  font: var(--fonte-meta);
-  color: var(--texto-muted);
-}
-
-.card-itinerario-resumo__curtir--ativo {
-  color: var(--cor-perigo);
-}
-
-.card-itinerario-resumo__rodape {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.card-itinerario-resumo__autor-link {
-  font: var(--fonte-meta);
+.card-itinerario-resumo__meta {
+  margin: 0;
+  font: var(--fonte-micro);
   color: var(--texto-secundario);
-  text-decoration: none;
-}
-
-.card-itinerario-resumo__autor-link:hover {
-  color: var(--cor-primaria);
-}
-
-.card-itinerario-resumo__data {
-  font: var(--fonte-meta);
-  color: var(--texto-muted);
-  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

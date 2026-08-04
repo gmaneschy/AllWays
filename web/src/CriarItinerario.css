@@ -404,6 +404,24 @@
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
 }
 
+/* Indica que a foto é clicável pra abrir o modal de centralização — fica
+   no canto oposto ao badge de vídeo (que só aparece em vídeo, nunca nos
+   dois ao mesmo tempo, mas mantém a simetria visual) e não intercepta
+   clique: quem trata o clique é a própria <img>, isso aqui é só um aviso. */
+.midia-item__badge-centralizar {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  display: flex;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+  pointer-events: none;
+}
+
+img.midia-item__thumb {
+  cursor: pointer;
+}
+
 .midia-item__remover {
   position: absolute;
   top: 2px;

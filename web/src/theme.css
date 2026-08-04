@@ -43,6 +43,14 @@
   /* 1.5 — Avatar vazio */
   --fundo-avatar-vazio: #E8E4DC;
 
+  /* 1.6 — Proporção padrão da mídia nos cards de itinerário (carrossel do
+     feed/página do itinerário e quadro do modal de centralização na
+     criação) — um único lugar pra mudar se a decisão de design mudar.
+     Decisão: 6:9 (mais vertical que o 4:5 anterior), Preencher (cover)
+     pra fotos com centralização ajustável, Ajustar (contain) sempre pra
+     vídeo — ver CarrosselItinerario.css e ModalCentralizarMidia.css. */
+  --razao-midia-card: 6 / 9;
+
   /* 3.1 — Tipografia */
   --fonte-titulo-pagina: bold 22px sans-serif;
   --fonte-titulo-card: bold 18px sans-serif;

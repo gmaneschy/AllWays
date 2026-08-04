@@ -214,46 +214,6 @@
   color: var(--texto-secundario);
 }
 
-/* --- Card de itinerário --- */
-
-.itinerario-card {
-  border: 1px solid var(--borda-padrao);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.itinerario-card__cabecalho {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.itinerario-card__link {
-  text-decoration: none;
-  color: inherit;
-}
-
-.itinerario-card__titulo {
-  margin: 0;
-  color: var(--texto-principal);
-}
-
-.itinerario-card__compartilhar {
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--texto-secundario);
-  display: flex;
-  padding: 0;
-}
-
-.itinerario-card__meta {
-  font-size: 13px;
-  color: var(--texto-secundario);
-  margin: 4px 0 0;
-}
-
 /* --- Modais (base compartilhada) --- */
 
 .modal-overlay {

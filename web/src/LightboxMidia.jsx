@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { IconeFechar, IconeSom, IconeSomMudo } from './icons';
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
+import { usePlayVideoControlado } from './usePlayVideoControlado';
 import './LightboxMidia.css';
 
 /** Visualizador fullscreen de uma única foto ou vídeo — usado pelo FeedCard
@@ -10,6 +11,8 @@ import './LightboxMidia.css';
 function LightboxMidia({ midia, onFechar }) {
   const mudo = useMudoGlobal();
   const videoRef = useRef(null);
+
+  usePlayVideoControlado(videoRef, midia?.tipo === 'video', midia?.id);
 
   useEffect(() => {
     function aoTeclar(e) {
@@ -57,13 +60,17 @@ function LightboxMidia({ midia, onFechar }) {
               src={midia.url}
               poster={midia.thumbnail_url || undefined}
               muted={mudo}
-              autoPlay
               loop
               playsInline
               controls={false}
               onClick={(e) => {
                 const v = e.currentTarget;
-                v.paused ? v.play() : v.pause();
+                if (v.paused) {
+                  const promessa = v.play();
+                  if (promessa) promessa.catch(() => {});
+                } else {
+                  v.pause();
+                }
               }}
               className="lightbox-midia lightbox-midia--video"
             />

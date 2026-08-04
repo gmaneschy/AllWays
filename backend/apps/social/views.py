@@ -310,6 +310,35 @@ class ComentariosItinerarioView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# ─── Mídia de capa (cards resumidos: Explorar, Hashtag, Perfil) ───────────────
+
+def _primeira_midia_itinerario(it, request):
+    """Primeira foto ou vídeo do itinerário, na ordem dos pontos (fotos antes
+    de vídeos dentro do mesmo ponto — o backend ainda não tem uma ordem
+    compartilhada entre os dois, mesma limitação já documentada no
+    CriarItinerario.jsx do frontend). Usado só pra miniatura do grid nos
+    cards resumidos — requer prefetch_related('pontos__fotos', 'pontos__videos')
+    no queryset de origem, senão isso vira uma query por itinerário."""
+    for ponto in it.pontos.all():
+        foto = next(iter(ponto.fotos.all()), None)
+        if foto:
+            return {
+                'tipo': 'foto',
+                'url': request.build_absolute_uri(foto.imagem.url),
+                'thumbnail_url': None,
+                'status': None,
+            }
+        video = next(iter(ponto.videos.all()), None)
+        if video:
+            return {
+                'tipo': 'video',
+                'url': request.build_absolute_uri(video.video.url) if video.video else None,
+                'thumbnail_url': request.build_absolute_uri(video.thumbnail.url) if video.thumbnail else None,
+                'status': video.status,
+            }
+    return None
+
+
 # ─── Hashtag feed ─────────────────────────────────────────────────────────────
 
 class HashtagFeedView(APIView):
@@ -323,7 +352,7 @@ class HashtagFeedView(APIView):
             hashtag.itinerarios
             .filter(status='publicado')
             .select_related('autor')
-            .prefetch_related('pontos__local')
+            .prefetch_related('pontos__local', 'pontos__fotos', 'pontos__videos')
             .order_by('-publicado_em')[:40]
         )
 
@@ -349,6 +378,7 @@ class HashtagFeedView(APIView):
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,
                 'total_pontos': it.pontos.count(),
+                'primeira_midia': _primeira_midia_itinerario(it, request),
                 **resumo_curtida(it, request.user),
             })
 
@@ -630,7 +660,7 @@ class ExplorarView(APIView):
             Itinerario.objects
             .filter(status='publicado')
             .select_related('autor')
-            .prefetch_related('pontos__local')
+            .prefetch_related('pontos__local', 'pontos__fotos', 'pontos__videos')
             .order_by('-publicado_em')[:40]
         )
 
@@ -656,6 +686,7 @@ class ExplorarView(APIView):
                     'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
                 } if primeiro_ponto else None,
                 'total_pontos': it.pontos.count(),
+                'primeira_midia': _primeira_midia_itinerario(it, request),
                 **resumo_curtida(it, request.user),
             })
 

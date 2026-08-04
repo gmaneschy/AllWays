@@ -168,18 +168,52 @@ class AlterarSenhaSerializer(serializers.Serializer):
 
 
 class ItinerarioResumoSerializer(serializers.ModelSerializer):
-    """Versão compacta para listar no perfil — sem pontos aninhados."""
+    """Versão compacta para listar no perfil — sem pontos aninhados.
+    'primeira_midia' e 'total_pontos' alimentam a miniatura do grid no
+    front (CardItinerarioResumo) — mesma lógica usada em ExplorarView e
+    HashtagFeedView (apps/social/views.py); requer que o queryset de
+    origem tenha prefetch_related('pontos__fotos', 'pontos__videos'),
+    senão isso vira uma query extra por itinerário."""
     badges_detalhe = serializers.SerializerMethodField()
+    total_pontos = serializers.SerializerMethodField()
+    primeira_midia = serializers.SerializerMethodField()
 
     class Meta:
         model = Itinerario
-        fields = ['id', 'titulo', 'tipo', 'status', 'data_inicio', 'publicado_em', 'badges_detalhe']
+        fields = [
+            'id', 'titulo', 'tipo', 'status', 'data_inicio', 'publicado_em',
+            'badges_detalhe', 'total_pontos', 'primeira_midia',
+        ]
 
     def get_badges_detalhe(self, obj):
         from apps.gamification.models import BadgeItinerario
         ids = obj.badges.values_list('badge_id', flat=True)
         badges = BadgeItinerario.objects.filter(id__in=ids)
         return BadgeItinerarioSerializer(badges, many=True, context=self.context).data
+
+    def get_total_pontos(self, obj):
+        return obj.pontos.count()
+
+    def get_primeira_midia(self, obj):
+        request = self.context.get('request')
+        for ponto in obj.pontos.all():
+            foto = next(iter(ponto.fotos.all()), None)
+            if foto:
+                return {
+                    'tipo': 'foto',
+                    'url': request.build_absolute_uri(foto.imagem.url) if request else foto.imagem.url,
+                    'thumbnail_url': None,
+                    'status': None,
+                }
+            video = next(iter(ponto.videos.all()), None)
+            if video:
+                return {
+                    'tipo': 'video',
+                    'url': (request.build_absolute_uri(video.video.url) if request else video.video.url) if video.video else None,
+                    'thumbnail_url': (request.build_absolute_uri(video.thumbnail.url) if request else video.thumbnail.url) if video.thumbnail else None,
+                    'status': video.status,
+                }
+        return None
 
 
 class BadgeResumoSerializer(serializers.ModelSerializer):
@@ -263,7 +297,7 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
     def get_itinerarios_publicados(self, obj):
         if not self._pode_ver_conteudo(obj):
             return []
-        qs = Itinerario.objects.filter(autor=obj, status='publicado')
+        qs = Itinerario.objects.filter(autor=obj, status='publicado').prefetch_related('pontos__fotos', 'pontos__videos')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
     def _pode_ver_conteudo(self, obj):
@@ -312,13 +346,13 @@ class PerfilProprioSerializer(PerfilPublicoSerializer):
         fields = PerfilPublicoSerializer.Meta.fields + ['rascunhos', 'salvos', 'email']
 
     def get_rascunhos(self, obj):
-        qs = Itinerario.objects.filter(autor=obj, status='rascunho')
+        qs = Itinerario.objects.filter(autor=obj, status='rascunho').prefetch_related('pontos__fotos', 'pontos__videos')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
     def get_salvos(self, obj):
         qs = Itinerario.objects.filter(
             salvos_por__usuario=obj
-        ).select_related('autor')
+        ).select_related('autor').prefetch_related('pontos__fotos', 'pontos__videos')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
 

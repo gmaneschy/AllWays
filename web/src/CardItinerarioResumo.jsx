@@ -1,92 +1,78 @@
-import { Link, useNavigate } from 'react-router-dom';
-import BadgeDestaque from './BadgeDestaque';
-import BadgesItinerarioTags from './BadgesItinerarioTags';
-import { IconePin, IconeLike } from './icons';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { IconePin } from './icons';
 import './CardItinerarioResumo.css';
 
-/** Card resumido de itinerário, usado em listas (Explorar, Hashtag, futuramente Perfil).
- * `onCurtir(id)` é opcional — se não for passado, o botão de curtir não aparece. */
-function CardItinerarioResumo({ it, onCurtir }) {
-  const navigate = useNavigate();
+/** Card compacto de itinerário — usado em grid de 3 colunas na Explorar,
+ * Hashtag e Perfil. De propósito bem enxuto: sem autor, sem curtir, sem
+ * data, sem foto de perfil — só título, contagem de lugares, tipo e a
+ * primeira mídia. A versão "rica" com esse outro tanto de informação é o
+ * FeedCard, usado só no Feed principal — esse aqui é deliberadamente mais
+ * simples.
+ *
+ * Espera `it.primeira_midia` no formato { tipo: 'foto'|'video', url,
+ * thumbnail_url, status } (ou null se o itinerário não tem nenhuma mídia
+ * ainda) — ver observação sobre o backend. */
+function CardItinerarioResumo({ it }) {
+  const midia = it.primeira_midia;
+  const ehVideo = midia?.tipo === 'video' && midia.status !== 'erro';
+  const videoRef = useRef(null);
+  const [emVista, setEmVista] = useState(false);
 
-  function handleClickCurtir(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    onCurtir(it.id);
-  }
+  // Só toca o vídeo quando o card está de fato visível — numa grade com
+  // muitos itinerários, autoplaying dezenas de vídeos ao mesmo tempo fora
+  // da tela seria um desperdício e pesaria bastante.
+  useEffect(() => {
+    if (!ehVideo) return undefined;
+    const el = videoRef.current;
+    if (!el) return undefined;
+    const observer = new IntersectionObserver(
+      ([entrada]) => setEmVista(entrada.isIntersecting),
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ehVideo]);
 
-  function handleClickCard() {
-    navigate(`/itinerario/${it.id}`);
-  }
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (emVista) el.play().catch(() => {});
+    else el.pause();
+  }, [emVista]);
 
-  function handleKeyDownCard(e) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      navigate(`/itinerario/${it.id}`);
-    }
-  }
+  const tipoLabel = it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip';
 
   return (
-    <div
-      role="link"
-      tabIndex={0}
-      onClick={handleClickCard}
-      onKeyDown={handleKeyDownCard}
-      className="card-itinerario-resumo"
-    >
-      <div className="card-itinerario-resumo__topo">
-        <div>
-          <h3 className="card-itinerario-resumo__titulo">{it.titulo}</h3>
-          {it.lugar_principal && (
-            <p className="card-itinerario-resumo__lugar-principal">
-              <IconePin size={13} /> {it.lugar_principal.nome}
-              {it.total_pontos > 1 ? ` + ${it.total_pontos - 1} lugar${it.total_pontos > 2 ? 'es' : ''}` : ''}
-            </p>
-          )}
-        </div>
-        <span className="card-itinerario-resumo__tipo-badge">
-          {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day'}
-        </span>
+    <Link to={`/itinerario/${it.id}`} className="card-itinerario-resumo">
+      <div className="card-itinerario-resumo__midia">
+        {ehVideo ? (
+          <video
+            ref={videoRef}
+            src={midia.url}
+            poster={midia.thumbnail_url || undefined}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="card-itinerario-resumo__midia-el"
+          />
+        ) : midia?.tipo === 'foto' ? (
+          <img src={midia.url} alt="" className="card-itinerario-resumo__midia-el" />
+        ) : (
+          <div className="card-itinerario-resumo__midia-vazia">
+            <IconePin size={24} />
+          </div>
+        )}
       </div>
 
-      {it.badges?.length > 0 && (
-        <div className="card-itinerario-resumo__badges">
-          <BadgesItinerarioTags badges={it.badges} tamanho="pequeno" />
-        </div>
-      )}
-
-      {onCurtir && (
-        <button
-          onClick={handleClickCurtir}
-          className={`card-itinerario-resumo__curtir${it.curtido ? ' card-itinerario-resumo__curtir--ativo' : ''}`}
-        >
-          <IconeLike size={16} fill={it.curtido ? 'currentColor' : 'none'} />
-          {it.total_curtidas > 0 && <span>{it.total_curtidas}</span>}
-        </button>
-      )}
-
-      <div className="card-itinerario-resumo__rodape">
-        {it.autor.foto_perfil
-          ? <img src={it.autor.foto_perfil} alt="" className="avatar-circulo" style={{ width: 24, height: 24 }} />
-          : <div className="avatar-circulo--vazio" style={{ width: 24, height: 24, fontSize: 10 }}>
-              {it.autor.username?.[0]?.toUpperCase()}
-            </div>
-        }
-        <Link
-          to={`/perfil/${it.autor.username}`}
-          onClick={(e) => e.stopPropagation()}
-          className="card-itinerario-resumo__autor-link"
-        >
-          {it.autor.username}
-        </Link>
-        <BadgeDestaque badge={it.autor.badge_destaque} size={14} />
-        <span className="card-itinerario-resumo__data">
-          {it.publicado_em
-            ? new Date(it.publicado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-            : ''}
-        </span>
+      <div className="card-itinerario-resumo__corpo">
+        <h3 className="card-itinerario-resumo__titulo">{it.titulo}</h3>
+        <p className="card-itinerario-resumo__meta">
+          {it.total_pontos} lugar{it.total_pontos !== 1 ? 'es' : ''} · {tipoLabel}
+        </p>
       </div>
-    </div>
+    </Link>
   );
 }
 

@@ -1,7 +1,7 @@
 .carrossel-itin {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: var(--razao-midia-card);
   border-radius: 8px;
   overflow: hidden;
   background: #000;
@@ -10,7 +10,7 @@
 .carrossel-itin__barra-segmentos {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   height: 20px; /* espaço suficiente pra centralizar o pin (15px) sobre a trilha fina */
   margin-top: 10px;
 }
@@ -19,7 +19,7 @@
   position: relative;
   width: 100%;
   height: 3px;
-  border-radius: 30px;
+  border-radius: 2px;
   background: var(--cor-primaria-clara);
   overflow: hidden;
 }
@@ -78,6 +78,12 @@
 .carrossel-itin__slide-midia--video {
   cursor: pointer;
   background: #000;
+  /* Decisão de produto: vídeo é sempre "Ajustar", nunca "Preencher" —
+     diferente da foto (que usa cover, ver .carrossel-itin__slide-midia),
+     cortar um vídeo em movimento perde contexto de um jeito que cortar
+     uma foto estática não perde. Essa regra pesa mais que a base cover
+     herdada de .carrossel-itin__slide-midia por vir depois no arquivo. */
+  object-fit: contain;
 }
 
 .carrossel-itin__video-play-overlay {
