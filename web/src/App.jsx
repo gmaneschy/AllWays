@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './Navbar';
+import './App.css';
 import Feed from './Feed';
 import CriarItinerario from './CriarItinerario';
 import PaginaPlace from './PaginaPlace';
@@ -18,6 +19,7 @@ function App() {
   return (
     <BrowserRouter>
       <Navbar />
+      <main className="app__conteudo">
       <Routes>
         <Route
           path="/"
@@ -108,6 +110,7 @@ function App() {
           }
         />
       </Routes>
+      </main>
     </BrowserRouter>
   );
 }

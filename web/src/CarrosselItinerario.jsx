@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import LightboxMidia from './LightboxMidia';
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
 import { usePlayVideoControlado } from './usePlayVideoControlado';
+import { useEmViewport } from './useEmViewport';
 import {
   IconeMovimentacao,
   IconePreco,
@@ -68,6 +69,8 @@ function CarrosselItinerario({ pontos }) {
   const [videoPausado, setVideoPausado] = useState(false);
   const [lightboxAberto, setLightboxAberto] = useState(null);
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
+  const emViewport = useEmViewport(containerRef);
 
   const slideAtualObj = slides[slideAtual] || null;
   const pontoAtivo = slideAtualObj ? pontos[slideAtualObj.pontoIdx] : pontos[0];
@@ -79,7 +82,11 @@ function CarrosselItinerario({ pontos }) {
   // jeito de abri-lo), o vídeo do carrossel por trás precisa ficar pausado
   // — dois <video> com a mesma fonte tocando ao mesmo tempo é o que causa
   // a inconsistência entre a reprodução em tela cheia e a normal.
-  usePlayVideoControlado(videoRef, videoDoSlidePronto && !lightboxAberto, slideAtualObj?._key);
+  //
+  // emViewport dá prioridade de reprodução ao card que está de fato na
+  // tela: assim que o carrossel sai da viewport (ex: usuário rolou o
+  // feed), o vídeo pausa — independente do que tiver no card seguinte.
+  usePlayVideoControlado(videoRef, videoDoSlidePronto && !lightboxAberto && emViewport, slideAtualObj?._key);
 
   // Índice do primeiro slide de cada ponto — é onde um pin fica
   // ancorado na trilha contínua (ponto de transição pra o próximo local).
@@ -118,11 +125,23 @@ function CarrosselItinerario({ pontos }) {
     setSlideAtual((s) => Math.max(s - 1, 0));
   }
 
+  // Fecha o Lightbox e devolve o tempo de reprodução pro vídeo do
+  // carrossel — sem isso, ao fechar o fullscreen o vídeo de trás voltaria
+  // pro ponto em que estava quando o Lightbox abriu (ele ficou pausado
+  // esse tempo todo), em vez de continuar de onde o usuário parou de
+  // assistir em tela cheia.
+  function fecharLightbox(tempoFinal) {
+    if (typeof tempoFinal === 'number' && videoRef.current) {
+      videoRef.current.currentTime = tempoFinal;
+    }
+    setLightboxAberto(null);
+  }
+
   if (!pontoAtivo) return null;
 
   return (
     <>
-      <div className="carrossel-itin">
+      <div ref={containerRef} className="carrossel-itin">
         <AnimatePresence initial={false}>
           {slideAtualObj && (
             <motion.div
@@ -192,7 +211,11 @@ function CarrosselItinerario({ pontos }) {
                           {mudo ? <IconeSomMudo size={16} /> : <IconeSom size={16} />}
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setLightboxAberto(slideAtualObj); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const tempoAtual = videoRef.current?.currentTime || 0;
+                            setLightboxAberto({ ...slideAtualObj, tempoInicial: tempoAtual });
+                          }}
                           className="carrossel-itin__video-btn"
                           title="Tela cheia"
                         >
@@ -329,7 +352,7 @@ function CarrosselItinerario({ pontos }) {
 
       <AnimatePresence>
         {lightboxAberto && (
-          <LightboxMidia midia={lightboxAberto} onFechar={() => setLightboxAberto(null)} />
+          <LightboxMidia midia={lightboxAberto} onFechar={fecharLightbox} />
         )}
       </AnimatePresence>
     </>

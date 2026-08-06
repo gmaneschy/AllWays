@@ -59,6 +59,11 @@ import {
   Circle,
   Pin,
   Flag,
+  Home,
+  Compass,
+  SquarePlus,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -115,3 +120,10 @@ export const IconeSetaDireita = criarIcone(ChevronRight);
 export const IconeDot = criarIcone(Circle);
 export const IconeCarrosselPin = criarIcone(Pin);
 export const IconeChegada = criarIcone(Flag);
+
+// ─── Navegação (sidebar) ──────────────────────────────────────────────
+export const IconeInicio = criarIcone(Home);
+export const IconeExplorarNav = criarIcone(Compass);
+export const IconeCriarItinerario = criarIcone(SquarePlus);
+export const IconeSair = criarIcone(LogOut);
+export const IconeEntrar = criarIcone(LogIn);

@@ -1,3 +1,13 @@
+/* Reserva o espaço da sidebar (Navbar), que é position: fixed — sem
+   isso o conteúdo das páginas ficaria embaixo dela. Usa a largura
+   colapsada porque a sidebar só expande por cima do conteúdo no
+   hover (position: fixed não desloca o layout ao redor), então o
+   conteúdo nunca precisa "recuar" quando ela abre. */
+.app__conteudo {
+  margin-left: var(--navbar-largura-colapsada);
+  min-height: 100vh;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

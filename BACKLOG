@@ -6,10 +6,8 @@ places:
 itineraries:
 social:
 
-
 Checklist:
 frontend:
-    Voltar página no browser não volta para a posição da página que estava antes. No caso do Feed.jsx, onde é possível scrollar bastante, a página volta do início.
     CriarItinerario.jsx:
         - obrigatório para a publicação (para o rascunho, não é obrigatório):
             - pelo menos 1 imagem por ponto
@@ -18,32 +16,11 @@ frontend:
 
     Feed.jsx:
         - No feed, abrir os comentários desce um drop da janela de comentários. Até aí tudo certo. Não há, porém, possibilidade de responder um comentário, nem respostas de comentários são exibidos. É preciso corrigir isso.
-
-    CriarItinerario.jsx:
-        - Sobre mídia.
-        Definir se mídia no card deve ser:
-            Proporção: 1:1 ou 6:9;
-            Ajuste: Preencher ou Ajustar;
-            Se "Preencher" e imagem, deve haver modal de centralização de imagem no ponto itinerário. Se usuário clicar na imagem, modal de centralização no formato da proporção determinada é aberto.
-            Em qualquer caso, a abordagem de vídeo deve ser "Ajustar" e em fullscreen tamanho normal.
-
-
-    CarrosselItinerario.jsx:
-        - Fila da barra de progresso deve começar no -1.
-        A última imagem de um ponto itinerário marca embaixo do pin do ponto itinerário seguinte, levando a confundir a imagem com o ponto seguinte (embora o pin não tenha mudado de cor).
-        Problema: se o ponto da imagem primeira imagem do pin for exatamente abaixo do pin, então a flag da última imagem vai sobrepor pin do último ponto itinerario.
-        É preciso resolver esse conflito ou deixar da forma como está.
-        (Mostrar imagem)
-
-    PaginaItinerario.jsx:
-        - FeedCard (CarrosselItinerario) está do mesmo tamanho que o painel de comentário. Ele devia ocupar um espaço maior. Idealmente, a proporção de largura deve ser 2/3 e 1/3 ou 3/4 e 1/4.
-
-
+        - Voltar página no browser não volta para a posição da página que estava antes. No caso do Feed.jsx, onde é possível scrollar bastante, a página volta do início.
 
 Backend e Frontend:
     Criar opções para excluir itinerários publicados, salvos e rascunhos
     Criar opção de excluir comentário (excluir comentário apaga respostas desse comentário em cascata)
-
 
 Configurações:
     Privacidade:
@@ -55,7 +32,6 @@ Configurações:
 
     Notificações:
     Exibição:
-
 
 Tela admin
 http://localhost:8000/admin/
@@ -86,5 +62,3 @@ CTRL+C to stop.
 
 # Terminal 4 - subir versão (print) do componente para o Chromatic
 npx chromatic --project-token=chpt_6d076130ba669b8
-
-

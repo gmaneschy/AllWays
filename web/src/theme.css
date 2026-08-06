@@ -51,6 +51,10 @@
      vídeo — ver CarrosselItinerario.css e ModalCentralizarMidia.css. */
   --razao-midia-card: 6 / 9;
 
+  /* 1.7 — Navbar vertical (sidebar fixa à esquerda, expande no hover) */
+  --navbar-largura-colapsada: 76px;
+  --navbar-largura-expandida: 240px;
+
   /* 3.1 — Tipografia */
   --fonte-titulo-pagina: bold 22px sans-serif;
   --fonte-titulo-card: bold 18px sans-serif;

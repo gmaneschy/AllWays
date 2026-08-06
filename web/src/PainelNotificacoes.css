@@ -1,7 +1,7 @@
 .painel-notificacoes {
   position: absolute;
-  top: 110%;
-  right: 0;
+  top: 0;
+  left: calc(100% + 8px);
   width: 340px;
   background: var(--fundo-card);
   border-radius: 12px;

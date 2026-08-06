@@ -1,23 +1,63 @@
 .navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--borda-padrao);
-  font: var(--fonte-corpo);
+  gap: 24px;
+  width: var(--navbar-largura-colapsada);
+  padding: 20px 0;
+  border-right: 1px solid var(--borda-padrao);
   background: var(--fundo-card);
+  font: var(--fonte-corpo);
+  transition: width 0.18s ease;
 }
 
-.navbar__links {
+/* Expande com o mouse em cima OU quando o painel de notificações está
+   aberto (.navbar--expandido, aplicado via estado no Navbar.jsx). Isso
+   garante que o menu fique "preso" aberto enquanto o usuário interage
+   com o painel, mesmo que o mouse passe por cima do conteúdo da página
+   (fora da navbar) para chegar até ele. */
+.navbar:hover,
+.navbar--expandido {
+  width: var(--navbar-largura-expandida);
+}
+
+.navbar__secao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navbar__link,
+.navbar__botao {
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px calc((var(--navbar-largura-colapsada) - 22px) / 2);
+  border: none;
+  background: none;
+  color: var(--texto-principal);
+  font: var(--fonte-corpo);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  text-align: left;
+  /* Corta o texto do label quando colapsado. Fica aqui (no próprio item),
+     e não no .navbar, para não cortar o painel de notificações, que é
+     irmão do botão dentro do item-wrapper e propositalmente sai para
+     fora dos limites da navbar. */
+  overflow: hidden;
 }
 
-.navbar__link {
-  text-decoration: none;
-  font: var(--fonte-corpo);
-  color: var(--texto-principal);
+.navbar__link:hover,
+.navbar__botao:hover {
+  background: var(--fundo-hover);
 }
 
 .navbar__link--ativo {
@@ -25,100 +65,47 @@
   color: var(--cor-primaria);
 }
 
-.navbar__mensagens-wrapper {
+.navbar__icone {
+  flex-shrink: 0;
+}
+
+.navbar__icone-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
-.navbar__mensagens-link {
-  display: flex;
-  align-items: center;
+/* Rótulo some no modo colapsado — some com opacity (não display:none) pra
+   poder animar o fade junto da expansão da largura, em vez de "piscar". */
+.navbar__label {
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
-.navbar__right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.navbar:hover .navbar__label,
+.navbar--expandido .navbar__label {
+  opacity: 1;
+  transition-delay: 0.05s;
 }
 
-.navbar__sino-wrapper {
-  position: relative;
-}
-
-.navbar__sino-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 4px;
-  color: var(--texto-principal);
-}
-
-.navbar__sino-btn:hover {
-  color: var(--cor-primaria);
-}
-
-.navbar__sino-badge {
+.navbar__badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  background: var(--cor-perigo);
-  color: #fff;
-  border-radius: 50%;
-  font: var(--fonte-micro);
-  font-weight: bold;
+  top: -4px;
+  right: -6px;
   min-width: 16px;
   height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 3px;
-}
-
-.navbar__usuario {
-  font: var(--fonte-meta);
-  display: flex;
-  align-items: center;
-}
-
-.navbar__link-usuario {
-  text-decoration: none;
-  color: var(--texto-principal);
+  border-radius: 50%;
+  background: var(--cor-perigo);
+  color: #fff;
+  font: var(--fonte-micro);
   font-weight: bold;
 }
 
-.navbar__configuracoes-btn {
-  margin-left: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: var(--texto-secundario);
-}
-
-.navbar__configuracoes-btn:hover {
-  color: var(--cor-perigo);
-}
-
-.navbar__logout-btn {
-  margin-left: 8px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--texto-secundario);
-  font: var(--fonte-meta);
-}
-
-.navbar__logout-btn:hover {
-  color: var(--cor-perigo);
-}
-
-.navbar__entrar-link {
-  text-decoration: none;
-  color: var(--cor-primaria);
-  font-weight: bold;
+.navbar__item-wrapper {
+  position: relative;
 }

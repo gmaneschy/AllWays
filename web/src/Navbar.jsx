@@ -2,12 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas, getMensagensNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
-import { IconeNotificacao, IconeConfiguracoes, IconeMensagem } from './icons';
+import {
+  IconeInicio,
+  IconeExplorarNav,
+  IconeCriarItinerario,
+  IconeMensagem,
+  IconeNotificacao,
+  IconeConfiguracoes,
+  IconeUsuario,
+  IconeSair,
+  IconeEntrar,
+} from './icons';
 import './Navbar.css';
 
 const LINKS_PUBLICOS = [
-  { to: '/', label: 'Feed' },
-  { to: '/explorar', label: 'Explorar' },
+  { to: '/', label: 'Feed', Icone: IconeInicio },
+  { to: '/explorar', label: 'Explorar', Icone: IconeExplorarNav },
 ];
 
 function Navbar() {
@@ -66,46 +76,52 @@ function Navbar() {
   }
 
   return (
-    <nav className="navbar">
-      <div className="navbar__links">
-        {LINKS_PUBLICOS.map((link) => (
-          <Link key={link.to} to={link.to} className={classeLink(link.to)}>
-            {link.label}
+    <nav className={`navbar${painelAberto ? ' navbar--expandido' : ''}`}>
+      {/* ─── Topo: navegação principal ─── */}
+      <div className="navbar__secao">
+        {LINKS_PUBLICOS.map(({ to, label, Icone }) => (
+          <Link key={to} to={to} className={classeLink(to)}>
+            <Icone size={22} className="navbar__icone" />
+            <span className="navbar__label">{label}</span>
           </Link>
         ))}
+
         {logado && (
           <Link to="/criar" className={classeLink('/criar')}>
-            Criar Itinerário
+            <IconeCriarItinerario size={22} className="navbar__icone" />
+            <span className="navbar__label">Criar Itinerário</span>
           </Link>
         )}
-        {logado && (
-          <div className="navbar__mensagens-wrapper">
-            <Link to="/mensagens" className={`${classeLink('/mensagens')} navbar__mensagens-link`}>
-              <IconeMensagem size={20} strokeWidth={2} />
-            </Link>
-            {mensagensNaoLidas > 0 && (
-              <span className="navbar__sino-badge">
-                {mensagensNaoLidas > 9 ? '9+' : mensagensNaoLidas}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
 
-      <div className="navbar__right">
         {logado && (
-          <div ref={sinoRef} className="navbar__sino-wrapper">
-            <button
-              onClick={() => setPainelAberto((prev) => !prev)}
-              title="Notificações"
-              className="navbar__sino-btn"
-            >
-              <IconeNotificacao size={20} strokeWidth={2} />
-              {naoLidas > 0 && (
-                <span className="navbar__sino-badge">
-                  {naoLidas > 9 ? '9+' : naoLidas}
+          <Link to="/mensagens" className={classeLink('/mensagens')}>
+            <span className="navbar__icone-wrapper">
+              <IconeMensagem size={22} className="navbar__icone" />
+              {mensagensNaoLidas > 0 && (
+                <span className="navbar__badge">
+                  {mensagensNaoLidas > 9 ? '9+' : mensagensNaoLidas}
                 </span>
               )}
+            </span>
+            <span className="navbar__label">Mensagens</span>
+          </Link>
+        )}
+
+        {logado && (
+          <div ref={sinoRef} className="navbar__item-wrapper">
+            <button
+              onClick={() => setPainelAberto((prev) => !prev)}
+              className={`navbar__link navbar__botao${painelAberto ? ' navbar__link--ativo' : ''}`}
+            >
+              <span className="navbar__icone-wrapper">
+                <IconeNotificacao size={22} className="navbar__icone" />
+                {naoLidas > 0 && (
+                  <span className="navbar__badge">
+                    {naoLidas > 9 ? '9+' : naoLidas}
+                  </span>
+                )}
+              </span>
+              <span className="navbar__label">Notificações</span>
             </button>
 
             {painelAberto && (
@@ -116,22 +132,29 @@ function Navbar() {
             )}
           </div>
         )}
+      </div>
 
+      {/* ─── Rodapé: conta do usuário ─── */}
+      <div className="navbar__secao">
         {logado ? (
-          <span className="navbar__usuario">
-            <Link to={`/perfil/${usuario?.username}`} className="navbar__link-usuario">
-              {usuario?.username}
+          <>
+            <Link to={`/perfil/${usuario?.username}`} className={classeLink(`/perfil/${usuario?.username}`)}>
+              <IconeUsuario size={22} className="navbar__icone" />
+              <span className="navbar__label">{usuario?.username}</span>
             </Link>
-            <Link to="/configuracoes" className="navbar__configuracoes-btn">
-              <IconeConfiguracoes size={18} strokeWidth={2} />
+            <Link to="/configuracoes" className={classeLink('/configuracoes')}>
+              <IconeConfiguracoes size={22} className="navbar__icone" />
+              <span className="navbar__label">Configurações</span>
             </Link>
-            <button onClick={handleLogout} className="navbar__logout-btn">
-              Sair
+            <button onClick={handleLogout} className="navbar__link navbar__botao">
+              <IconeSair size={22} className="navbar__icone" />
+              <span className="navbar__label">Sair</span>
             </button>
-          </span>
+          </>
         ) : (
-          <Link to="/login" className="navbar__entrar-link">
-            Entrar
+          <Link to="/login" className={classeLink('/login')}>
+            <IconeEntrar size={22} className="navbar__icone" />
+            <span className="navbar__label">Entrar</span>
           </Link>
         )}
       </div>
