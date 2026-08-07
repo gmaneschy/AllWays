@@ -13,6 +13,7 @@ import {
   IconeAdicionar,
   IconeEnviado,
   IconeLidoDuplo,
+  IconeEnviar,
 } from './icons';
 import './PaginaMensagens.css';
 
@@ -527,8 +528,13 @@ function PaginaMensagens() {
           {previewImagem && (
             <div className="preview-midia">
               <img src={previewImagem.url} alt="preview" className="preview-midia__imagem" />
-              <button onClick={() => enviarImagem(previewImagem.file)} disabled={enviando} className="btn-primario">
-                {enviando ? 'Enviando...' : 'Enviar foto'}
+              <button
+                onClick={() => enviarImagem(previewImagem.file)}
+                disabled={enviando}
+                className="btn-primario"
+                title="Enviar foto"
+              >
+                <IconeEnviar size={18} />
               </button>
               <button onClick={() => setPreviewImagem(null)} className="preview-midia__fechar">
                 <IconeFechar size={20} />
@@ -540,8 +546,13 @@ function PaginaMensagens() {
           {previewVideo && (
             <div className="preview-midia">
               <video src={previewVideo.url} muted className="preview-midia__video" />
-              <button onClick={() => enviarVideo(previewVideo.file)} disabled={enviando} className="btn-primario">
-                {enviando ? 'Enviando...' : 'Enviar vídeo'}
+              <button
+                onClick={() => enviarVideo(previewVideo.file)}
+                disabled={enviando}
+                className="btn-primario"
+                title="Enviar vídeo"
+              >
+                <IconeEnviar size={18} />
               </button>
               <button onClick={() => setPreviewVideo(null)} className="preview-midia__fechar">
                 <IconeFechar size={20} />
@@ -576,8 +587,13 @@ function PaginaMensagens() {
               className="barra-input__texto"
             />
 
-            <button onClick={enviarTexto} disabled={enviando || !texto.trim() || gravando} className="barra-input__enviar">
-              Enviar
+            <button
+              onClick={enviarTexto}
+              disabled={enviando || !texto.trim() || gravando}
+              className="barra-input__enviar"
+              title="Enviar mensagem"
+            >
+              <IconeEnviar size={18} />
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './Navbar';
+import ScrollToTop from './ScrollToTop';
 import './App.css';
 import Feed from './Feed';
 import CriarItinerario from './CriarItinerario';
@@ -18,6 +19,7 @@ import PaginaConfiguracoes from './PaginaConfiguracoes';
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Navbar />
       <main className="app__conteudo">
       <Routes>

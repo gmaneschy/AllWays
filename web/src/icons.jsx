@@ -64,6 +64,7 @@ import {
   SquarePlus,
   LogOut,
   LogIn,
+  Send,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -120,6 +121,7 @@ export const IconeSetaDireita = criarIcone(ChevronRight);
 export const IconeDot = criarIcone(Circle);
 export const IconeCarrosselPin = criarIcone(Pin);
 export const IconeChegada = criarIcone(Flag);
+export const IconeEnviar = criarIcone(Send);
 
 // ─── Navegação (sidebar) ──────────────────────────────────────────────
 export const IconeInicio = criarIcone(Home);

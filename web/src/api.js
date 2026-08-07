@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { limparCacheFeed } from './feedCache';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
 
@@ -66,6 +67,7 @@ export function logout() {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
+  limparCacheFeed(); // evita que o feed do usuário anterior apareça pro próximo login
 }
 
 export function getUsuarioLogado() {

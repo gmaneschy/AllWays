@@ -12,6 +12,7 @@ import {
   IconeSucesso,
   IconeAdicionar,
   IconeFechar,
+  IconeEnviar,
 } from './icons';
 import './PaginaItinerario.css';
 
@@ -425,11 +426,12 @@ function PaginaItinerario() {
                         onClick={() => postarResposta(c.id)}
                         disabled={!textoResposta[c.id]?.trim()}
                         className="btn-primario"
+                        title="Enviar resposta"
                       >
-                        Enviar
+                        <IconeEnviar size={16} />
                       </button>
-                      <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar">
-                        Cancelar
+                      <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar" title="Cancelar">
+                        <IconeFechar size={16} />
                       </button>
                     </div>
                   )}

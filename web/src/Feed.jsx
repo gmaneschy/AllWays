@@ -1,16 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import api, { curtir } from './api';
 import FeedCard from './FeedCard';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import { lerCacheFeed, salvarCacheFeed } from './feedCache';
 import './Feed.css';
 
 const POR_PAGINA = 10;
 
 function Feed() {
-  const [itinerarios, setItinerarios] = useState([]);
-  const [carregando, setCarregando] = useState(true);
+  // Lido uma única vez, na montagem — useState com inicializador "lazy"
+  // (função) garante que lerCacheFeed() só roda na primeira renderização,
+  // não em toda re-render.
+  const [cacheInicial] = useState(() => lerCacheFeed());
+
+  const [itinerarios, setItinerarios] = useState(cacheInicial?.itinerarios ?? []);
+  const [carregando, setCarregando] = useState(!cacheInicial);
   const [carregandoMais, setCarregandoMais] = useState(false);
-  const [temMais, setTemMais] = useState(true);
+  const [temMais, setTemMais] = useState(cacheInicial?.temMais ?? true);
   const [erro, setErro] = useState(null);
   const [compartilhando, setCompartilhando] = useState(null); // itinerário sendo compartilhado
 
@@ -18,12 +24,28 @@ function Feed() {
   // o callback do IntersectionObserver é registrado uma vez por efeito e
   // fecha sobre valores antigos de state se a gente depender só de state
   // aqui — ref sempre lê o valor atual no momento da chamada.
-  const paginaRef = useRef(1);
+  const paginaRef = useRef(cacheInicial?.pagina ?? 1);
   const carregandoMaisRef = useRef(false);
   const sentinelaRef = useRef(null);
 
-  // Carga do primeiro lote
+  // Refs "espelho" do state mais atual, mantidos só pra salvar o cache no
+  // unmount. Isso é o que resolve o bug da versão anterior: um cleanup de
+  // useEffect com deps [] fecha sobre os valores da PRIMEIRA renderização
+  // (itinerarios geralmente [] antes do fetch terminar). Ao salvar o cache
+  // com esse valor obsoleto, voltar pro feed hidratava com lista vazia
+  // ("feed não carrega") ou com só o primeiro lote, perdendo tudo que foi
+  // carregado depois via scroll infinito ("posts sumiram"). Lendo de refs
+  // em vez de state, o cleanup sempre enxerga o valor mais recente.
+  const itinerariosRef = useRef(itinerarios);
+  const temMaisRef = useRef(temMais);
+  useEffect(() => { itinerariosRef.current = itinerarios; }, [itinerarios]);
+  useEffect(() => { temMaisRef.current = temMais; }, [temMais]);
+
+  // Carga do primeiro lote — só roda se não veio nada do cache. Se veio,
+  // o estado já está hidratado e não faz sentido buscar de novo (e
+  // sobrescrever o que o usuário já tinha rolado).
   useEffect(() => {
+    if (cacheInicial) return undefined;
     let cancelado = false;
 
     async function buscarPrimeiroLote() {
@@ -46,6 +68,36 @@ function Feed() {
 
     buscarPrimeiroLote();
     return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Restaura a posição de rolagem quando o feed foi hidratado do cache.
+  // useLayoutEffect (em vez de useEffect) roda antes do navegador pintar
+  // a tela, evitando o "pulo" visual de aparecer no topo e só depois ir
+  // pra posição salva.
+  useLayoutEffect(() => {
+    if (cacheInicial?.scrollY) {
+      window.scrollTo(0, cacheInicial.scrollY);
+    }
+    // roda só uma vez, na montagem
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salva o cache quando o componente desmonta (ex: usuário clicou num
+  // post e navegou pra PaginaItinerario). Só salva se há pelo menos um
+  // item carregado — cache vazio não ajuda em nada e era exatamente o
+  // que fazia o feed "não carregar" ao voltar.
+  useEffect(() => {
+    return () => {
+      if (itinerariosRef.current.length > 0) {
+        salvarCacheFeed({
+          itinerarios: itinerariosRef.current,
+          pagina: paginaRef.current,
+          temMais: temMaisRef.current,
+          scrollY: window.scrollY,
+        });
+      }
+    };
   }, []);
 
   const carregarProximoLote = useCallback(async () => {

@@ -10,6 +10,7 @@ import {
   IconeLike,
   IconeComentario,
   IconeFechar,
+  IconeEnviar,
 } from './icons';
 import './FeedCard.css';
 
@@ -41,6 +42,15 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
   const [carregandoComentarios, setCarregandoComentarios] = useState(false);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  // Qual comentário está recebendo uma resposta agora: { raizId, usuarioId,
+  // username } | null. raizId é sempre o comentário DE PRIMEIRO NÍVEL (é
+  // o que vira o `parent` no POST — threading de 1 nível só, ver Comment
+  // model), mesmo quando o clique em "Responder" foi numa resposta; nesse
+  // caso usuarioId/username são os da resposta (quem está sendo
+  // mencionado), não os do comentário raiz.
+  const [respondendoA, setRespondendoA] = useState(null);
+  const [textoResposta, setTextoResposta] = useState('');
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
 
   async function alternarComentarios() {
     const abrindo = !mostrarComentarios;
@@ -75,34 +85,96 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
   async function apagarComentario(comentarioId) {
     try {
       await api.delete(`/social/itinerarios/${it.id}/comentarios/?comentario_id=${comentarioId}`);
-      setComentarios((prev) => (prev || []).filter((c) => c.id !== comentarioId));
+      setComentarios((prev) => (prev || [])
+        .filter((c) => c.id !== comentarioId) // remove se o apagado for um comentário raiz
+        .map((c) => (c.respostas?.some((r) => r.id === comentarioId)
+          ? { ...c, respostas: c.respostas.filter((r) => r.id !== comentarioId) }
+          : c)));
     } catch (_) {}
   }
 
+  // Acha um comentário (raiz OU resposta) pelo id — usado por curtirComentario,
+  // que precisa funcionar igual nos dois níveis.
+  function encontrarComentario(comentarioId) {
+    for (const c of comentarios || []) {
+      if (c.id === comentarioId) return c;
+      const resposta = c.respostas?.find((r) => r.id === comentarioId);
+      if (resposta) return resposta;
+    }
+    return null;
+  }
+
+  // Aplica `atualizar` no comentário com esse id, seja ele raiz ou resposta
+  // aninhada — centraliza a navegação em 2 níveis pra curtirComentario não
+  // precisar duplicar essa lógica pros dois casos.
+  function atualizarComentario(comentarioId, atualizar) {
+    setComentarios((prev) => (prev || []).map((c) => {
+      if (c.id === comentarioId) return atualizar(c);
+      if (c.respostas?.some((r) => r.id === comentarioId)) {
+        return { ...c, respostas: c.respostas.map((r) => (r.id === comentarioId ? atualizar(r) : r)) };
+      }
+      return c;
+    }));
+  }
+
   async function curtirComentario(comentarioId) {
-    const alvo = comentarios?.find((c) => c.id === comentarioId);
+    const alvo = encontrarComentario(comentarioId);
     if (!alvo) return;
     const otimista = {
       curtido: !alvo.curtido,
       total_curtidas: alvo.total_curtidas + (alvo.curtido ? -1 : 1),
     };
-    setComentarios((prev) => prev.map((c) => (c.id === comentarioId ? { ...c, ...otimista } : c)));
+    atualizarComentario(comentarioId, (c) => ({ ...c, ...otimista }));
     try {
       const resultado = await curtir('comentario_post', comentarioId);
-      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
-        ? { ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
-        : c)));
+      atualizarComentario(comentarioId, (c) => (
+        { ...c, curtido: resultado.curtido, total_curtidas: resultado.total_curtidas }
+      ));
     } catch (_) {
-      setComentarios((prev) => prev.map((c) => (c.id === comentarioId
-        ? { ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
-        : c)));
+      atualizarComentario(comentarioId, (c) => (
+        { ...c, curtido: alvo.curtido, total_curtidas: alvo.total_curtidas }
+      ));
     }
   }
 
-  // Contagem exibida no rodapé: usa o que já foi carregado; se ainda não
-  // abriu o dropdown, cai pro campo opcional `total_comentarios` do feed
-  // (se o backend mandar) — senão fica só "Ver comentários", sem número.
-  const contagemComentarios = comentarios !== null ? comentarios.length : it.total_comentarios;
+  function iniciarResposta(raizId, usuarioId, username) {
+    setRespondendoA({ raizId, usuarioId, username });
+    setTextoResposta('');
+  }
+
+  function cancelarResposta() {
+    setRespondendoA(null);
+    setTextoResposta('');
+  }
+
+  async function postarResposta() {
+    if (!textoResposta.trim() || enviandoResposta || !respondendoA) return;
+    setEnviandoResposta(true);
+    try {
+      const res = await api.post(`/social/itinerarios/${it.id}/comentarios/`, {
+        texto: textoResposta,
+        parent: respondendoA.raizId,
+        responder_para: respondendoA.usuarioId,
+      });
+      setComentarios((prev) => (prev || []).map((c) => (c.id === respondendoA.raizId
+        ? { ...c, respostas: [...(c.respostas || []), res.data] }
+        : c)));
+      setRespondendoA(null);
+      setTextoResposta('');
+    } catch (_) {
+      // silencioso — mesmo padrão usado no restante do app pra postagem de comentário
+    } finally {
+      setEnviandoResposta(false);
+    }
+  }
+
+  // Contagem exibida no rodapé: usa o que já foi carregado (raiz + respostas
+  // de cada uma); se ainda não abriu o dropdown, cai pro campo opcional
+  // `total_comentarios` do feed (se o backend mandar) — senão fica só "Ver
+  // comentários", sem número.
+  const contagemComentarios = comentarios !== null
+    ? comentarios.reduce((soma, c) => soma + 1 + (c.respostas?.length || 0), 0)
+    : it.total_comentarios;
 
   return (
     <div className="feedcard">
@@ -178,34 +250,123 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                 <p className="feedcard__comentarios-estado">Nenhum comentário ainda. Seja o primeiro!</p>
               )}
               {comentarios?.map((c) => (
-                <div key={c.id} className="feedcard__comentario-linha">
-                  {c.autor_foto
-                    ? <img src={c.autor_foto} alt="" className="feedcard__comentario-avatar" />
-                    : <div className="feedcard__comentario-avatar feedcard__comentario-avatar--vazio">
-                        {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
+                <div key={c.id} className="feedcard__comentario-thread">
+                  <div className="feedcard__comentario-linha">
+                    {c.autor_foto
+                      ? <img src={c.autor_foto} alt="" className="feedcard__comentario-avatar" />
+                      : <div className="feedcard__comentario-avatar feedcard__comentario-avatar--vazio">
+                          {c.autor_nome?.[0]?.toUpperCase() ?? '?'}
+                        </div>
+                    }
+                    <div className="feedcard__comentario-corpo">
+                      <div className="feedcard__comentario-topo">
+                        <Link to={`/perfil/${c.autor_nome}`} className="feedcard__comentario-autor">
+                          {c.autor_nome}
+                        </Link>
+                        <BadgeDestaque badge={c.autor_badge_destaque} size={13} />
+                        {usuarioLogado?.username === c.autor_nome && (
+                          <button onClick={() => apagarComentario(c.id)} className="feedcard__comentario-apagar">
+                            <IconeFechar size={13} />
+                          </button>
+                        )}
                       </div>
-                  }
-                  <div className="feedcard__comentario-corpo">
-                    <div className="feedcard__comentario-topo">
-                      <Link to={`/perfil/${c.autor_nome}`} className="feedcard__comentario-autor">
-                        {c.autor_nome}
-                      </Link>
-                      <BadgeDestaque badge={c.autor_badge_destaque} size={13} />
-                      {usuarioLogado?.username === c.autor_nome && (
-                        <button onClick={() => apagarComentario(c.id)} className="feedcard__comentario-apagar">
-                          <IconeFechar size={13} />
+                      <p className="feedcard__comentario-texto">{c.texto}</p>
+                      <div className="feedcard__comentario-acoes">
+                        <button
+                          onClick={() => curtirComentario(c.id)}
+                          className={`feedcard__comentario-curtir${c.curtido ? ' feedcard__comentario-curtir--ativo' : ''}`}
+                        >
+                          <IconeLike size={13} fill={c.curtido ? 'currentColor' : 'none'} />
+                          {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
                         </button>
-                      )}
+                        {usuarioLogado && (
+                          <button
+                            onClick={() => iniciarResposta(c.id, c.autor, c.autor_nome)}
+                            className="feedcard__comentario-responder"
+                          >
+                            Responder
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="feedcard__comentario-texto">{c.texto}</p>
-                    <button
-                      onClick={() => curtirComentario(c.id)}
-                      className={`feedcard__comentario-curtir${c.curtido ? ' feedcard__comentario-curtir--ativo' : ''}`}
-                    >
-                      <IconeLike size={13} fill={c.curtido ? 'currentColor' : 'none'} />
-                      {c.total_curtidas > 0 && <span>{c.total_curtidas}</span>}
-                    </button>
                   </div>
+
+                  {c.respostas?.length > 0 && (
+                    <div className="feedcard__respostas-lista">
+                      {c.respostas.map((r) => (
+                        <div key={r.id} className="feedcard__comentario-linha feedcard__comentario-linha--resposta">
+                          {r.autor_foto
+                            ? <img src={r.autor_foto} alt="" className="feedcard__comentario-avatar" />
+                            : <div className="feedcard__comentario-avatar feedcard__comentario-avatar--vazio">
+                                {r.autor_nome?.[0]?.toUpperCase() ?? '?'}
+                              </div>
+                          }
+                          <div className="feedcard__comentario-corpo">
+                            <div className="feedcard__comentario-topo">
+                              <Link to={`/perfil/${r.autor_nome}`} className="feedcard__comentario-autor">
+                                {r.autor_nome}
+                              </Link>
+                              <BadgeDestaque badge={r.autor_badge_destaque} size={13} />
+                              {usuarioLogado?.username === r.autor_nome && (
+                                <button onClick={() => apagarComentario(r.id)} className="feedcard__comentario-apagar">
+                                  <IconeFechar size={13} />
+                                </button>
+                              )}
+                            </div>
+                            <p className="feedcard__comentario-texto">
+                              {r.responder_para_username && (
+                                <Link to={`/perfil/${r.responder_para_username}`} className="feedcard__comentario-mencao">
+                                  @{r.responder_para_username}{' '}
+                                </Link>
+                              )}
+                              {r.texto}
+                            </p>
+                            <div className="feedcard__comentario-acoes">
+                              <button
+                                onClick={() => curtirComentario(r.id)}
+                                className={`feedcard__comentario-curtir${r.curtido ? ' feedcard__comentario-curtir--ativo' : ''}`}
+                              >
+                                <IconeLike size={13} fill={r.curtido ? 'currentColor' : 'none'} />
+                                {r.total_curtidas > 0 && <span>{r.total_curtidas}</span>}
+                              </button>
+                              {usuarioLogado && (
+                                <button
+                                  onClick={() => iniciarResposta(c.id, r.autor, r.autor_nome)}
+                                  className="feedcard__comentario-responder"
+                                >
+                                  Responder
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {respondendoA?.raizId === c.id && (
+                    <div className="feedcard__resposta-compor">
+                      <input
+                        autoFocus
+                        value={textoResposta}
+                        onChange={(e) => setTextoResposta(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta())}
+                        placeholder={`Responder a @${respondendoA.username}...`}
+                        className="feedcard__novo-comentario-input"
+                      />
+                      <button
+                        onClick={postarResposta}
+                        disabled={!textoResposta.trim() || enviandoResposta}
+                        className="feedcard__novo-comentario-btn"
+                        title="Publicar resposta"
+                      >
+                        <IconeEnviar size={18} />
+                      </button>
+                      <button onClick={cancelarResposta} className="feedcard__resposta-cancelar" title="Cancelar">
+                        <IconeFechar size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

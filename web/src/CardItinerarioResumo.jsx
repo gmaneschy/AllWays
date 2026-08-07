@@ -7,8 +7,8 @@ import './CardItinerarioResumo.css';
  * Hashtag e Perfil. De propósito bem enxuto: sem autor, sem curtir, sem
  * data, sem foto de perfil — só título, contagem de lugares, tipo e a
  * primeira mídia. A versão "rica" com esse outro tanto de informação é o
- * FeedCard, usado só no Feed principal — esse aqui é deliberadamente mais
- * simples.
+ * FeedCard, usado só no Feed principal e no PaginaItinerario
+ * — esse aqui é deliberadamente mais simples.
  *
  * Espera `it.primeira_midia` no formato { tipo: 'foto'|'video', url,
  * thumbnail_url, status } (ou null se o itinerário não tem nenhuma mídia

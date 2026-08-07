@@ -6,8 +6,18 @@ places:
 itineraries:
 social:
 
+ Estou com problema em relação ao funcionamento da página PaginaExplorar.
+ Para esse, estou enviando o views e services do app feed do backend, e o views de social.
+ A página explorar é uma página de recomendação "infinita" de cards, mas esses cards são o CardItinerarioResumo, que são mais simples que o FeedCard (CarrosselItinerario).
+ Porém, ela (os cards da PaginaExplorar) não carrega em "batch", scrollando para baixo, como o Feed.jsx, mas apenas exibe 40 cards fixos.
+ É preciso corrigir isso e conferir no fluxo que o algoritmo de recomendação esteja funcionando.
+
 Checklist:
 frontend:
+    Em logout, navbar não deve aparecer na tela de login
+    PaginaItinerario.jsx:
+        - passar botões de salvar e usar como base para drop de 3 pontos "Mais opções" no canto superior direito do card.
+
     CriarItinerario.jsx:
         - obrigatório para a publicação (para o rascunho, não é obrigatório):
             - pelo menos 1 imagem por ponto
@@ -15,8 +25,6 @@ frontend:
             - data do itinerário (data de início e término se multi-day trip)
 
     Feed.jsx:
-        - No feed, abrir os comentários desce um drop da janela de comentários. Até aí tudo certo. Não há, porém, possibilidade de responder um comentário, nem respostas de comentários são exibidos. É preciso corrigir isso.
-        - Voltar página no browser não volta para a posição da página que estava antes. No caso do Feed.jsx, onde é possível scrollar bastante, a página volta do início.
 
 Backend e Frontend:
     Criar opções para excluir itinerários publicados, salvos e rascunhos
