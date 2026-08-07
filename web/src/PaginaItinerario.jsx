@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { MoreVertical } from 'lucide-react';
 import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
@@ -85,7 +86,21 @@ function PaginaItinerario() {
   const [textoResposta, setTextoResposta] = useState({}); // { [raizId]: rascunho }
   const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
   const [compartilhando, setCompartilhando] = useState(false);
+  const [maisOpcoesAberto, setMaisOpcoesAberto] = useState(false);
   const painelComentariosRef = useRef(null);
+  const maisOpcoesRef = useRef(null);
+
+  // Fecha o dropdown "Mais opções" ao clicar fora dele — mesmo padrão do
+  // painelAberto na Navbar.
+  useEffect(() => {
+    function handleClickFora(e) {
+      if (maisOpcoesRef.current && !maisOpcoesRef.current.contains(e.target)) {
+        setMaisOpcoesAberto(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickFora);
+    return () => document.removeEventListener('mousedown', handleClickFora);
+  }, []);
 
   useEffect(() => {
     async function buscar() {
@@ -266,9 +281,44 @@ function PaginaItinerario() {
         <div className="pagina-itinerario__post">
           <div className="pagina-itinerario__post-header">
             <h1 className="pagina-itinerario__post-titulo">{it.titulo}</h1>
-            <span className="pagina-itinerario__post-tipo">
-              {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
-            </span>
+            <div className="pagina-itinerario__post-header-direita">
+              <span className="pagina-itinerario__post-tipo">
+                {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
+              </span>
+
+              {usuarioLogado && (
+                <div className="pagina-itinerario__mais-opcoes" ref={maisOpcoesRef}>
+                  <button
+                    onClick={() => setMaisOpcoesAberto((prev) => !prev)}
+                    className={`pagina-itinerario__mais-opcoes-botao${maisOpcoesAberto ? ' pagina-itinerario__mais-opcoes-botao--ativo' : ''}`}
+                    title="Mais opções"
+                  >
+                    <MoreVertical size={20} />
+                  </button>
+
+                  {maisOpcoesAberto && (
+                    <div className="pagina-itinerario__mais-opcoes-menu">
+                      {!ehAutor && (
+                        <button
+                          onClick={() => { setMaisOpcoesAberto(false); alternarSalvar(); }}
+                          disabled={salvando}
+                          className={`pagina-itinerario__mais-opcoes-item${it.salvo_por_mim ? ' pagina-itinerario__mais-opcoes-item--ativo' : ''}`}
+                        >
+                          {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
+                          {it.salvo_por_mim ? 'Salvo' : 'Salvar itinerário'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setMaisOpcoesAberto(false); usarComoBase(); }}
+                        className="pagina-itinerario__mais-opcoes-item"
+                      >
+                        Usar como base
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="pagina-itinerario__post-autor">
@@ -314,22 +364,6 @@ function PaginaItinerario() {
             {it.status === 'publicado' && (
               <button onClick={() => setCompartilhando(true)} className="pagina-itinerario__post-acao" title="Compartilhar">
                 <IconeCompartilhar size={22} />
-              </button>
-            )}
-
-            {usuarioLogado && !ehAutor && (
-              <button
-                onClick={alternarSalvar}
-                disabled={salvando}
-                className={`btn-outline pagina-itinerario__post-salvar${it.salvo_por_mim ? ' btn-outline--ativo' : ''}`}
-              >
-                {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
-                {it.salvo_por_mim ? 'Salvo' : 'Salvar'}
-              </button>
-            )}
-            {usuarioLogado && (
-              <button onClick={usarComoBase} className="btn-primario pagina-itinerario__post-usar-base">
-                Usar como base
               </button>
             )}
           </div>

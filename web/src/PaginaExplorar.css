@@ -188,3 +188,14 @@
 .pagina-explorar__estado {
   color: var(--texto-secundario);
 }
+
+/* Sentinela do scroll infinito: sem conteúdo visual, só existe pro
+   IntersectionObserver ter algo pra vigiar no fim do grid. */
+.pagina-explorar__sentinela {
+  height: 1px;
+}
+
+.pagina-explorar__estado--carregando-mais {
+  text-align: center;
+  padding: 16px 0;
+}

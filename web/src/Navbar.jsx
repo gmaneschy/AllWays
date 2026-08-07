@@ -75,6 +75,13 @@ function Navbar() {
     return `navbar__link${location.pathname === path ? ' navbar__link--ativo' : ''}`;
   }
 
+  // A tela de login é a única rota pública do app (ver RotaPublica) — não
+  // faz sentido mostrar a navbar ali, nem a versão reduzida com só o link
+  // "Entrar". Isso cobre tanto acessar /login direto quanto o logout, que
+  // redireciona pra /login e, sem esse guard, deixava a navbar reduzida
+  // visível na tela.
+  if (location.pathname === '/login') return null;
+
   return (
     <nav className={`navbar${painelAberto ? ' navbar--expandido' : ''}`}>
       {/* ─── Topo: navegação principal ─── */}

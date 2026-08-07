@@ -16,6 +16,7 @@ from apps.places.models import Place
 from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
+from apps.feed import services as feed_services
 from .models import Follow, Hashtag, Message, Comment, Curtida, Notification, SolicitacaoSeguir
 from .services import resumo_curtida
 from .serializers import (
@@ -651,46 +652,78 @@ class BuscaView(APIView):
 
 # ─── Explorar ─────────────────────────────────────────────────────────────────
 
+# Cap defensivo pro tamanho de página pedido pelo cliente — mesmo helper que
+# apps/feed/views.py usa. Duplicado aqui (em vez de importado de lá) porque
+# apps/feed/views.py importa apps.social.views (ExplorarView) — importar na
+# direção contrária criaria um import circular entre os dois módulos de views.
+EXPLORAR_POR_PAGINA_PADRAO = 10
+EXPLORAR_POR_PAGINA_MAXIMO = 50
+
+
+def _parse_paginacao_explorar(request):
+    try:
+        pagina = int(request.query_params.get('pagina', 1))
+    except (TypeError, ValueError):
+        pagina = 1
+    try:
+        por_pagina = int(request.query_params.get('por_pagina', EXPLORAR_POR_PAGINA_PADRAO))
+    except (TypeError, ValueError):
+        por_pagina = EXPLORAR_POR_PAGINA_PADRAO
+
+    pagina = max(pagina, 1)
+    por_pagina = min(max(por_pagina, 1), EXPLORAR_POR_PAGINA_MAXIMO)
+    return pagina, por_pagina
+
+
 class ExplorarView(APIView):
-    """GET /api/social/explorar/ — feed cronológico."""
+    """GET /api/social/explorar/?pagina=1&por_pagina=10
+    Feed de descoberta paginado (scroll infinito), usado pela PaginaExplorar.
+
+    Antes esta view retornava sempre os mesmos 40 itinerários mais recentes,
+    sem paginação e sem passar pelo motor de recomendação — por isso a
+    página travava em 40 cards e o algoritmo de apps/feed/services.py nunca
+    era consultado aqui. Agora reaproveita o mesmo motor do Feed principal:
+    usuário autenticado recebe o feed personalizado (gerar_feed_usuario),
+    anônimo recebe o cronológico paginado (gerar_feed_principal) — os dois já
+    vêm com o prefetch certo (pontos__local, pontos__fotos, pontos__videos).
+
+    Serialização enxuta de propósito: os cards aqui são o CardItinerarioResumo
+    (não o FeedCard), que não exibe autor, badges nem curtidas — então esses
+    campos nem são calculados, evitando as queries extras que a versão antiga
+    fazia por item (badges_ids/badges_itinerario, it.pontos.count())."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        itinerarios = (
-            Itinerario.objects
-            .filter(status='publicado')
-            .select_related('autor')
-            .prefetch_related('pontos__local', 'pontos__fotos', 'pontos__videos')
-            .order_by('-publicado_em')[:40]
-        )
+        pagina, por_pagina = _parse_paginacao_explorar(request)
+
+        if request.user.is_authenticated:
+            itinerarios, tem_mais = feed_services.gerar_feed_usuario(
+                request.user, pagina=pagina, por_pagina=por_pagina,
+            )
+        else:
+            itinerarios, tem_mais = feed_services.gerar_feed_principal(
+                pagina=pagina, por_pagina=por_pagina,
+            )
 
         resultado = []
         for it in itinerarios:
-            primeiro_ponto = it.pontos.first()
-            badges_ids = it.badges.values_list('badge_id', flat=True)
-            badges_itinerario = BadgeItinerario.objects.filter(id__in=badges_ids)
-
             resultado.append({
                 'id': it.id,
                 'titulo': it.titulo,
                 'tipo': it.tipo,
-                'publicado_em': it.publicado_em,
-                'autor': {
-                    'username': it.autor.username if it.autor else None,
-                    'foto_perfil': request.build_absolute_uri(it.autor.foto_perfil.url)
-                                   if it.autor and it.autor.foto_perfil else None,
-                    'badge_destaque': serializar_badge_destaque(it.autor, context={'request': request}),
-                },
-                'badges': BadgeItinerarioSerializer(badges_itinerario, many=True, context={'request': request}).data,
-                'lugar_principal': {
-                    'nome': primeiro_ponto.local.nome if primeiro_ponto else None,
-                } if primeiro_ponto else None,
-                'total_pontos': it.pontos.count(),
+                # usa o prefetch_related('pontos__local', ...) já feito pelo
+                # services — len() lê da cache do prefetch, .count() dispararia
+                # uma query nova por item.
+                'total_pontos': len(it.pontos.all()),
                 'primeira_midia': _primeira_midia_itinerario(it, request),
-                **resumo_curtida(it, request.user),
             })
 
-        return Response(resultado)
+        return Response({
+            'resultados': resultado,
+            'pagina': pagina,
+            'tem_mais': tem_mais,
+        })
+
 
 # ─── Notificações ────────────────────────────────────────────────────────────
 # Notification nunca é criada via request direto — só via signal + Celery task

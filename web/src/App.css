@@ -8,6 +8,13 @@
   min-height: 100vh;
 }
 
+/* Aplicada pelo AppLayout (App.jsx) na tela de login, onde a Navbar
+   retorna null (ver Navbar.jsx) — sem isso sobraria o respiro do
+   margin-left acima com nada ocupando aquele espaço. */
+.app__conteudo--sem-navbar {
+  margin-left: 0;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CardItinerarioResumo from './CardItinerarioResumo';
 import api from './api';
+import { lerCacheExplorar, salvarCacheExplorar } from './explorarCache';
 import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag } from './icons';
 import './PaginaExplorar.css';
+
+const POR_PAGINA = 10;
 
 function useDebounce(valor, delay) {
   const [debouncado, setDebouncado] = useState(valor);
@@ -67,10 +70,33 @@ function PaginaExplorar() {
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState(null);
   const [buscando, setBuscando] = useState(false);
-  const [feed, setFeed] = useState([]);
-  const [carregandoFeed, setCarregandoFeed] = useState(true);
-  const queryDebounced = useDebounce(query, 300);
+
+  // Lido uma única vez, na montagem — useState com inicializador "lazy"
+  // (função) garante que lerCacheExplorar() só roda na primeira
+  // renderização, não em toda re-render. Mesmo padrão do Feed.jsx.
+  const [cacheInicial] = useState(() => lerCacheExplorar());
+
+  const [feed, setFeed] = useState(cacheInicial?.feed ?? []);
+  const [carregandoFeed, setCarregandoFeed] = useState(!cacheInicial);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [temMais, setTemMais] = useState(cacheInicial?.temMais ?? true);
   const inputRef = useRef(null);
+
+  // Mesmo esquema de refs do Feed.jsx: página e guarda de disparo duplo em
+  // ref (não state), pra o callback do IntersectionObserver sempre ler o
+  // valor mais atual em vez de fechar sobre uma renderização antiga.
+  const paginaRef = useRef(cacheInicial?.pagina ?? 1);
+  const carregandoMaisRef = useRef(false);
+  const sentinelaRef = useRef(null);
+
+  // Refs "espelho" do state mais atual, mantidos só pra salvar o cache no
+  // unmount — mesmo motivo do Feed.jsx: um cleanup com deps [] fecha sobre
+  // os valores da PRIMEIRA renderização, então ler de state direto no
+  // cleanup salvaria sempre o feed vazio de antes do fetch terminar.
+  const feedRef = useRef(feed);
+  const temMaisRef = useRef(temMais);
+  useEffect(() => { feedRef.current = feed; }, [feed]);
+  useEffect(() => { temMaisRef.current = temMais; }, [temMais]);
 
   function handleEnter(e) {
     if (e.key !== 'Enter') return;
@@ -92,23 +118,109 @@ function PaginaExplorar() {
     // Caso contrário: mantém dropdown aberto com os resultados já exibidos
   }
 
-  // Carrega feed ao entrar na página
+  // Carrega o primeiro lote ao entrar na página — só roda se não veio nada
+  // do cache. Se veio, o estado já está hidratado e não faz sentido buscar
+  // de novo (e sobrescrever o que o usuário já tinha rolado).
   useEffect(() => {
+    if (cacheInicial) return undefined;
+    let cancelado = false;
+
     async function buscarFeed() {
       try {
-        const res = await api.get('/social/explorar/');
-        setFeed(res.data);
-      } catch (_) {}
-      finally { setCarregandoFeed(false); }
+        const res = await api.get('/social/explorar/', {
+          params: { pagina: 1, por_pagina: POR_PAGINA },
+        });
+        if (cancelado) return;
+        setFeed(res.data.resultados);
+        setTemMais(res.data.tem_mais);
+        paginaRef.current = 1;
+      } catch (_) {
+        if (!cancelado) setTemMais(false);
+      } finally {
+        if (!cancelado) setCarregandoFeed(false);
+      }
     }
     buscarFeed();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Restaura a posição de rolagem quando o grid foi hidratado do cache.
+  // useLayoutEffect (em vez de useEffect) roda antes do navegador pintar a
+  // tela, evitando o "pulo" visual de aparecer no topo e só depois ir pra
+  // posição salva.
+  useLayoutEffect(() => {
+    if (cacheInicial?.scrollY) {
+      window.scrollTo(0, cacheInicial.scrollY);
+    }
+    // roda só uma vez, na montagem
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salva o cache quando o componente desmonta (ex: usuário clicou num
+  // card e navegou pra PaginaItinerario ou PlacePage). Só salva se há
+  // pelo menos um item carregado — cache vazio não ajuda em nada.
+  useEffect(() => {
+    return () => {
+      if (feedRef.current.length > 0) {
+        salvarCacheExplorar({
+          feed: feedRef.current,
+          pagina: paginaRef.current,
+          temMais: temMaisRef.current,
+          scrollY: window.scrollY,
+        });
+      }
+    };
+  }, []);
+
+  // Próximos lotes — mesmo padrão do carregarProximoLote do Feed.jsx.
+  const carregarProximoLote = useCallback(async () => {
+    if (carregandoMaisRef.current || !temMais) return;
+    carregandoMaisRef.current = true;
+    setCarregandoMais(true);
+
+    try {
+      const proximaPagina = paginaRef.current + 1;
+      const res = await api.get('/social/explorar/', {
+        params: { pagina: proximaPagina, por_pagina: POR_PAGINA },
+      });
+      setFeed((prev) => [...prev, ...res.data.resultados]);
+      setTemMais(res.data.tem_mais);
+      paginaRef.current = proximaPagina;
+    } catch (_) {
+      // Silencioso — a sentinela continua visível e uma nova rolagem até
+      // ela tenta carregar o mesmo lote de novo.
+    } finally {
+      carregandoMaisRef.current = false;
+      setCarregandoMais(false);
+    }
+  }, [temMais]);
+
+  // Observa a sentinela no fim do grid: quando ela entra na viewport,
+  // busca o próximo lote. Só ativa fora do modo de busca (query vazia),
+  // já que a sentinela só existe no grid do feed, não no dropdown.
+  useEffect(() => {
+    if (query || carregandoFeed || !temMais) return undefined;
+    const alvo = sentinelaRef.current;
+    if (!alvo) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) carregarProximoLote();
+      },
+      { rootMargin: '600px' },
+    );
+
+    observer.observe(alvo);
+    return () => observer.disconnect();
+  }, [query, carregandoFeed, temMais, carregarProximoLote]);
 
   // handleCurtir removido — CardItinerarioResumo não tem mais botão de
   // curtir (card simplificado, sem essa ação).
 
 
   // Busca ao digitar (debounced)
+  const queryDebounced = useDebounce(query, 300);
   useEffect(() => {
     if (!queryDebounced.trim()) {
       setResultados(null);
@@ -227,6 +339,16 @@ function PaginaExplorar() {
           <div className="grid-itinerarios">
             {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} />)}
           </div>
+
+          {/* Sentinela: invisível, só existe pro IntersectionObserver ter
+              algo pra vigiar. Some quando não há mais lotes pra buscar. */}
+          {temMais && !carregandoFeed && (
+            <div ref={sentinelaRef} className="pagina-explorar__sentinela" aria-hidden="true" />
+          )}
+
+          {carregandoMais && (
+            <p className="pagina-explorar__estado pagina-explorar__estado--carregando-mais">Carregando mais...</p>
+          )}
         </>
       )}
     </div>
