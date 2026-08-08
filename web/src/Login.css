@@ -41,6 +41,22 @@
   gap: 6px;
 }
 
+/* Wrapper do acordeão (motion.div que anima height: 0 → 'auto') — overflow
+   hidden é obrigatório aqui, senão os campos "vazam" pra fora da caixa
+   enquanto a altura ainda está animando. */
+.login-bloco-animado {
+  overflow: hidden;
+}
+
+/* Agrupa os campos extras do cadastro dentro do bloco animado, com o
+   mesmo espaçamento vertical do restante do formulário — assim o gap
+   entre eles fica idêntico ao gap normal do .login-form. */
+.login-campos-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .login-campo label {
   font: var(--fonte-meta);
   color: var(--texto-secundario);
@@ -107,6 +123,10 @@
 .login-botao:disabled {
   background: var(--texto-muted);
   cursor: default;
+}
+
+.login-botao__texto {
+  display: inline-block;
 }
 
 .login-erro {

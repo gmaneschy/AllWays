@@ -576,8 +576,6 @@ function CriarItinerario() {
 
         {/* ─── Painel direito: card do ponto ativo + abas dos outros pontos, embaixo ─── */}
         <div className="painel-direito">
-          <h2 className="secao-pontos__titulo">Pontos</h2>
-
           <AnimatePresence mode="wait">
             <motion.div
               key={`${formVersion}-${pontoAtivo}`}

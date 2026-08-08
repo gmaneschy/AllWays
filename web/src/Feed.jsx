@@ -177,7 +177,6 @@ function Feed() {
 
   return (
     <div className="feed-pagina">
-      <h1 className="feed-titulo">Feed</h1>
 
       {itinerarios.length === 0 && (
         <p className="feed-vazio">Nenhum itinerário publicado ainda.</p>

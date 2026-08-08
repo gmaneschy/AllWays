@@ -331,7 +331,6 @@ function PaginaExplorar() {
       {/* Feed de itinerários */}
       {!query && (
         <>
-          <h2 className="pagina-explorar__secao-titulo">Itinerários recentes</h2>
           {carregandoFeed && <p className="pagina-explorar__estado">Carregando...</p>}
           {!carregandoFeed && feed.length === 0 && (
             <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>

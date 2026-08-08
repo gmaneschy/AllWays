@@ -2,9 +2,27 @@
   position: relative;
   width: 100%;
   aspect-ratio: var(--razao-midia-card);
+  /* Teto de altura em vh: numa foto/vídeo muito vertical (aspect-ratio
+     alto), sem isso o carrossel cresceria até a altura ditada só pela
+     largura do card, empurrando os botões de ação (e, na PaginaItinerario,
+     todo o resto do post) pra fora da tela. Com max-height, o navegador
+     simplesmente limita a altura do box quando o aspect-ratio pediria mais
+     que isso — a proporção "quebra" nesse caso, mas o object-fit: cover
+     das mídias (ver .carrossel-itin__slide-midia) cobre a diferença
+     cortando a imagem/vídeo, então visualmente é só um corte, não uma
+     distorção. Em telas baixas (max-width: 860px, onde o layout empilha)
+     relaxamos um pouco o teto — ver media query abaixo.
+     Ajuste esse valor à vontade se quiser cards mais altos ou mais baixos. */
+  max-height: 62vh;
   border-radius: 8px;
   overflow: hidden;
   background: #000;
+}
+
+@media (max-width: 860px) {
+  .carrossel-itin {
+    max-height: 72vh;
+  }
 }
 
 .carrossel-itin__barra-segmentos {
