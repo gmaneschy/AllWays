@@ -5,6 +5,7 @@ import api, { curtir, getUsuarioLogado } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import CarrosselItinerario from './CarrosselItinerario';
+import { AvisoExcluirComentario } from './Avisos';
 import {
   IconeCompartilhar,
   IconeLike,
@@ -51,6 +52,11 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
   const [respondendoA, setRespondendoA] = useState(null);
   const [textoResposta, setTextoResposta] = useState('');
   const [enviandoResposta, setEnviandoResposta] = useState(false);
+  // Comentário/resposta pendente de confirmação de exclusão:
+  // { id, ehResposta } | null — guarda ehResposta só pra ajustar o texto
+  // do modal (a chamada de apagar é a mesma pros dois casos).
+  const [confirmandoApagar, setConfirmandoApagar] = useState(null);
+  const [apagandoComentario, setApagandoComentario] = useState(false);
 
   async function alternarComentarios() {
     const abrindo = !mostrarComentarios;
@@ -91,6 +97,18 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
           ? { ...c, respostas: c.respostas.filter((r) => r.id !== comentarioId) }
           : c)));
     } catch (_) {}
+  }
+
+  function abrirConfirmarApagar(comentarioId, ehResposta) {
+    setConfirmandoApagar({ id: comentarioId, ehResposta });
+  }
+
+  async function confirmarApagarComentario() {
+    if (!confirmandoApagar) return;
+    setApagandoComentario(true);
+    await apagarComentario(confirmandoApagar.id);
+    setApagandoComentario(false);
+    setConfirmandoApagar(null);
   }
 
   // Acha um comentário (raiz OU resposta) pelo id — usado por curtirComentario,
@@ -265,7 +283,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                         </Link>
                         <BadgeDestaque badge={c.autor_badge_destaque} size={13} />
                         {usuarioLogado?.username === c.autor_nome && (
-                          <button onClick={() => apagarComentario(c.id)} className="feedcard__comentario-apagar">
+                          <button onClick={() => abrirConfirmarApagar(c.id, false)} className="feedcard__comentario-apagar">
                             <IconeFechar size={13} />
                           </button>
                         )}
@@ -308,7 +326,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                               </Link>
                               <BadgeDestaque badge={r.autor_badge_destaque} size={13} />
                               {usuarioLogado?.username === r.autor_nome && (
-                                <button onClick={() => apagarComentario(r.id)} className="feedcard__comentario-apagar">
+                                <button onClick={() => abrirConfirmarApagar(r.id, true)} className="feedcard__comentario-apagar">
                                   <IconeFechar size={13} />
                                 </button>
                               )}
@@ -392,6 +410,14 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AvisoExcluirComentario
+        aberto={!!confirmandoApagar}
+        ehResposta={confirmandoApagar?.ehResposta}
+        carregando={apagandoComentario}
+        onConfirmar={confirmarApagarComentario}
+        onCancelar={() => setConfirmandoApagar(null)}
+      />
     </div>
   );
 });

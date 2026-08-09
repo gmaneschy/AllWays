@@ -5,7 +5,8 @@ import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
 import ModalCentralizarMidia from './ModalCentralizarMidia';
-import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover, IconeExpandir } from './icons';
+import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover, IconeExpandir, IconeUpload } from './icons';
+import { AvisoRemoverPonto } from './Avisos';
 import './CriarItinerario.css';
 
 const MEIO_DESLOCAMENTO_OPCOES = [
@@ -292,6 +293,25 @@ function CriarItinerario() {
       if (index === prev) return Math.max(0, prev - 1);
       return prev;
     });
+  }
+
+  // Confirmação antes de remover o ponto ativo — guarda só um booleano
+  // (não o índice) porque a ação sempre parte do ponto atualmente exibido
+  // no card; se o usuário trocar de aba com o modal aberto, `pontoAtivo`
+  // já reflete a nova seleção quando `confirmarRemoverPonto` roda.
+  const [confirmandoRemoverPonto, setConfirmandoRemoverPonto] = useState(false);
+
+  function abrirConfirmarRemoverPonto() {
+    setConfirmandoRemoverPonto(true);
+  }
+
+  function fecharConfirmarRemoverPonto() {
+    setConfirmandoRemoverPonto(false);
+  }
+
+  function confirmarRemoverPonto() {
+    removerPonto(pontoAtivo);
+    setConfirmandoRemoverPonto(false);
   }
 
   // Índice do ponto + midia sendo centralizada no momento; null = modal fechado.
@@ -670,13 +690,30 @@ function CriarItinerario() {
               <label className="form-label">
                 Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
               </label>
-              <input
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                onChange={(e) => { adicionarMidia(pontoAtivo, e.target.files); e.target.value = ''; }}
-                className="midia-input"
-              />
+              <div className="linha-midia">
+                <label htmlFor={`midia-input-${pontoAtivo}`} className="btn-upload-midia">
+                  <IconeUpload size={16} /> Adicionar mídia
+                  <input
+                    id={`midia-input-${pontoAtivo}`}
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => { adicionarMidia(pontoAtivo, e.target.files); e.target.value = ''; }}
+                    className="midia-input midia-input--oculto"
+                  />
+                </label>
+
+                {pontos.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={abrirConfirmarRemoverPonto}
+                    className="btn-icone-remover-ponto"
+                    title="Remover este ponto"
+                  >
+                    <IconeRemover size={16} />
+                  </button>
+                )}
+              </div>
               {pontos[pontoAtivo].midias.length > 0 && (
                 <Reorder.Group
                   as="div"
@@ -717,11 +754,6 @@ function CriarItinerario() {
                 </Reorder.Group>
               )}
 
-              {pontos.length > 1 && (
-                <button type="button" onClick={() => removerPonto(pontoAtivo)} className="btn-remover">
-                  <IconeRemover size={14} /> Remover ponto
-                </button>
-              )}
             </motion.div>
           </AnimatePresence>
 
@@ -759,6 +791,12 @@ function CriarItinerario() {
           />
         )}
       </AnimatePresence>
+
+      <AvisoRemoverPonto
+        aberto={confirmandoRemoverPonto}
+        onConfirmar={confirmarRemoverPonto}
+        onCancelar={fecharConfirmarRemoverPonto}
+      />
     </div>
   );
 }

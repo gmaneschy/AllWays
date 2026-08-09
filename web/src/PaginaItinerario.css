@@ -3,8 +3,8 @@
 
 .pagina-itinerario {
   max-width: 1100px;
-  margin: auto auto;
-  padding: 20px 20px;
+  margin: 40px auto;
+  padding: 0 16px;
   font: var(--fonte-corpo);
   color: var(--texto-principal);
 }
@@ -36,7 +36,7 @@
   background: var(--fundo-card);
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px;
   /* Mesmo teto do painel de comentários ao lado (ver
      .pagina-itinerario__comentarios-painel) — sem isso, um post com muito
      conteúdo (carrossel + badges + meta do ponto ativo) podia ultrapassar
@@ -44,7 +44,16 @@
      overflow-y: auto é só uma rede de segurança pro caso raro de ainda
      sobrar conteúdo — na prática, com o carrossel limitado, isso quase
      nunca deve precisar rolar. */
-  max-height: calc(100vh - 40px);
+  /* Mesma lógica do painel de comentários ao lado, mas descontando os
+     40px de EMBAIXO também: .pagina-itinerario tem margin: 40px auto
+     (topo E rodapé), então "100vh - 40px" só considerava o offset de
+     cima — o post terminava encostado no fundo da viewport e, depois
+     dele, a margin-bottom de 40px do container pai ainda somava mais
+     altura, estourando 100vh e ativando o scroll da página. Descontando
+     os dois lados aqui, o post + a margem de baixo cabem exatamente
+     dentro da viewport. overflow-y: auto continua como rede de segurança
+     pro caso raro de ainda sobrar conteúdo. */
+  max-height: calc(100vh - 80px);
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -54,12 +63,19 @@
   min-width: 0;
   max-width: 380px;
   position: sticky;
-  top: 20px;
+  /* Mesmo offset de 40px do margin-top do .pagina-itinerario (era 20px
+     antes) — assim, quando fica "grudado" durante o scroll, alinha
+     exatamente com o topo do post ao lado em vez de ficar 20px mais alto. */
+  top: 40px;
   background: var(--fundo-card);
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
   padding: 20px;
-  max-height: calc(100vh - 40px);
+  /* Mesma conta do .pagina-itinerario__post: desconta os 40px de cima E
+     os 40px de baixo (margin-bottom do .pagina-itinerario), pra esse
+     painel também terminar exatamente na borda da viewport sem sobrar
+     altura que ative o scroll da página. */
+  max-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
 }
@@ -181,6 +197,14 @@
   color: var(--cor-primaria);
 }
 
+.pagina-itinerario__mais-opcoes-item--perigo {
+  color: var(--cor-perigo);
+}
+
+.pagina-itinerario__mais-opcoes-item--perigo:hover {
+  background: #FDECEA;
+}
+
 .pagina-itinerario__post-autor {
   font: var(--fonte-meta);
   color: var(--texto-secundario);
@@ -223,7 +247,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 4px;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 

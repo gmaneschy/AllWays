@@ -16,6 +16,7 @@
 
 .card-itinerario-resumo {
   display: block;
+  position: relative;
   border: 1px solid var(--borda-padrao);
   border-radius: 8px;
   overflow: hidden;
@@ -28,6 +29,35 @@
 .card-itinerario-resumo:hover {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+}
+
+/* Botão "x" de excluir — só aparece em cards de rascunho (ver
+   CardItinerarioResumo.jsx). Sobreposto no canto superior direito,
+   por cima da mídia. */
+.card-itinerario-resumo__excluir {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.card-itinerario-resumo__excluir:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.card-itinerario-resumo__excluir:disabled {
+  cursor: default;
 }
 
 .card-itinerario-resumo__midia {

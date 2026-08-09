@@ -65,6 +65,7 @@ import {
   LogOut,
   LogIn,
   Send,
+  Upload,
 } from 'lucide-react';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -122,6 +123,7 @@ export const IconeDot = criarIcone(Circle);
 export const IconeCarrosselPin = criarIcone(Pin);
 export const IconeChegada = criarIcone(Flag);
 export const IconeEnviar = criarIcone(Send);
+export const IconeUpload = criarIcone(Upload);
 
 // ─── Navegação (sidebar) ──────────────────────────────────────────────
 export const IconeInicio = criarIcone(Home);

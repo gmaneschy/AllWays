@@ -1,0 +1,105 @@
+.aviso-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 44, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.aviso-box {
+  width: 100%;
+  max-width: 340px;
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-padrao);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.aviso-box__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+}
+
+/* Variante "perigo" (ex: excluir) — mesmo círculo, mas na cor de erro em
+   vez da cor primária, pra bater com o botão de confirmar quando `perigo`
+   está ativo. */
+.aviso-box__icone--perigo {
+  background: #FDECEA;
+  color: var(--cor-perigo);
+}
+
+.aviso-box__titulo {
+  margin: 0 0 8px;
+  font: var(--fonte-titulo-card);
+  color: var(--texto-principal);
+}
+
+.aviso-box__mensagem {
+  margin: 0 0 20px;
+  font: var(--fonte-corpo);
+  color: var(--texto-secundario);
+  line-height: 1.4;
+}
+
+.aviso-box__acoes {
+  display: flex;
+  gap: 10px;
+}
+
+.aviso-box__botao {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font: var(--fonte-corpo);
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.aviso-box__botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aviso-box__botao--cancelar {
+  background: var(--fundo-hover);
+  border-color: var(--borda-padrao);
+  color: var(--texto-principal);
+}
+
+.aviso-box__botao--cancelar:hover:not(:disabled) {
+  background: var(--borda-sutil);
+}
+
+.aviso-box__botao--primario {
+  background: var(--cor-primaria);
+  color: #fff;
+}
+
+.aviso-box__botao--primario:hover:not(:disabled) {
+  background: var(--cor-primaria-hover);
+}
+
+.aviso-box__botao--perigo {
+  background: var(--cor-perigo);
+  color: #fff;
+}
+
+.aviso-box__botao--perigo:hover:not(:disabled) {
+  background: #C62828;
+}

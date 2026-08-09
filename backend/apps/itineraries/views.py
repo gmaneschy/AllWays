@@ -35,6 +35,19 @@ class ItinerarioViewSet(viewsets.ModelViewSet):
                 return qs.filter(autor=self.request.user).order_by('-publicado_em', '-id')
             return qs.none()
 
+        # Escrita (update/partial_update/destroy): só o próprio autor, mesmo
+        # se o itinerário estiver publicado. A união com status='publicado'
+        # logo abaixo existe só pra LEITURA (qualquer um pode ver um post
+        # publicado de outra pessoa) — sem essa checagem separada aqui, o
+        # DRF resolve o objeto do destroy/update com o mesmo queryset da
+        # leitura, e qualquer usuário autenticado conseguiria apagar ou
+        # editar itinerário publicado alheio via DELETE/PATCH direto no
+        # endpoint, não só o dono.
+        if self.action in ('update', 'partial_update', 'destroy'):
+            if not self.request.user.is_authenticated:
+                return qs.none()
+            return qs.filter(autor=self.request.user)
+
         # Não-autenticados e outros usuários só veem publicados
         if not self.request.user.is_authenticated:
             return qs.filter(status='publicado')

@@ -6,6 +6,7 @@ import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import CarrosselItinerario from './CarrosselItinerario';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import { AvisoExcluirItinerario, AvisoExcluirComentario } from './Avisos';
 import {
   IconeLike,
   IconeComentario,
@@ -36,7 +37,7 @@ function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApa
             {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
           </span>
           {usuarioLogado?.username === c.autor_nome && (
-            <button onClick={() => onApagar(c.id)} className="comentario-linha__apagar">
+            <button onClick={() => onApagar(c.id, isResposta)} className="comentario-linha__apagar">
               <IconeFechar size={16} />
             </button>
           )}
@@ -87,6 +88,13 @@ function PaginaItinerario() {
   const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
   const [compartilhando, setCompartilhando] = useState(false);
   const [maisOpcoesAberto, setMaisOpcoesAberto] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  // Comentário/resposta pendente de confirmação de exclusão:
+  // { id, ehResposta } | null — mesma ideia do confirmandoExclusao acima,
+  // mas pro comentário em vez do itinerário inteiro.
+  const [confirmandoApagarComentario, setConfirmandoApagarComentario] = useState(null);
+  const [apagandoComentario, setApagandoComentario] = useState(false);
   const painelComentariosRef = useRef(null);
   const maisOpcoesRef = useRef(null);
 
@@ -103,24 +111,44 @@ function PaginaItinerario() {
   }, []);
 
   useEffect(() => {
+    let cancelado = false;
+
     async function buscar() {
       setCarregando(true);
       try {
-        const [itRes, comRes] = await Promise.all([
-          api.get(`/itineraries/itinerarios/${id}/detalhe/`),
-          api.get(`/social/itinerarios/${id}/comentarios/`).catch(() => ({ data: [] })),
-        ]);
+        const itRes = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
+        if (cancelado) return;
+
+        // Rascunho não tem página própria — ele deve se comportar como
+        // "Usar como base" (ver usarComoBase logo abaixo), nunca como um
+        // post navegável: não tem comentários (o endpoint nem responde
+        // pra rascunho, daí o 404 que essa checagem evita), curtir não faz
+        // sentido, e "usar como base" no próprio rascunho não faria
+        // sentido também. Busca o detalhe só pra descobrir o status, sem
+        // nunca chegar a preencher `it` nem buscar comentários — a página
+        // nunca renderiza o post em si, só redireciona.
+        if (itRes.data.status === 'rascunho') {
+          navigate(`/criar?base=${id}`, { replace: true });
+          return;
+        }
+
+        const comRes = await api.get(`/social/itinerarios/${id}/comentarios/`).catch(() => ({ data: [] }));
+        if (cancelado) return;
         setIt(itRes.data);
         setComentarios(comRes.data);
       } catch (err) {
-        setErro(err.response?.status === 404
-          ? 'Itinerário não encontrado ou não disponível.'
-          : 'Erro ao carregar itinerário.');
+        if (!cancelado) {
+          setErro(err.response?.status === 404
+            ? 'Itinerário não encontrado ou não disponível.'
+            : 'Erro ao carregar itinerário.');
+        }
       } finally {
-        setCarregando(false);
+        if (!cancelado) setCarregando(false);
       }
     }
     buscar();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Enquanto algum vídeo ainda estiver 'processando' (compressão async no
@@ -167,6 +195,21 @@ function PaginaItinerario() {
   function usarComoBase() {
     // Redireciona para criar itinerário passando o ID para carregar como base
     navigate(`/criar?base=${id}`);
+  }
+
+  async function handleConfirmarExclusao() {
+    if (excluindo) return;
+    setExcluindo(true);
+    try {
+      await api.delete(`/itineraries/itinerarios/${id}/`);
+      // O post deixou de existir — não tem pra onde "voltar" nele mesmo,
+      // então manda pro perfil do autor (replace: true pra não deixar a
+      // URL morta no histórico do botão "voltar").
+      navigate(`/perfil/${it.autor_username}`, { replace: true });
+    } catch (_) {
+      setExcluindo(false);
+      setConfirmandoExclusao(false);
+    }
   }
 
   function focarComentarios() {
@@ -245,6 +288,18 @@ function PaginaItinerario() {
     } catch (_) {}
   }
 
+  function iniciarExclusaoComentario(comentarioId, ehResposta) {
+    setConfirmandoApagarComentario({ id: comentarioId, ehResposta });
+  }
+
+  async function confirmarExclusaoComentario() {
+    if (!confirmandoApagarComentario) return;
+    setApagandoComentario(true);
+    await apagarComentario(confirmandoApagarComentario.id);
+    setApagandoComentario(false);
+    setConfirmandoApagarComentario(null);
+  }
+
   async function handleCurtirComentario(comentarioId) {
     const alvo = encontrarComentarioNaArvore(comentarios, comentarioId);
     if (!alvo) return;
@@ -314,6 +369,16 @@ function PaginaItinerario() {
                       >
                         Usar como base
                       </button>
+
+                      {ehAutor && (
+                        <button
+                          onClick={() => { setMaisOpcoesAberto(false); setConfirmandoExclusao(true); }}
+                          className="pagina-itinerario__mais-opcoes-item pagina-itinerario__mais-opcoes-item--perigo"
+                        >
+                          <IconeFechar size={16} />
+                          Excluir itinerário
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -429,7 +494,7 @@ function PaginaItinerario() {
                     isResposta={false}
                     usuarioLogado={usuarioLogado}
                     onCurtir={handleCurtirComentario}
-                    onApagar={apagarComentario}
+                    onApagar={iniciarExclusaoComentario}
                     onResponder={abrirResposta}
                   />
 
@@ -441,7 +506,7 @@ function PaginaItinerario() {
                       isResposta
                       usuarioLogado={usuarioLogado}
                       onCurtir={handleCurtirComentario}
-                      onApagar={apagarComentario}
+                      onApagar={iniciarExclusaoComentario}
                       onResponder={abrirResposta}
                     />
                   ))}
@@ -483,6 +548,21 @@ function PaginaItinerario() {
           onFechar={() => setCompartilhando(false)}
         />
       )}
+
+      <AvisoExcluirItinerario
+        aberto={confirmandoExclusao}
+        carregando={excluindo}
+        onConfirmar={handleConfirmarExclusao}
+        onCancelar={() => setConfirmandoExclusao(false)}
+      />
+
+      <AvisoExcluirComentario
+        aberto={!!confirmandoApagarComentario}
+        ehResposta={confirmandoApagarComentario?.ehResposta}
+        carregando={apagandoComentario}
+        onConfirmar={confirmarExclusaoComentario}
+        onCancelar={() => setConfirmandoApagarComentario(null)}
+      />
     </div>
   );
 }

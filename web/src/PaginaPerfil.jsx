@@ -373,6 +373,16 @@ function PaginaPerfil() {
     }
   }
 
+  // Chamado pelo CardItinerarioResumo depois de excluir um rascunho com
+  // sucesso — tira o item da lista local em vez de refazer o GET do
+  // perfil inteiro.
+  function handleRascunhoExcluido(idExcluido) {
+    setPerfil((prev) => ({
+      ...prev,
+      rascunhos: (prev.rascunhos || []).filter((r) => r.id !== idExcluido),
+    }));
+  }
+
   if (carregando) return <p className="pagina-perfil__carregando">Carregando...</p>;
   if (erro && !perfil) return <p className="pagina-perfil__erro">{erro}</p>;
   if (!perfil) return null;
@@ -520,7 +530,7 @@ function PaginaPerfil() {
 
       <div className="grid-itinerarios">
         {itinerariosAba.map((it) => (
-          <CardItinerarioResumo key={it.id} it={it} />
+          <CardItinerarioResumo key={it.id} it={it} onExcluido={handleRascunhoExcluido} />
         ))}
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas, getMensagensNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
+import { AvisoSair } from './Avisos';
 import {
   IconeInicio,
   IconeExplorarNav,
@@ -28,6 +29,7 @@ function Navbar() {
   const [painelAberto, setPainelAberto] = useState(false);
   const [naoLidas, setNaoLidas] = useState(0);
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   const sinoRef = useRef(null);
 
   useEffect(() => {
@@ -67,6 +69,10 @@ function Navbar() {
   }, []);
 
   function handleLogout() {
+    setConfirmandoSaida(true);
+  }
+
+  function handleConfirmarLogout() {
     logout();
     navigate('/login');
   }
@@ -165,6 +171,12 @@ function Navbar() {
           </Link>
         )}
       </div>
+
+      <AvisoSair
+        aberto={confirmandoSaida}
+        onConfirmar={handleConfirmarLogout}
+        onCancelar={() => setConfirmandoSaida(false)}
+      />
     </nav>
   );
 }
