@@ -17,12 +17,12 @@ from apps.itineraries.models import Itinerario, PontoItinerario
 from apps.gamification.models import BadgeItinerario
 from apps.gamification.serializers import BadgeItinerarioSerializer, serializar_badge_destaque
 from apps.feed import services as feed_services
-from .models import Follow, Hashtag, Message, Comment, Curtida, Notification, SolicitacaoSeguir
+from .models import Follow, Hashtag, Message, Comment, Curtida, Notification, SolicitacaoSeguir, Denuncia
 from .services import resumo_curtida
 from .serializers import (
     FollowSerializer, UsuarioResumoSerializer, HashtagSerializer,
     MessageSerializer, CommentSerializer, NotificationSerializer,
-    SolicitacaoSeguirSerializer,
+    SolicitacaoSeguirSerializer, DenunciaSerializer,
 )
 
 
@@ -309,6 +309,40 @@ class ComentariosItinerarioView(APIView):
             return Response({'erro': 'Você só pode apagar seus próprios comentários.'}, status=status.HTTP_403_FORBIDDEN)
         comentario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Denúncias ────────────────────────────────────────────────────────────────
+
+class DenunciarItinerarioView(APIView):
+    """POST /api/social/itinerarios/<id>/denunciar/   body: {"motivo": "...", "detalhe": "..." (opcional)}
+    Cria uma denúncia do itinerário publicado. Um mesmo usuário não pode
+    denunciar o mesmo itinerário mais de uma vez — checamos aqui pra
+    devolver uma mensagem clara em vez de deixar a UniqueConstraint do
+    model estourar um IntegrityError (500) direto no banco."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, itinerario_id):
+        itinerario = get_object_or_404(Itinerario, pk=itinerario_id, status='publicado')
+
+        if itinerario.autor_id == request.user.id:
+            return Response(
+                {'erro': 'Você não pode denunciar o próprio itinerário.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Denuncia.objects.filter(itinerario=itinerario, usuario=request.user).exists():
+            return Response(
+                {'erro': 'Você já denunciou este itinerário.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = DenunciaSerializer(
+            data={**request.data, 'itinerario': itinerario.id},
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(usuario=request.user)
+        return Response({'denunciado': True}, status=status.HTTP_201_CREATED)
 
 
 # ─── Mídia de capa (cards resumidos: Explorar, Hashtag, Perfil) ───────────────

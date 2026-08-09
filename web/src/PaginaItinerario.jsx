@@ -6,6 +6,7 @@ import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
 import CarrosselItinerario from './CarrosselItinerario';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import ModalDenunciarItinerario from './ModalDenunciarItinerario';
 import { AvisoExcluirItinerario, AvisoExcluirComentario } from './Avisos';
 import {
   IconeLike,
@@ -15,6 +16,8 @@ import {
   IconeAdicionar,
   IconeFechar,
   IconeEnviar,
+  IconeDenunciar,
+  IconeReplicar
 } from './icons';
 import './PaginaItinerario.css';
 
@@ -87,6 +90,7 @@ function PaginaItinerario() {
   const [textoResposta, setTextoResposta] = useState({}); // { [raizId]: rascunho }
   const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
   const [compartilhando, setCompartilhando] = useState(false);
+  const [denunciando, setDenunciando] = useState(false);
   const [maisOpcoesAberto, setMaisOpcoesAberto] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
@@ -367,8 +371,19 @@ function PaginaItinerario() {
                         onClick={() => { setMaisOpcoesAberto(false); usarComoBase(); }}
                         className="pagina-itinerario__mais-opcoes-item"
                       >
-                        Usar como base
+                        <IconeReplicar size={16}/>
+                        Replicar
                       </button>
+
+                      {!ehAutor && (
+                        <button
+                          onClick={() => { setMaisOpcoesAberto(false); setDenunciando(true); }}
+                          className="pagina-itinerario__mais-opcoes-item pagina-itinerario__mais-opcoes-item--perigo"
+                        >
+                          <IconeDenunciar size={16} />
+                          Denunciar
+                        </button>
+                      )}
 
                       {ehAutor && (
                         <button
@@ -548,6 +563,12 @@ function PaginaItinerario() {
           onFechar={() => setCompartilhando(false)}
         />
       )}
+
+      <ModalDenunciarItinerario
+        aberto={denunciando}
+        itinerarioId={it.id}
+        onFechar={() => setDenunciando(false)}
+      />
 
       <AvisoExcluirItinerario
         aberto={confirmandoExclusao}

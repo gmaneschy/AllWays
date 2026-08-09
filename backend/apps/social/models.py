@@ -279,3 +279,54 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.tipo}] para {self.destinatario.username}"
+
+
+class Denuncia(models.Model):
+    """Denúncia de um itinerário publicado. Um usuário só pode denunciar o
+    mesmo itinerário uma vez — checado em DenunciarItinerarioView (mensagem
+    de erro amigável) e reforçado aqui pela UniqueConstraint (rede de
+    segurança a nível de banco, igual Curtida faz com curtida_unica_por_usuario_e_alvo)."""
+
+    MOTIVO_CONTEUDO_IMPROPRIO = 'conteudo_impropio'
+    MOTIVO_IMAGEM_NAO_CONDIZ = 'imagem_nao_condiz'
+    MOTIVO_INFORMACAO_FALSA = 'informacao_falsa'
+    MOTIVO_IMAGEM_IA = 'imagem_ia'
+    MOTIVO_SPAM = 'spam'
+    MOTIVO_DISCURSO_ODIO = 'discurso_odio'
+    MOTIVO_OUTRO = 'outro'
+
+    MOTIVO_CHOICES = [
+        (MOTIVO_CONTEUDO_IMPROPRIO, 'Conteúdo impróprio'),
+        (MOTIVO_IMAGEM_NAO_CONDIZ, 'Imagem não condiz com o lugar'),
+        (MOTIVO_INFORMACAO_FALSA, 'Informação falsa'),
+        (MOTIVO_IMAGEM_IA, 'Imagem gerada por IA'),
+        (MOTIVO_SPAM, 'Spam ou propaganda'),
+        (MOTIVO_DISCURSO_ODIO, 'Discurso de ódio ou discriminação'),
+        (MOTIVO_OUTRO, 'Outro'),
+    ]
+
+    itinerario = models.ForeignKey(
+        'itineraries.Itinerario', on_delete=models.CASCADE,
+        related_name='denuncias'
+    )
+    usuario = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE,
+        related_name='denuncias_feitas'
+    )
+    motivo = models.CharField(max_length=32, choices=MOTIVO_CHOICES)
+    # Só preenchido de fato quando motivo == MOTIVO_OUTRO (validado no
+    # serializer) — nos demais casos a label do motivo já é autoexplicativa.
+    detalhe = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['itinerario', 'usuario'],
+                name='denuncia_unica_por_usuario_e_itinerario',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Denúncia de {self.usuario.username} em "{self.itinerario}" ({self.get_motivo_display()})'

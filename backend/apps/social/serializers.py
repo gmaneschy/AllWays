@@ -4,7 +4,7 @@ from apps.users.models import User
 from apps.places.models import Place
 from apps.itineraries.models import Itinerario
 from apps.gamification.serializers import serializar_badge_destaque
-from .models import Follow, Hashtag, Comment, Message, Notification, SolicitacaoSeguir
+from .models import Follow, Hashtag, Comment, Message, Notification, SolicitacaoSeguir, Denuncia
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -63,6 +63,20 @@ class SolicitacaoSeguirSerializer(serializers.ModelSerializer):
     class Meta:
         model = SolicitacaoSeguir
         fields = ['id', 'solicitante', 'criado_em']
+
+
+class DenunciaSerializer(serializers.ModelSerializer):
+    motivo_display = serializers.CharField(source='get_motivo_display', read_only=True)
+
+    class Meta:
+        model = Denuncia
+        fields = ['id', 'itinerario', 'motivo', 'motivo_display', 'detalhe', 'criado_em']
+        read_only_fields = ['id', 'motivo_display', 'criado_em']
+
+    def validate(self, data):
+        if data.get('motivo') == Denuncia.MOTIVO_OUTRO and not data.get('detalhe', '').strip():
+            raise serializers.ValidationError({'detalhe': 'Descreva o motivo da denúncia.'})
+        return data
 
 
 class CommentSerializer(serializers.ModelSerializer):

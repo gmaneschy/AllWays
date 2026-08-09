@@ -7,7 +7,7 @@ from .views import (
     NotificacoesView, NotificacoesNaoLidasView,
     MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView, LugaresSeguidosView,
     SolicitacoesSeguirView, ResponderSolicitacaoSeguirView, MensagensNaoLidasView,
-    ResponderSolicitacaoSeguirPorUsernameView,
+    ResponderSolicitacaoSeguirPorUsernameView, DenunciarItinerarioView,
 )
 
 urlpatterns = [
@@ -22,6 +22,9 @@ urlpatterns = [
 
     # Comentários sociais
     path('itinerarios/<int:itinerario_id>/comentarios/', ComentariosItinerarioView.as_view(), name='comentarios'),
+
+    # Denúncias
+    path('itinerarios/<int:itinerario_id>/denunciar/', DenunciarItinerarioView.as_view(), name='denunciar-itinerario'),
 
     # Hashtag feed
     path('hashtag/<str:nome>/', HashtagFeedView.as_view(), name='hashtag-feed'),
