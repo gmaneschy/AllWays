@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas, getMensagensNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
 import { AvisoSair } from './Avisos';
+import { PaginaSemNavbar } from './layoutRotas';
 import {
   IconeInicio,
   IconeExplorarNav,
@@ -81,12 +82,13 @@ function Navbar() {
     return `navbar__link${location.pathname === path ? ' navbar__link--ativo' : ''}`;
   }
 
-  // A tela de login é a única rota pública do app (ver RotaPublica) — não
-  // faz sentido mostrar a navbar ali, nem a versão reduzida com só o link
-  // "Entrar". Isso cobre tanto acessar /login direto quanto o logout, que
+  // Páginas full-page (login, ativação de conta) não mostram a navbar, nem
+  // a versão reduzida com só o link "Entrar" — lista centralizada em
+  // layoutRotas.js (usada também pelo App.jsx pra zerar o layout). Isso
+  // cobre tanto acessar essas rotas direto quanto o logout, que
   // redireciona pra /login e, sem esse guard, deixava a navbar reduzida
   // visível na tela.
-  if (location.pathname === '/login') return null;
+  if (PaginaSemNavbar(location.pathname)) return null;
 
   return (
     <nav className={`navbar${painelAberto ? ' navbar--expandido' : ''}`}>

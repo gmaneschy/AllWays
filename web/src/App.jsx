@@ -6,6 +6,7 @@ import Feed from './Feed';
 import CriarItinerario from './CriarItinerario';
 import PaginaPlace from './PaginaPlace';
 import Login from './Login';
+import AtivarConta from './AtivarConta';
 import RotaProtegida from './RotaProtegida';
 import RotaPublica from './RotaPublica';
 import PaginaPerfil from './PaginaPerfil';
@@ -15,6 +16,7 @@ import PaginaItinerario from './PaginaItinerario';
 import PaginaHashtag from './PaginaHashtag';
 import PaginaNotificacoes from './PaginaNotificacoes';
 import PaginaConfiguracoes from './PaginaConfiguracoes';
+import { PaginaSemNavbar } from './layoutRotas';
 
 function App() {
   return (
@@ -26,13 +28,14 @@ function App() {
 }
 
 // Precisa estar por dentro do BrowserRouter pra poder usar useLocation.
-// Existe só pra decidir a classe do <main>: na tela de login a Navbar não
-// renderiza nada (ver Navbar.jsx), então o margin-left que reserva o
-// espaço dela em App.css precisa ser zerado ali, senão sobra um respiro
-// vazio à esquerda do formulário de login.
+// Existe só pra decidir a classe do <main>: nas páginas full-page (login,
+// ativação de conta) a Navbar não renderiza nada (ver Navbar.jsx e
+// layoutRotas.js — mesma lista de rotas usada nos dois lugares), então o
+// margin-left que reserva o espaço dela em App.css precisa ser zerado
+// ali, senão sobra um respiro vazio à esquerda do conteúdo.
 function AppLayout() {
   const location = useLocation();
-  const semNavbar = location.pathname === '/login';
+  const semNavbar = PaginaSemNavbar(location.pathname);
 
   return (
     <>
@@ -52,6 +55,14 @@ function AppLayout() {
             element={
               <RotaPublica>
                 <Login />
+              </RotaPublica>
+            }
+          />
+          <Route
+            path="/ativar-conta/:uidb64/:token"
+            element={
+              <RotaPublica>
+                <AtivarConta/>
               </RotaPublica>
             }
           />

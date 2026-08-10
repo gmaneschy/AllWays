@@ -134,6 +134,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'cadastro': '5/hour',
+        'reenvio_ativacao': '3/hour',
+    },
 }
 
 SIMPLE_JWT = {
@@ -209,3 +213,36 @@ VIDEO_ALTURA_ALVO_COMPRESSAO = 1080
 VIDEO_CRF = 23
 VIDEO_PRESET = 'medium'                # trade-off velocidade de encode x taxa de compressão
 VIDEO_BITRATE_AUDIO = '128k'
+
+# ─── Ativação de conta por e-mail ──────────────────────────────────────────────
+# FRONTEND_URL: base do link de ativação enviado por e-mail (não tem como o
+# backend "adivinhar" a URL do front). Sobrescreva via .env em cada ambiente
+# (dev aponta pro Vite, produção pro domínio real).
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'AllWays <no-reply@allways.app>')
+
+# EMAIL_BACKEND: console por padrão (imprime o e-mail no terminal do backend
+# em vez de enviar de verdade) — bom o suficiente pra dev local. Em
+# config/settings/production.py, sobrescreva pra um backend real
+# (SMTP, Anymail/SES, etc.), ou defina EMAIL_BACKEND no .env de produção.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend'
+)
+
+# Só têm efeito quando EMAIL_BACKEND é o smtp.EmailBackend (ver .env) — com
+# o console.EmailBackend padrão, essas variáveis ficam sem uso. Valores
+# fixos aqui são os do Gmail; se trocar de provedor SMTP no futuro (SES,
+# SendGrid etc.), só mudar host/porta — usuário/senha continuam no .env.
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Contas criadas e nunca ativadas são apagadas depois desse prazo (task
+# apps.users.tasks.deletar_contas_nao_ativadas, agendada no celery.py).
+# Fica acima do PASSWORD_RESET_TIMEOUT padrão do Django (3 dias, usado
+# também na validade do token de ativação — ver apps/users/tokens.py) pra
+# dar folga: ninguém perde a conta por causa de token expirado se ainda
+# não passou desse prazo maior.
+CONTA_NAO_ATIVADA_EXPIRA_DIAS = 7

@@ -34,6 +34,12 @@ app.conf.beat_schedule = {
         'task': 'apps.gamification.tasks.avaliar_badges_todos_usuarios_task',
         'schedule': crontab(hour=4, minute=0),  # diário, de madrugada — mais leve que a hora do feed
     },
+    # Remove contas nunca ativadas após o prazo de graça (libera
+    # username/e-mail pra reuso — ver settings.CONTA_NAO_ATIVADA_EXPIRA_DIAS)
+    'limpar-contas-nao-ativadas': {
+        'task': 'apps.users.tasks.deletar_contas_nao_ativadas',
+        'schedule': crontab(hour=5, minute=0),  # diário, de madrugada
+    },
 }
 
 app.conf.timezone = 'UTC'

@@ -79,6 +79,20 @@ export function estaLogado() {
   return !!localStorage.getItem('access_token');
 }
 
+// ─── Ativação de conta ──────────────────────────────────────────────────
+// Sem token de sessão ainda (usuário nem logou), por isso usam axios puro,
+// igual login/cadastrar acima, em vez da instância 'api' com interceptor.
+
+export async function ativarConta(uidb64, token) {
+  const { data } = await axios.get(`${API_BASE}/users/ativar/${uidb64}/${token}/`);
+  return data;
+}
+
+export async function reenviarAtivacao(email) {
+  const { data } = await axios.post(`${API_BASE}/users/ativar/reenviar/`, { email });
+  return data;
+}
+
 // ─── Curtidas ───────────────────────────────────────────────────────────
 
 export async function curtir(tipo, id) {

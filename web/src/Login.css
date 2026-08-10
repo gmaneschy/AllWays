@@ -131,11 +131,30 @@
 
 .login-erro {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   margin-top: 16px;
   font: var(--fonte-meta);
   color: var(--cor-perigo);
+}
+
+/* Ícone alinhado com a primeira linha de texto (align-items: flex-start
+   no .login-erro, em vez de center) — com uma mensagem só isso não faz
+   diferença visual, mas com várias linhas o ícone centralizado no meio
+   do bloco ficava estranho. */
+.login-erro__icone {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login-erro__mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login-erro__mensagens p {
+  margin: 0;
 }
 
 .login-rodape {
@@ -154,4 +173,46 @@
   font-weight: bold;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.login-sucesso {
+  margin-top: 16px;
+  font: var(--fonte-meta);
+  color: var(--cor-sucesso, #2e7d32);
+  text-align: center;
+}
+
+/* Rodapé secundário (link de reenvio de ativação) — mais discreto que o
+   rodapé principal (login/cadastro), fica mais pra baixo no card. */
+.login-rodape--secundario {
+  margin-top: 8px;
+}
+
+.login-link--secundario {
+  color: var(--texto-secundario);
+  font-weight: normal;
+  text-decoration: none;
+}
+
+.login-link--secundario:hover {
+  text-decoration: underline;
+}
+
+.login-reenvio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.login-reenvio .login-campo {
+  width: 100%;
+}
+
+.login-reenvio__mensagem {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  text-align: center;
+  margin: 0;
 }

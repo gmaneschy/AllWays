@@ -6,13 +6,6 @@ frontend:
             - título
             - data do itinerário (data de início e término se multi-day trip)
 
-    Validações:
-        Login:
-            - criar validação na criação de conta, caso contrário, será possível criar infinitas contas se o formato do e-mail for válido:
-                - ao criar a conta, é preciso ativá-la
-                - um link de ativação será enviado ao e-mail utilizado na criação da conta
-                - o login não será possível se a conta não for ativada
-
     Configurações:
         - Criar opção de excluir conta:
             - pedir para colocar a senha
@@ -58,3 +51,8 @@ CTRL+C to stop.
 
 # Terminal 4 - subir versão (print) do componente para o Chromatic
 npx chromatic --project-token=chpt_6d076130ba669b8
+
+
+Futuro:
+Quando o aplicativo estiver em produção, é necessário:
+    - Trocar SMTP para SendGrid ou SES pois o Gmail tem limite de ~500 e-mails/dia por conta — pra produção de verdade, SES ou SendGrid aguentam mais e são mais indicados; Gmail é ótimo pra validar o fluxo em desenvolvimento.

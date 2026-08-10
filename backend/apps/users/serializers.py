@@ -57,6 +57,17 @@ class CadastroSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Este nome de usuário já está em uso.')
         return value
 
+    def validate_email(self, value):
+        # O model herdado de AbstractUser não tem unique=True em 'email' —
+        # sem essa checagem aqui, dava pra criar várias contas com o mesmo
+        # e-mail (inclusive o de outra pessoa, só pra spammar ela de
+        # e-mails de ativação). Case-insensitive pra evitar
+        # "nome@x.com" vs "Nome@X.com" contando como diferentes.
+        value = value.strip().lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('Este e-mail já está associado a uma conta.')
+        return value
+
     def validate_nome_exibicao(self, value):
         value = value.strip()
         if not value:
@@ -74,7 +85,18 @@ class CadastroSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        # is_active=False: a conta só é liberada pra login depois que o
+        # usuário clica no link de ativação recebido por e-mail (ver
+        # CadastroView.perform_create / AtivarContaView).
+        return User.objects.create_user(**validated_data, is_active=False)
+
+
+class ReenviarAtivacaoSerializer(serializers.Serializer):
+    """Usado em POST /users/ativar/reenviar/. Só valida o formato do
+    e-mail — a existência (ou não) da conta é tratada na view, que
+    devolve sempre a mesma mensagem genérica pra não permitir
+    enumeração de contas por e-mail."""
+    email = serializers.EmailField()
 
 
 class MeSerializer(serializers.ModelSerializer):

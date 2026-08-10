@@ -1,6 +1,9 @@
 from django.shortcuts import get_object_or_404
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.itineraries.models import ItinerarioSalvo, ItinerarioBaixado, Itinerario
@@ -9,14 +12,80 @@ from .serializers import (
     CadastroSerializer, MeSerializer, ConfiguracoesSerializer,
     PerfilPublicoSerializer, PerfilProprioSerializer,
     SelecionarBadgeDestaqueSerializer, EditarPerfilSerializer,
-    AlterarSenhaSerializer,
+    AlterarSenhaSerializer, ReenviarAtivacaoSerializer,
 )
+from .tasks import enviar_email_ativacao
+from .tokens import gerador_token_ativacao
+
+
+class ThrottleCadastro(AnonRateThrottle):
+    scope = 'cadastro'
+
+
+class ThrottleReenvioAtivacao(AnonRateThrottle):
+    scope = 'reenvio_ativacao'
 
 
 class CadastroView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = CadastroSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ThrottleCadastro]
+
+    def perform_create(self, serializer):
+        usuario = serializer.save()
+        enviar_email_ativacao.delay(usuario.id)
+
+
+class AtivarContaView(APIView):
+    """GET /api/users/ativar/<uidb64>/<token>/
+    Chamada pela página de ativação do front, que extrai uidb64/token da
+    URL recebida por e-mail. Idempotente: ativar uma conta já ativa
+    simplesmente confirma sucesso de novo, sem erro."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            usuario = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, UnicodeDecodeError, User.DoesNotExist):
+            usuario = None
+
+        if usuario is None or not gerador_token_ativacao.check_token(usuario, token):
+            return Response(
+                {'detail': 'Link de ativação inválido ou expirado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not usuario.is_active:
+            usuario.is_active = True
+            usuario.save(update_fields=['is_active'])
+
+        return Response({'ativado': True})
+
+
+class ReenviarAtivacaoView(APIView):
+    """POST /api/users/ativar/reenviar/  body: {email}
+    Resposta sempre genérica (não revela se o e-mail existe, se já está
+    ativo, etc.) — evita enumeração de contas via esse endpoint."""
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ThrottleReenvioAtivacao]
+
+    MENSAGEM_GENERICA = (
+        'Se o e-mail informado tiver uma conta pendente de ativação, '
+        'enviamos um novo link.'
+    )
+
+    def post(self, request):
+        serializer = ReenviarAtivacaoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        usuario = User.objects.filter(email__iexact=email, is_active=False).first()
+        if usuario:
+            enviar_email_ativacao.delay(usuario.id)
+
+        return Response({'detail': self.MENSAGEM_GENERICA})
 
 
 class MeView(APIView):
