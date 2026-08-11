@@ -9,7 +9,13 @@ frontend:
     Configurações:
         - Criar opção de excluir conta:
             - pedir para colocar a senha
-            - Validação (tem certeza de que deseja excluir sua conta? essa ação é irreversível)
+            - Validação (tem certeza de que deseja excluir sua conta? Essa ação é irreversível.)
+            - perfil, comentários, mensagens e itinerários de contas excluídas são excluídos e ficam invisíveis para os outros usuários.
+
+        - Criar opção de desativar conta:
+            - pedir para colocar a senha
+            - perfil, comentários, mensagens e itinerários de contas desativadas ficam invisíveis para os outros usuários.
+            - desativar por 30, 15, 7 dias; desativar indefinidamente (até logar novamente)
 
 Configurações:
     Privacidade:

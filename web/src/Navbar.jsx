@@ -74,6 +74,12 @@ function Navbar() {
   }
 
   function handleConfirmarLogout() {
+    // O Navbar nunca desmonta entre rotas (só retorna null em páginas
+    // full-page — ver PaginaSemNavbar), então o estado sobrevive à
+    // navegação pro /login. Sem resetar aqui, confirmandoSaida continuava
+    // 'true' e o AvisoSair reaparecia sozinho assim que a Navbar voltasse
+    // a renderizar de verdade, no próximo login.
+    setConfirmandoSaida(false);
     logout();
     navigate('/login');
   }

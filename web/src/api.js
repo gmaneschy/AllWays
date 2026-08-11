@@ -13,6 +13,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Evita que múltiplas requisições em paralelo (ex: Navbar buscando
+// notificações + mensagens, Feed buscando o feed, tudo ao montar a rota
+// "/") disparem POST /auth/refresh/ ao mesmo tempo. Se ROTATE_REFRESH_TOKENS
+// estiver ligado no backend, a primeira chamada de refresh invalida o
+// refresh_token antigo — qualquer segunda chamada concorrente usando esse
+// mesmo token antigo falha e força logout, mesmo a sessão sendo válida.
+// A partir daqui, todo 401 concorrente "pega carona" na mesma Promise de
+// refresh em andamento, em vez de disparar a sua própria.
+let refreshEmAndamento = null;
+
+function limparSessaoEForcarLogin() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -22,20 +39,36 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refresh_token');
 
-      if (refreshToken) {
-        try {
-          const resposta = await axios.post(`${API_BASE}/auth/refresh/`, {
-            refresh: refreshToken,
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
+      // Só a primeira requisição a cair aqui efetivamente chama o
+      // endpoint de refresh; as demais aguardam essa mesma Promise.
+      if (!refreshEmAndamento) {
+        refreshEmAndamento = axios
+          .post(`${API_BASE}/auth/refresh/`, { refresh: refreshToken })
+          .then((resposta) => {
+            localStorage.setItem('access_token', resposta.data.access);
+            // Se ROTATE_REFRESH_TOKENS estiver ligado, o backend devolve
+            // um refresh token novo — sem persistir aqui, a próxima
+            // tentativa de refresh usaria o antigo (já invalidado).
+            if (resposta.data.refresh) {
+              localStorage.setItem('refresh_token', resposta.data.refresh);
+            }
+            return resposta.data.access;
+          })
+          .finally(() => {
+            refreshEmAndamento = null;
           });
-          localStorage.setItem('access_token', resposta.data.access);
-          originalRequest.headers.Authorization = `Bearer ${resposta.data.access}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
+      }
+
+      try {
+        const novoAccessToken = await refreshEmAndamento;
+        originalRequest.headers.Authorization = `Bearer ${novoAccessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        limparSessaoEForcarLogin();
       }
     }
 
