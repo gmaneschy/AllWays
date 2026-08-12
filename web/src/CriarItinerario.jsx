@@ -81,12 +81,62 @@ function pontoVazio() {
     meio_deslocamento: '',
     horario_estimado: '',
     comentario: '',
+    // id do PontoItinerario no backend, quando já existe (ponto vindo de um
+    // itinerário salvo/em edição). null pra um ponto novo, ainda não
+    // persistido — usado pra atualizar o registro certo em vez de recriar
+    // (ver payloadAtual, atualizarBackendIdsDosPontos e
+    // services.sincronizar_pontos_itinerario no backend).
+    backendId: null,
     // Lista única e ORDENÁVEL (arrastar reordena) — cada item é
     // { tipo: 'foto' | 'video', arquivo: File }. Antes eram dois arrays
     // separados (arquivos/videos), o que não permitia intercalar a ordem
     // entre os dois tipos.
     midias: [],
   };
+}
+
+/** Achata a resposta de erro do DRF (string | lista | dict de campo→erros,
+ * aninhados à vontade — ex: {"pontos": [{}, {"seguranca": ["..."]}]}) numa
+ * lista plana de mensagens legíveis, prefixadas pelo campo quando isso
+ * ajuda a localizar o problema. Usada em vez de JSON.stringify(err.response.data),
+ * que mostra a estrutura crua do erro pro usuário. */
+function extrairMensagensErro(dados, prefixo = '') {
+  if (dados === null || dados === undefined || dados === '') return [];
+
+  if (typeof dados === 'string') {
+    return [prefixo ? `${prefixo}: ${dados}` : dados];
+  }
+
+  if (Array.isArray(dados)) {
+    return dados.flatMap((item, i) => {
+      // Item de uma lista de objetos (ex: um erro por índice do array
+      // 'pontos' enviado) — numera pra deixar claro qual ponto tem
+      // problema. Item de lista de strings simples não ganha número.
+      const rotulo = (typeof item === 'object' && item !== null && !Array.isArray(item))
+        ? (prefixo ? `${prefixo} #${i + 1}` : `Item #${i + 1}`)
+        : prefixo;
+      return extrairMensagensErro(item, rotulo);
+    });
+  }
+
+  if (typeof dados === 'object') {
+    return Object.entries(dados).flatMap(([campo, valor]) => {
+      // Esses campos já vêm com mensagem autoexplicativa (nosso endpoint de
+      // publicar, ou erros genéricos do DRF) — não precisam de prefixo.
+      const generico = ['erros', 'non_field_errors', 'detail', 'erro'].includes(campo);
+      const novoPrefixo = generico ? prefixo : (prefixo ? `${prefixo} — ${campo}` : campo);
+      return extrairMensagensErro(valor, novoPrefixo);
+    });
+  }
+
+  return [prefixo ? `${prefixo}: ${dados}` : String(dados)];
+}
+
+/** Normaliza qualquer coisa que os handlers de erro produzam (string única,
+ * lista de strings, ou o retorno de extrairMensagensErro) no formato que o
+ * estado `erro` espera. */
+function paraListaDeErros(itensOuTexto) {
+  return Array.isArray(itensOuTexto) ? itensOuTexto : [itensOuTexto];
 }
 
 function CriarItinerario() {
@@ -98,6 +148,9 @@ function CriarItinerario() {
   const [pontos, setPontos] = useState([pontoVazio()]);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
+  // null quando não há erro; caso contrário { titulo: string|null, itens: string[] }.
+  // 'titulo' é opcional (contexto do que falhou); 'itens' é sempre a lista de
+  // mensagens a exibir — mesmo pra um erro único, pra manter um formato só.
   const [erro, setErro] = useState(null);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
   const [rascunhoSalvo, setRascunhoSalvo] = useState(false);
@@ -113,11 +166,34 @@ function CriarItinerario() {
   // reaproveitar a instância antiga, que senão mantém o texto do local
   // selecionado anteriormente mesmo com `localSelecionado` voltando a null.
   const [formVersion, setFormVersion] = useState(0);
+  // id do Itinerario que este formulário está editando/continuando (rascunho
+  // salvo antes, publicado sendo editado, ou rascunho de backup criado numa
+  // tentativa de publicação que falhou). null = formulário "em branco": a
+  // próxima ação de salvar/publicar CRIA um itinerário novo. Não-null = as
+  // próximas ações ATUALIZAM esse mesmo registro em vez de criar outro —
+  // é isso que evita duplicar rascunho a cada nova tentativa de publicar.
+  const [itinerarioEmEdicaoId, setItinerarioEmEdicaoId] = useState(null);
 
-  // Se veio de "Usar como base" na PaginaItinerario, carrega automaticamente
+  // Único ponto de entrada pra setar o estado de erro — sempre normaliza pra
+  // { titulo, itens }, então o JSX de renderização não precisa saber se veio
+  // de uma string simples, uma lista, ou uma resposta de API já achatada por
+  // extrairMensagensErro.
+  function mostrarErro(itensOuTexto, titulo = null) {
+    setErro({ titulo, itens: paraListaDeErros(itensOuTexto) });
+  }
+
+  // ?base=<id>: "usar como base" (PaginaItinerario) — cópia de verdade, vira
+  // um itinerário novo ao salvar. ?editar=<id>: continuar um rascunho (ou
+  // editar um publicado) que já é seu — mesmo registro, título original
+  // preservado (ver continuarEditando).
   useEffect(() => {
     const baseId = searchParams.get('base');
-    if (baseId) carregarItinerario(baseId);
+    const editarId = searchParams.get('editar');
+    if (editarId) {
+      continuarEditando(editarId);
+    } else if (baseId) {
+      carregarItinerario(baseId);
+    }
     getBadgesItinerarioDisponiveis().then(setBadgesDisponiveis).catch(() => {});
   }, []);
 
@@ -132,6 +208,10 @@ function CriarItinerario() {
       pontos: pontos
         .filter((p) => p.local) // ignora pontos sem local no rascunho
         .map((p, index) => ({
+          // Só presente se este ponto já existe no backend (edição/retry) —
+          // é o que permite ao serializer atualizar o registro certo em vez
+          // de apagar e recriar (o que perderia fotos/vídeos já enviados).
+          ...(p.backendId ? { id: p.backendId } : {}),
           local: p.local.id,
           ordem: index + 1,
           movimentacao: p.movimentacao,
@@ -145,16 +225,48 @@ function CriarItinerario() {
     };
   }
 
+  // Cria um itinerário novo (POST) na primeira vez; a partir do momento que
+  // `itinerarioEmEdicaoId` existe (seja porque este form já salvou algo, seja
+  // porque abriu via continuarEditando), passa a ATUALIZAR (PATCH) o mesmo
+  // registro. É isso que evita criar um rascunho novo a cada tentativa de
+  // salvar/publicar um itinerário que já existe.
+  async function criarOuAtualizarItinerario(payload) {
+    if (itinerarioEmEdicaoId) {
+      return api.patch(`/itineraries/itinerarios/${itinerarioEmEdicaoId}/`, payload);
+    }
+    const resposta = await api.post('/itineraries/itinerarios/', payload);
+    setItinerarioEmEdicaoId(resposta.data.id);
+    return resposta;
+  }
+
+  // Depois de criar/atualizar, guarda o id real de cada ponto no estado local
+  // (casando pela mesma regra de 'ordem' que payloadAtual usa: só pontos com
+  // local, na ordem em que aparecem) — assim a PRÓXIMA vez que salvar, o
+  // payload já manda o id de volta e o backend atualiza em vez de recriar.
+  function atualizarBackendIdsDosPontos(pontosCriados) {
+    if (!pontosCriados) return;
+    setPontos((prev) => {
+      let indiceFiltrado = 0;
+      return prev.map((p) => {
+        if (!p.local) return p;
+        indiceFiltrado += 1;
+        const pontoCriado = pontosCriados.find((pc) => pc.ordem === indiceFiltrado);
+        return pontoCriado ? { ...p, backendId: pontoCriado.id } : p;
+      });
+    });
+  }
+
   async function salvarRascunho() {
-    if (!titulo) { setErro('Adicione um título antes de salvar o rascunho.'); return; }
+    if (!titulo) { mostrarErro('Adicione um título antes de salvar o rascunho.'); return; }
     setErro(null);
     setSalvandoRascunho(true);
     try {
-      await api.post('/itineraries/itinerarios/', payloadAtual('rascunho'));
+      const resposta = await criarOuAtualizarItinerario(payloadAtual('rascunho'));
+      atualizarBackendIdsDosPontos(resposta.data.pontos);
       setRascunhoSalvo(true);
       setTimeout(() => setRascunhoSalvo(false), 3000);
     } catch (err) {
-      setErro(JSON.stringify(err.response?.data || err.message));
+      mostrarErro(extrairMensagensErro(err.response?.data || err.message));
     } finally {
       setSalvandoRascunho(false);
     }
@@ -178,6 +290,10 @@ function CriarItinerario() {
     }
   }
 
+  // "Usar como base" (?base=) e "Selecionar itinerário para copiar" (modal
+  // abaixo): SEMPRE cria um itinerário novo e distinto ao salvar — por isso
+  // o título ganha o prefixo "Cópia de" e data/comentário não são trazidos.
+  // Não confundir com continuarEditando, que reabre o MESMO registro.
   async function carregarItinerario(id) {
     try {
       const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
@@ -197,16 +313,66 @@ function CriarItinerario() {
           meio_deslocamento: p.meio_deslocamento || '',
           horario_estimado: p.horario_estimado || '',
           comentario: '', // comentário não é copiado conforme especificado
+          backendId: null, // é um ponto novo — a cópia ainda não existe no backend
           midias: [],
         }))
       );
+      // Uma cópia é sempre um itinerário novo — não deve herdar a edição em
+      // andamento de outro registro que porventura este form já tivesse.
+      setItinerarioEmEdicaoId(null);
       setMostraCarregar(false);
       setResultado(null);
       setErro(null);
       setPontoAtivo(0);
       setFormVersion((v) => v + 1);
     } catch (_) {
-      setErro('Não foi possível carregar o itinerário.');
+      mostrarErro('Não foi possível carregar o itinerário.');
+    }
+  }
+
+  // Reabre um itinerário que já é seu (rascunho salvo, ou o rascunho de
+  // backup criado quando uma publicação anterior falhou na validação) pra
+  // CONTINUAR editando o mesmo registro — ao contrário de carregarItinerario,
+  // não é uma cópia: título, data e comentários vêm exatamente como estão,
+  // e a próxima ação de salvar/publicar atualiza esse itinerário (não cria
+  // outro), porque `itinerarioEmEdicaoId` fica setado.
+  //
+  // NOTA: fotos/vídeos já enviados pros pontos continuam no backend (não são
+  // apagados nem duplicados — ver services.sincronizar_pontos_itinerario),
+  // mas não aparecem na prévia de miniaturas deste formulário, que só sabe
+  // exibir arquivos escolhidos nesta sessão. Publicar de novo sem adicionar
+  // mídia nova não perde a mídia antiga.
+  async function continuarEditando(id) {
+    try {
+      const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
+      const it = res.data;
+      setTitulo(it.titulo);
+      setTipo(it.tipo);
+      setDataInicio(it.data_inicio || '');
+      setDataFim(it.data_fim || '');
+      setBadgesSelecionadas((it.badges || []).map((b) => b.id));
+      setPontos(
+        (it.pontos || []).map((p) => ({
+          local: p.local_id ? { id: p.local_id, nome: p.local_nome } : null,
+          movimentacao: p.movimentacao || '',
+          seguranca: p.seguranca ?? '',
+          entrada_gratuita: p.entrada_gratuita || false,
+          preco_medio: p.preco_medio ?? '',
+          meio_deslocamento: p.meio_deslocamento || '',
+          horario_estimado: p.horario_estimado || '',
+          comentario: p.comentario || '',
+          backendId: p.id,
+          midias: [],
+        }))
+      );
+      setItinerarioEmEdicaoId(it.id);
+      setMostraCarregar(false);
+      setResultado(null);
+      setErro(null);
+      setPontoAtivo(0);
+      setFormVersion((v) => v + 1);
+    } catch (_) {
+      mostrarErro('Não foi possível carregar o itinerário.');
     }
   }
 
@@ -377,14 +543,21 @@ function CriarItinerario() {
     setResultado(null);
 
     if (!titulo || pontos.some((p) => !p.local)) {
-      setErro('Preencha o título e selecione um local para cada ponto.');
+      mostrarErro('Preencha o título e selecione um local para cada ponto.');
       return;
     }
 
-    const payload = payloadAtual('publicado');
+    // Cria o rascunho na primeira tentativa; nas seguintes (mesmo formulário,
+    // depois de corrigir algo), ATUALIZA o mesmo rascunho em vez de criar
+    // outro — é o que `itinerarioEmEdicaoId` garante. O status nunca vai
+    // direto pra 'publicado' aqui: o backend não aceita mais isso na
+    // criação/edição, porque a mídia (obrigatória por ponto) só existe
+    // depois do upload abaixo, que depende dos IDs de ponto retornados aqui.
+    const payload = payloadAtual('rascunho');
     setEnviando(true);
     try {
-      const resposta = await api.post('/itineraries/itinerarios/', payload);
+      const resposta = await criarOuAtualizarItinerario(payload);
+      atualizarBackendIdsDosPontos(resposta.data.pontos);
 
       // Upload das fotos e vídeos: casamos cada ponto local (por ordem) com o
       // PontoItinerario real retornado pela API (também ordenado por 'ordem').
@@ -425,27 +598,50 @@ function CriarItinerario() {
         }
       }
 
-      setResultado(resposta.data);
+      // Se algum upload falhou, não adianta tentar publicar — o backend vai
+      // barrar mesmo (ponto sem mídia) e a mensagem de "campo obrigatório"
+      // confundiria mais do que ajudaria aqui. O itinerário fica salvo como
+      // rascunho e o usuário pode reenviar a mídia faltante depois.
+      if (uploadsComFalha.length > 0 || videosComFalha.length > 0) {
+        const avisos = [];
+        if (uploadsComFalha.length > 0) {
+          avisos.push(`Fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas.`);
+        }
+        if (videosComFalha.length > 0) {
+          avisos.push(`Vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados.`);
+        }
+        avisos.push('Reenvie a mídia faltante e publique novamente pela lista de rascunhos.');
+        mostrarErro(avisos, 'O itinerário foi salvo como rascunho, mas:');
+        return;
+      }
+
+      // Toda a mídia já está no servidor — agora sim tenta a transição pra
+      // "publicado". É só aqui que o backend consegue validar campos
+      // obrigatórios de cada ponto e a exigência de pelo menos 1 foto/vídeo.
+      const respostaPublicar = await api.post(`/itineraries/itinerarios/${resposta.data.id}/publicar/`);
+
+      setResultado(respostaPublicar.data);
       setTitulo('');
       setDataInicio('');
       setDataFim('');
       setBadgesSelecionadas([]);
       setPontos([pontoVazio()]);
       setPontoAtivo(0);
+      setItinerarioEmEdicaoId(null);
       setFormVersion((v) => v + 1);
-
-      const avisos = [];
-      if (uploadsComFalha.length > 0) {
-        avisos.push(`as fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas`);
-      }
-      if (videosComFalha.length > 0) {
-        avisos.push(`o(s) vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados`);
-      }
-      if (avisos.length > 0) {
-        setErro(`Itinerário criado, mas ${avisos.join(' e ')}. Tente reenviar depois.`);
-      }
     } catch (err) {
-      setErro(JSON.stringify(err.response?.data || err.message));
+      const dados = err.response?.data;
+      if (dados?.erros) {
+        // Erros de validação da publicação (services.validar_itinerario_para_publicacao):
+        // lista de strings, uma por problema encontrado. O itinerário já existe
+        // como rascunho nesse ponto — não é perdido, só não virou 'publicado'.
+        mostrarErro(
+          [...dados.erros, 'O itinerário continua salvo como rascunho — corrija e tente publicar de novo.'],
+          'Não foi possível publicar:'
+        );
+      } else {
+        mostrarErro(extrairMensagensErro(dados || err.message));
+      }
     } finally {
       setEnviando(false);
     }
@@ -586,7 +782,18 @@ function CriarItinerario() {
           </div>
 
           {rascunhoSalvo && <p className="msg-sucesso"><IconeSucesso size={14} /> Rascunho salvo!</p>}
-          {erro && <p className="msg-erro">{erro}</p>}
+          {erro && (
+            <div className="msg-erro" role="alert">
+              {erro.titulo && <p className="msg-erro__titulo">{erro.titulo}</p>}
+              {!erro.titulo && erro.itens.length === 1 ? (
+                <p className="msg-erro__texto">{erro.itens[0]}</p>
+              ) : (
+                <ul className="msg-erro__lista">
+                  {erro.itens.map((msg, i) => <li key={i}>{msg}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
           {resultado && (
             <p className="msg-sucesso msg-sucesso--publicado">
               <IconeSucesso size={16} /> Itinerário "{resultado.titulo}" publicado com sucesso!

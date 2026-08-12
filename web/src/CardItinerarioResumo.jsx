@@ -48,9 +48,11 @@ function CardItinerarioResumo({ it, onExcluido }) {
   const tipoLabel = it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip';
 
   // Rascunho não tem página própria (ver PaginaItinerario) — clicar nele
-  // deve levar direto pro editor com os dados já carregados como base,
-  // igual ao "Usar como base" de um itinerário publicado.
-  const destino = it.status === 'rascunho' ? `/criar?base=${it.id}` : `/itinerario/${it.id}`;
+  // deve levar direto pro editor CONTINUANDO o mesmo registro (?editar=),
+  // não como cópia (?base=) — usar ?base= aqui recriava um itinerário novo
+  // a cada edição e, no caso de rascunho de backup gerado por falha de
+  // publicação, exibia erroneamente "Cópia de X" no título do formulário.
+  const destino = it.status === 'rascunho' ? `/criar?editar=${it.id}` : `/itinerario/${it.id}`;
 
   // O card inteiro é um <Link> — preventDefault + stopPropagation evitam
   // que clicar no "x" também dispare a navegação do link em volta. Isso só

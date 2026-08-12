@@ -8,6 +8,16 @@ from . import services as itinerario_services
 
 class PontoItinerarioSerializer(serializers.ModelSerializer):
     local_nome = serializers.CharField(source='local.nome', read_only=True)
+    # Num ModelSerializer aninhado 'id' normalmente vem read-only. Aqui
+    # precisa ser gravável (mas opcional) pra permitir, ao ATUALIZAR um
+    # itinerário, casar cada ponto do payload com o registro já existente no
+    # banco em vez de apagar e recriar tudo — apagar destruiria (via
+    # CASCADE) as fotos/vídeos já enviados pro ponto. Ver
+    # services.sincronizar_pontos_itinerario, que é o único lugar que
+    # efetivamente usa esse id (sempre restrito aos pontos do próprio
+    # itinerário sendo atualizado — um id de outro itinerário é ignorado,
+    # não sequestrado).
+    id = serializers.IntegerField(required=False)
 
     class Meta:
         model = PontoItinerario
@@ -20,16 +30,15 @@ class PontoItinerarioSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['distancia_ate_proximo']
 
-    def validate(self, data):
-        if data.get('entrada_gratuita') and data.get('preco_medio'):
-            raise serializers.ValidationError(
-                "Local gratuito não deve ter avaliação de preço."
-            )
-        if not data.get('entrada_gratuita') and data.get('preco_medio') is None:
-            raise serializers.ValidationError(
-                "Informe a avaliação de preço, ou marque como entrada gratuita."
-            )
-        return data
+    # Não há validate() aqui de propósito: a regra "gratuito não pode ter
+    # preço / não-gratuito precisa de preço" só se aplica na PUBLICAÇÃO,
+    # não no salvamento do rascunho (ver comentário em
+    # ItinerarioSerializer.validate() e services.CAMPOS_OBRIGATORIOS_PONTO).
+    # Um rascunho em andamento pode perfeitamente ter um ponto sem essa
+    # decisão ainda tomada. A checagem de fato acontece em
+    # services.validar_itinerario_para_publicacao, chamada só na transição
+    # rascunho → publicado (POST /itinerarios/{id}/publicar/). Validar aqui
+    # também bloqueava incondicionalmente até o salvamento de rascunho.
 
 
 class ItinerarioSerializer(serializers.ModelSerializer):
@@ -68,12 +77,26 @@ class ItinerarioSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A data do itinerário não pode ser no futuro.")
         return value
 
+    def validate(self, data):
+        """Publicar não passa mais por aqui. Na criação, mídia ainda não existe
+        (é enviada depois, já com os IDs dos pontos); então a validação completa
+        de "pronto pra publicar" (campos obrigatórios + mídia por ponto) só faz
+        sentido rodar depois do upload, no endpoint dedicado
+        POST /itinerarios/{id}/publicar/ (ver views.py + services.py)."""
+        status_novo = data.get('status')
+        ja_publicado = self.instance is not None and self.instance.status == 'publicado'
+
+        if status_novo == 'publicado' and not ja_publicado:
+            raise serializers.ValidationError({
+                'status': "Não é possível publicar diretamente por aqui. Salve como rascunho, "
+                          "envie as fotos/vídeos de cada ponto e então chame "
+                          "POST /itinerarios/{id}/publicar/."
+            })
+        return data
+
     def create(self, validated_data):
         pontos_data = validated_data.pop('pontos')
         badges_data = validated_data.pop('badges', [])
-
-        if validated_data.get('status') == 'publicado':
-            validated_data['publicado_em'] = timezone.now()
 
         itinerario = Itinerario.objects.create(**validated_data)
 
@@ -87,18 +110,29 @@ class ItinerarioSerializer(serializers.ModelSerializer):
         return itinerario
 
     def update(self, instance, validated_data):
-        """Pontos não são editados por aqui (endpoint próprio já existe pra isso,
-        via PontoItinerario). Badges são substituídos por completo a cada update —
-        mais simples e previsível do lado do frontend do que um diff incremental."""
-        badges_data = validated_data.pop('badges', None)
-        validated_data.pop('pontos', None)
+        """Badges são substituídos por completo a cada update — mais simples e
+        previsível do lado do frontend do que um diff incremental. Pontos são
+        SINCRONIZADOS (casados por id quando o payload manda um, senão
+        criados) em vez de apagados e recriados — ver
+        services.sincronizar_pontos_itinerario; apagar destruiria (via
+        CASCADE) fotos/vídeos já enviados, o que quebraria justamente o
+        cenário que motivou pontos serem editáveis por aqui: reabrir um
+        rascunho que falhou na publicação, corrigir um campo e tentar de
+        novo sem perder a mídia já enviada.
 
-        if validated_data.get('status') == 'publicado' and instance.publicado_em is None:
-            validated_data['publicado_em'] = timezone.now()
+        'status' só chega aqui como 'publicado' se já estava publicado
+        (validate() acima barra a transição rascunho→publicado nesse
+        endpoint), então não há publicado_em pra recalcular."""
+        badges_data = validated_data.pop('badges', None)
+        pontos_data = validated_data.pop('pontos', None)
 
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
         instance.save()
+
+        if pontos_data is not None:
+            itinerario_services.sincronizar_pontos_itinerario(instance, pontos_data)
+            itinerario_services.calcular_distancias_itinerario(instance)
 
         if badges_data is not None:
             ItinerarioBadge.objects.filter(itinerario=instance).delete()

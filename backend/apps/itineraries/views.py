@@ -2,8 +2,10 @@ import os
 import tempfile
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import render, get_object_or_404
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +15,7 @@ from .serializers import (
     ItinerarioSerializer, FotoPontoItinerarioSerializer, ItinerarioDetalheSerializer,
     VideoPontoItinerarioSerializer,
 )
+from . import services as itinerario_services
 from core.video import probe_video, validar_video
 
 
@@ -58,6 +61,31 @@ class ItinerarioViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(autor=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def publicar(self, request, pk=None):
+        """POST /itinerarios/<id>/publicar/ — transição rascunho → publicado.
+
+        Chamado pelo frontend só depois que título/pontos já foram salvos
+        (via create/update normal) E toda a mídia de cada ponto já foi
+        enviada (/fotos/, /videos/). get_queryset() já garante que só o
+        autor enxerga/edita o próprio rascunho, então get_object() aqui
+        cobre a checagem de posse sem precisar repeti-la."""
+        itinerario = self.get_object()
+
+        if itinerario.status == 'publicado':
+            return Response(
+                {'erro': 'Este itinerário já está publicado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            itinerario_services.publicar_itinerario(itinerario)
+        except DjangoValidationError as e:
+            return Response({'erros': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(itinerario)
+        return Response(serializer.data)
 
 
 class ItinerarioDetalhePublicoView(APIView):

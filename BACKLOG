@@ -1,11 +1,5 @@
 Checklist:
 frontend:
-    CriarItinerario.jsx:
-        - obrigatório para a publicação (para o rascunho, não é obrigatório):
-            - pelo menos 1 imagem por ponto
-            - título
-            - data do itinerário (data de início e término se multi-day trip)
-
     Configurações:
         - Criar opção de excluir conta:
             - pedir para colocar a senha
