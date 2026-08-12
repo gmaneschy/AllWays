@@ -1,5 +1,10 @@
 Checklist:
 frontend:
+    Após a correção de mídia salva em rascunho, um bug persistiu no ModalCentralizarMidia
+    - Corrigir bug no ModalCentralizarMidia
+    - Incluir zoom por scroll no ModalCentralizarMidia
+    - Incluir movimentação da imagem em x e y simultaneamente
+
     Configurações:
         - Criar opção de excluir conta:
             - pedir para colocar a senha
@@ -11,16 +16,11 @@ frontend:
             - perfil, comentários, mensagens e itinerários de contas desativadas ficam invisíveis para os outros usuários.
             - desativar por 30, 15, 7 dias; desativar indefinidamente (até logar novamente)
 
-Configurações:
-    Privacidade:
-        Alterar Senha (testar)
-        Autenticação de dois fatores (futuro)
+        Segurança:
+            Autenticação de dois fatores (futuro)
 
-    Idioma:
-        Mudar idioma do aplicativo (futuro)
-
-    Notificações:
-    Exibição:
+        Idioma:
+            Mudar idioma do aplicativo (futuro)
 
 Tela admin
 http://localhost:8000/admin/

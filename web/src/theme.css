@@ -49,7 +49,7 @@
      Decisão: 6:9 (mais vertical que o 4:5 anterior), Preencher (cover)
      pra fotos com centralização ajustável, Ajustar (contain) sempre pra
      vídeo — ver CarrosselItinerario.css e ModalCentralizarMidia.css. */
-  --razao-midia-card: 6 / 9;
+  --razao-midia-card: 1 / 1;
 
   /* 1.7 — Navbar vertical (sidebar fixa à esquerda, expande no hover) */
   --navbar-largura-colapsada: 76px;

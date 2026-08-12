@@ -31,18 +31,26 @@ const MOVIMENTACAO_OPCOES = [
  * em qualquer campo do card), recriando a miniatura sem necessidade e
  * gerando um blob novo (vazado) a cada vez. */
 function MidiaThumb({ midia, aoClicarParaCentralizar }) {
-  const [url, setUrl] = useState(null);
+  const [urlLocal, setUrlLocal] = useState(null);
 
   useEffect(() => {
     // Criar E revogar dentro do MESMO efeito é o que importa aqui — em
     // StrictMode (dev), o React roda montagem→limpeza→remontagem uma vez
-    // de propósito; se a criação estivesse fora do efeito (ex: no useState),
-    // a limpeza revogaria a URL sem que ninguém recriasse na remontagem,
-    // deixando a <img>/<video> apontando pra um blob morto.
+    // de propósito; se a criação estivesse fora do efeito, a limpeza
+    // revogaria a URL sem que ninguém recriasse na remontagem, deixando a
+    // <img>/<video> apontando pra um blob morto.
+    //
+    // Mídia recém-selecionada nesta sessão (File, ainda não enviada) precisa
+    // de blob URL local. Mídia que já existe no backend (reaberta via
+    // continuarEditando, ou enviada num salvamento anterior nesta mesma
+    // sessão) já chega com `url` pronta — não passa por aqui.
+    if (!midia.arquivo) return undefined;
     const objectUrl = URL.createObjectURL(midia.arquivo);
-    setUrl(objectUrl);
+    setUrlLocal(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [midia.arquivo]);
+
+  const url = midia.arquivo ? urlLocal : midia.url;
 
   if (!url) {
     return <div className="midia-item__thumb midia-item__thumb--carregando" />;
@@ -68,7 +76,15 @@ function MidiaThumb({ midia, aoClicarParaCentralizar }) {
       />
     );
   }
-  return <video src={url} muted draggable={false} className="midia-item__thumb midia-item__thumb--video" />;
+  return (
+    <video
+      src={url}
+      poster={midia.thumbnailUrl || undefined}
+      muted
+      draggable={false}
+      className="midia-item__thumb midia-item__thumb--video"
+    />
+  );
 }
 
 function pontoVazio() {
@@ -263,6 +279,27 @@ function CriarItinerario() {
     try {
       const resposta = await criarOuAtualizarItinerario(payloadAtual('rascunho'));
       atualizarBackendIdsDosPontos(resposta.data.pontos);
+
+      // Mídia escolhida nesta sessão fica só em memória (File objects) até
+      // aqui — sem isso, o rascunho salvava título/pontos mas a mídia se
+      // perdia ao fechar a aba, obrigando reenvio ao reabrir. Mídia já
+      // enviada antes (enviada: true) é pulada automaticamente — ver
+      // enviarMidiaPendente.
+      const { uploadsComFalha, videosComFalha } = await enviarMidiaPendente(resposta.data.pontos);
+
+      if (uploadsComFalha.length > 0 || videosComFalha.length > 0) {
+        const avisos = [];
+        if (uploadsComFalha.length > 0) {
+          avisos.push(`Fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas.`);
+        }
+        if (videosComFalha.length > 0) {
+          avisos.push(`Vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados.`);
+        }
+        avisos.push('O restante do rascunho foi salvo — tente reenviar a mídia faltante.');
+        mostrarErro(avisos, 'Rascunho salvo, mas:');
+        return;
+      }
+
       setRascunhoSalvo(true);
       setTimeout(() => setRascunhoSalvo(false), 3000);
     } catch (err) {
@@ -337,11 +374,11 @@ function CriarItinerario() {
   // e a próxima ação de salvar/publicar atualiza esse itinerário (não cria
   // outro), porque `itinerarioEmEdicaoId` fica setado.
   //
-  // NOTA: fotos/vídeos já enviados pros pontos continuam no backend (não são
-  // apagados nem duplicados — ver services.sincronizar_pontos_itinerario),
-  // mas não aparecem na prévia de miniaturas deste formulário, que só sabe
-  // exibir arquivos escolhidos nesta sessão. Publicar de novo sem adicionar
-  // mídia nova não perde a mídia antiga.
+  // Fotos/vídeos já enviados pros pontos são recarregados aqui como itens de
+  // `midias` com `enviada: true` e `backendId` — usam `url` (não `arquivo`,
+  // que só existe pra mídia escolhida NESTA sessão) e por isso não passam
+  // pelo blob local do MidiaThumb, e enviarMidiaPendente pula qualquer item
+  // já `enviada: true`, então reabrir e salvar de novo não duplica upload.
   async function continuarEditando(id) {
     try {
       const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
@@ -362,7 +399,27 @@ function CriarItinerario() {
           horario_estimado: p.horario_estimado || '',
           comentario: p.comentario || '',
           backendId: p.id,
-          midias: [],
+          midias: [
+            ...(p.fotos || []).map((f) => ({
+              id: `foto-${f.id}`,
+              tipo: 'foto',
+              url: f.url,
+              backendId: f.id,
+              enviada: true,
+              // O backend ainda não guarda o enquadramento escolhido (ver
+              // comentário em enviarFotosDoPonto), então volta sempre
+              // centralizado — não tem como recuperar o valor original.
+              posicao: { x: 50, y: 50 },
+            })),
+            ...(p.videos || []).map((v) => ({
+              id: `video-${v.id}`,
+              tipo: 'video',
+              url: v.url,
+              thumbnailUrl: v.thumbnail_url,
+              backendId: v.id,
+              enviada: true,
+            })),
+          ],
         }))
       );
       setItinerarioEmEdicaoId(it.id);
@@ -396,14 +453,14 @@ function CriarItinerario() {
       if (file.type.startsWith('video/')) {
         const resultado = await validarVideoLocal(file);
         if (resultado.valido) {
-          novasMidias.push({ id: crypto.randomUUID(), tipo: 'video', arquivo: file });
+          novasMidias.push({ id: crypto.randomUUID(), tipo: 'video', arquivo: file, enviada: false });
         } else {
           erros.push(`${file.name}: ${resultado.erro}`);
         }
       } else if (file.type.startsWith('image/')) {
         // posicao começa centralizada — o usuário só precisa mexer se
         // quiser um enquadramento diferente do padrão via ModalCentralizarMidia.
-        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, posicao: { x: 50, y: 50 } });
+        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, posicao: { x: 50, y: 50 }, enviada: false });
       } else {
         erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
       }
@@ -424,7 +481,29 @@ function CriarItinerario() {
     }
   }
 
-  function removerMidia(indexPonto, midiaId) {
+  // Se a mídia já foi enviada ao backend (rascunho salvo antes, ou item
+  // recarregado via continuarEditando), removê-la só da prévia local não
+  // basta — ela ficaria órfã, associada ao ponto pra sempre. Precisa
+  // excluir do servidor também. Antes disso não era um problema porque o
+  // upload só acontecia na publicação final (a mídia nunca existia no
+  // backend antes do usuário confirmar); agora que salvarRascunho também
+  // envia mídia, esse descompasso passou a importar.
+  async function removerMidia(indexPonto, midiaId) {
+    const midia = pontos[indexPonto].midias.find((m) => m.id === midiaId);
+
+    if (midia?.enviada && midia.backendId) {
+      const endpoint = midia.tipo === 'foto'
+        ? `/itineraries/fotos/${midia.backendId}/`
+        : `/itineraries/videos/${midia.backendId}/`;
+      try {
+        await api.delete(endpoint);
+      } catch (_) {
+        // Não trava a remoção da prévia por causa disso — pior caso é a
+        // mídia ficar órfã no servidor (recuperável manualmente depois);
+        // travar a UI aqui seria pior pro usuário.
+      }
+    }
+
     const novosPontos = [...pontos];
     novosPontos[indexPonto] = {
       ...novosPontos[indexPonto],
@@ -518,18 +597,88 @@ function CriarItinerario() {
     // com segurança, sem quebrar o upload.
     formData.append('posicoes', JSON.stringify(fotos.map((f) => f.posicao || { x: 50, y: 50 })));
 
-    await api.post('/itineraries/fotos/', formData, {
+    const { data } = await api.post('/itineraries/fotos/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return data; // lista de fotos criadas, na mesma ordem em que foram enviadas
   }
 
-  async function enviarVideosDoPonto(pontoId, videos) {
+  async function enviarVideosDoPonto(pontoId, videosMidias) {
     // Diferente de fotos (aceita várias no mesmo request), o endpoint de
     // vídeo processa um arquivo por vez — cada upload dispara sua própria
     // validação (ffprobe) e task de compressão no backend.
-    for (const video of videos) {
-      await enviarVideoPonto(pontoId, video);
+    const criados = [];
+    for (const midia of videosMidias) {
+      const criado = await enviarVideoPonto(pontoId, midia.arquivo);
+      criados.push(criado);
     }
+    return criados; // mesma ordem de videosMidias
+  }
+
+  // Depois de um upload bem-sucedido, marca cada item de `midiasEnviadas`
+  // (subconjunto de midias.filter(m => !m.enviada) de UM ponto) como
+  // `enviada: true` e guarda o id real no backend — é o que permite
+  // enviarMidiaPendente pular esses itens da próxima vez que rodar (rascunho
+  // salvo de novo, ou publicar depois de já ter salvo rascunho), evitando
+  // reenviar (e duplicar) a mesma mídia.
+  function marcarMidiasComoEnviadas(pontoIndex, midiasEnviadas, registrosCriados) {
+    setPontos((prev) => {
+      const novosPontos = [...prev];
+      const ponto = novosPontos[pontoIndex];
+      novosPontos[pontoIndex] = {
+        ...ponto,
+        midias: ponto.midias.map((m) => {
+          const posLocal = midiasEnviadas.findIndex((me) => me.id === m.id);
+          if (posLocal === -1) return m; // não fazia parte deste lote
+          const registro = registrosCriados[posLocal];
+          return registro ? { ...m, enviada: true, backendId: registro.id } : m;
+        }),
+      };
+      return novosPontos;
+    });
+  }
+
+  // Sobe pro backend só a mídia que AINDA não foi enviada (midia.enviada
+  // !== true) — usada tanto por salvarRascunho quanto por publicar, pra não
+  // duplicar lógica nem reenviar o que um salvamento anterior já persistiu.
+  // Casamos cada ponto local (por posição, "i+1") com o PontoItinerario real
+  // retornado pela API (também ordenado por 'ordem') — mesma lógica que
+  // payloadAtual usa pra montar 'ordem' a partir dos pontos que TÊM local
+  // selecionado.
+  async function enviarMidiaPendente(pontosCriados) {
+    const uploadsComFalha = [];
+    const videosComFalha = [];
+
+    for (let i = 0; i < pontos.length; i++) {
+      const midiasPendentes = pontos[i].midias.filter((m) => !m.enviada);
+      if (midiasPendentes.length === 0) continue;
+
+      const pontoCriado = pontosCriados.find((pc) => pc.ordem === i + 1);
+      if (!pontoCriado) continue;
+
+      const fotosPendentes = midiasPendentes.filter((m) => m.tipo === 'foto');
+      const videosPendentes = midiasPendentes.filter((m) => m.tipo === 'video');
+
+      if (fotosPendentes.length > 0) {
+        try {
+          const criadas = await enviarFotosDoPonto(pontoCriado.id, fotosPendentes);
+          marcarMidiasComoEnviadas(i, fotosPendentes, criadas);
+        } catch (err) {
+          uploadsComFalha.push(i + 1);
+        }
+      }
+
+      if (videosPendentes.length > 0) {
+        try {
+          const criados = await enviarVideosDoPonto(pontoCriado.id, videosPendentes);
+          marcarMidiasComoEnviadas(i, videosPendentes, criados);
+        } catch (err) {
+          videosComFalha.push(i + 1);
+        }
+      }
+    }
+
+    return { uploadsComFalha, videosComFalha };
   }
 
   function alternarBadge(badgeId) {
@@ -559,44 +708,10 @@ function CriarItinerario() {
       const resposta = await criarOuAtualizarItinerario(payload);
       atualizarBackendIdsDosPontos(resposta.data.pontos);
 
-      // Upload das fotos e vídeos: casamos cada ponto local (por ordem) com o
-      // PontoItinerario real retornado pela API (também ordenado por 'ordem').
-      const pontosCriados = resposta.data.pontos;
-      const uploadsComFalha = [];
-      const videosComFalha = [];
-
-      for (let i = 0; i < pontos.length; i++) {
-        const midias = pontos[i].midias;
-        if (midias.length === 0) continue;
-
-        // O backend ainda guarda fotos e vídeos em tabelas separadas, sem um
-        // campo de ordem compartilhado entre os dois tipos — então a ordem
-        // relativa DENTRO de cada tipo é preservada (é o que dá pra garantir
-        // hoje), mas um intercalado exato foto/vídeo/foto não sobrevive à
-        // publicação. Se isso vier a importar, precisaríamos de um campo de
-        // ordem único no backend.
-        const fotosDoPonto = midias.filter((m) => m.tipo === 'foto');
-        const videos = midias.filter((m) => m.tipo === 'video').map((m) => m.arquivo);
-
-        const pontoCriado = pontosCriados.find((pc) => pc.ordem === i + 1);
-        if (!pontoCriado) continue;
-
-        if (fotosDoPonto.length > 0) {
-          try {
-            await enviarFotosDoPonto(pontoCriado.id, fotosDoPonto);
-          } catch (err) {
-            uploadsComFalha.push(i + 1);
-          }
-        }
-
-        if (videos.length > 0) {
-          try {
-            await enviarVideosDoPonto(pontoCriado.id, videos);
-          } catch (err) {
-            videosComFalha.push(i + 1);
-          }
-        }
-      }
+      // Mídia já enviada num salvamento de rascunho anterior (enviada: true)
+      // é pulada aqui automaticamente — só o que ainda não subiu é enviado
+      // agora (ver enviarMidiaPendente).
+      const { uploadsComFalha, videosComFalha } = await enviarMidiaPendente(resposta.data.pontos);
 
       // Se algum upload falhou, não adianta tentar publicar — o backend vai
       // barrar mesmo (ponto sem mídia) e a mensagem de "campo obrigatório"
