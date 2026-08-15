@@ -1,0 +1,124 @@
+.modal-recortar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.modal-recortar {
+  width: 100%;
+  max-width: 540px;
+  background: var(--fundo-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.modal-recortar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.modal-recortar__header strong {
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+}
+
+.modal-recortar__fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--texto-secundario);
+}
+
+.modal-recortar__aviso {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  margin: 0 0 14px;
+}
+
+.modal-recortar__quadro {
+  position: relative;
+  width: 100%;
+  /* Sempre 1:1 — a foto sempre sai quadrada do recorte, independente da
+     proporção usada em cada lugar que ela é exibida depois (a exibição em
+     si pode usar object-fit: cover num container não-quadrado sem problema,
+     já que o quadrado recortado cobre qualquer proporção). */
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  cursor: grab;
+  touch-action: none; /* sem isso, arrastar no celular também rola a página por trás */
+}
+
+.modal-recortar__quadro:active {
+  cursor: grabbing;
+}
+
+.modal-recortar__imagem {
+  /* width/height/left/top são animados via framer-motion (ver o
+     `animate` no componente) — dependem do zoom escolhido, não dá pra
+     fixar isso aqui (object-fit/object-position não têm conceito de
+     "zoom além do cover", só cobrem o quadro no mínimo). */
+  position: absolute;
+  max-width: none;
+  display: block;
+  pointer-events: none; /* o gesto de arrastar é tratado pelo quadro, não pela img */
+  user-select: none;
+}
+
+.modal-recortar__zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.modal-recortar__zoom-label {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+
+.modal-recortar__zoom-slider {
+  flex: 1;
+  accent-color: var(--cor-destaque, #000);
+  cursor: pointer;
+}
+
+.modal-recortar__zoom-valor {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  min-width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-recortar__erro {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: #FDECEA;
+  border: 1px solid var(--cor-perigo);
+  border-radius: 8px;
+  color: var(--cor-perigo);
+  font: var(--fonte-meta);
+}
+
+.modal-recortar__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}

@@ -13,7 +13,16 @@ class Place(models.Model):
     # ─── Dados geográficos estruturados (usados na gamificação) ──────────
     cidade = models.CharField(max_length=100, blank=True)
     regiao = models.CharField(max_length=100, blank=True)        # estado/província/cantão/etc.
-    regiao_codigo = models.CharField(max_length=10, blank=True)   # ex: 'CE' (parte do ISO 3166-2 'BR-CE')
+    # 'short_name' do Google Places, guardado como código da região (ex: 'CE',
+    # parte do ISO 3166-2 'BR-CE'). O nome do campo sugere sigla curta, mas o
+    # Google só devolve sigla de verdade pra países com subdivisão ISO 3166-2
+    # oficialmente reconhecida por ele — pra vários países (Rússia entre eles),
+    # 'short_name' de administrative_area_level_1 volta como o nome completo
+    # da região. max_length=10 estourava nesses casos e derrubava o POST
+    # /places/ inteiro com um DataError do Postgres antes mesmo de criar o
+    # Place — por isso o mesmo tamanho de 'regiao' aqui, não é mais garantia
+    # de "código curto".
+    regiao_codigo = models.CharField(max_length=100, blank=True)
     pais = models.CharField(max_length=100, blank=True)
     pais_codigo = models.CharField(max_length=2, blank=True)       # ISO 3166-1 alpha-2
     continente = models.CharField(max_length=20, blank=True)

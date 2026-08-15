@@ -105,6 +105,28 @@ def obter_continente(pais_codigo):
         return ''
 
 
+def truncar_campos_para_modelo(model_class, dados):
+    """Trunca valores string que excederiam o max_length dos campos do model.
+
+    A Places API do Google não garante tamanho máximo pra nenhum dos campos
+    de texto que ela devolve (nome, endereço, short_name de região etc.) —
+    o caso que motivou isso foi 'regiao_codigo' (pensado pra sigla tipo 'CE',
+    mas que a Google preenche com o nome completo da região em vários
+    países, Rússia inclusive), mas a mesma armadilha vale pra qualquer
+    CharField aqui. Sem truncar antes, o Postgres rejeita o INSERT inteiro
+    com um DataError assim que qualquer um desses campos vier maior que o
+    esperado — e o usuário simplesmente não consegue salvar aquele local,
+    sem nenhuma mensagem de erro amigável.
+    """
+    resultado = dict(dados)
+    for campo in model_class._meta.get_fields():
+        max_length = getattr(campo, 'max_length', None)
+        nome = getattr(campo, 'name', None)
+        if max_length and nome in resultado and isinstance(resultado[nome], str):
+            resultado[nome] = resultado[nome][:max_length]
+    return resultado
+
+
 def buscar_detalhes(place_id):
     client = get_client()
     resultado = client.place(

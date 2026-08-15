@@ -4,7 +4,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
-import ModalCentralizarMidia from './ModalCentralizarMidia';
+import ModalRecortarMidia from './ModalRecortarMidia';
 import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, IconeAdicionar, IconeRemover, IconeExpandir, IconeUpload } from './icons';
 import { AvisoRemoverPonto } from './Avisos';
 import './CriarItinerario.css';
@@ -30,7 +30,7 @@ const MOVIMENTACAO_OPCOES = [
  * chamado a cada re-render do formulário inteiro (ex: cada tecla digitada
  * em qualquer campo do card), recriando a miniatura sem necessidade e
  * gerando um blob novo (vazado) a cada vez. */
-function MidiaThumb({ midia, aoClicarParaCentralizar }) {
+function MidiaThumb({ midia, aoClicarParaRecortar }) {
   const [urlLocal, setUrlLocal] = useState(null);
 
   useEffect(() => {
@@ -61,17 +61,17 @@ function MidiaThumb({ midia, aoClicarParaCentralizar }) {
     // que a envolve (era o "agarra e solta" que persistia mesmo depois do
     // fix do blob).
     //
-    // objectPosition reflete o enquadramento escolhido no
-    // ModalCentralizarMidia — mesmo valor que vai aparecer no card de
-    // verdade, então a miniatura já dá um preview fiel.
+    // A foto já sai quadrada do ModalRecortarMidia (recorte 1:1 real, não
+    // mais um enquadramento calculado em cima da imagem inteira) — a
+    // miniatura não precisa de nenhum object-position especial, o
+    // object-fit: cover padrão do CSS já é fiel ao que foi recortado.
     return (
       <img
         src={url}
         alt=""
         draggable={false}
-        onClick={(e) => { e.stopPropagation(); aoClicarParaCentralizar?.(); }}
-        style={{ objectPosition: midia.posicao ? `${midia.posicao.x}% ${midia.posicao.y}%` : undefined }}
-        title="Clique para ajustar o enquadramento"
+        onClick={(e) => { e.stopPropagation(); aoClicarParaRecortar?.(); }}
+        title="Clique para recortar"
         className="midia-item__thumb"
       />
     );
@@ -406,10 +406,6 @@ function CriarItinerario() {
               url: f.url,
               backendId: f.id,
               enviada: true,
-              // O backend ainda não guarda o enquadramento escolhido (ver
-              // comentário em enviarFotosDoPonto), então volta sempre
-              // centralizado — não tem como recuperar o valor original.
-              posicao: { x: 50, y: 50 },
             })),
             ...(p.videos || []).map((v) => ({
               id: `video-${v.id}`,
@@ -458,9 +454,7 @@ function CriarItinerario() {
           erros.push(`${file.name}: ${resultado.erro}`);
         }
       } else if (file.type.startsWith('image/')) {
-        // posicao começa centralizada — o usuário só precisa mexer se
-        // quiser um enquadramento diferente do padrão via ModalCentralizarMidia.
-        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, posicao: { x: 50, y: 50 }, enviada: false });
+        novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, enviada: false });
       } else {
         erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
       }
@@ -559,44 +553,52 @@ function CriarItinerario() {
     setConfirmandoRemoverPonto(false);
   }
 
-  // Índice do ponto + midia sendo centralizada no momento; null = modal fechado.
-  const [centralizando, setCentralizando] = useState(null);
+  // Índice do ponto + midia sendo recortada no momento; null = modal fechado.
+  const [recortando, setRecortando] = useState(null);
 
-  function abrirCentralizacao(pontoIndex, midia) {
-    setCentralizando({ pontoIndex, midia });
+  function abrirRecorte(pontoIndex, midia) {
+    setRecortando({ pontoIndex, midia });
   }
 
-  function fecharCentralizacao() {
-    setCentralizando(null);
+  function fecharRecorte() {
+    setRecortando(null);
   }
 
-  function salvarCentralizacao(posicao) {
-    if (!centralizando) return;
-    const { pontoIndex, midia } = centralizando;
+  function salvarRecorte(arquivoRecortado) {
+    if (!recortando) return;
+    const { pontoIndex, midia } = recortando;
     setPontos((prev) => {
       const novosPontos = [...prev];
       novosPontos[pontoIndex] = {
         ...novosPontos[pontoIndex],
-        midias: novosPontos[pontoIndex].midias.map((m) => (
-          m.id === midia.id ? { ...m, posicao } : m
-        )),
+        midias: novosPontos[pontoIndex].midias.map((m) => {
+          if (m.id !== midia.id) return m;
+          // O recorte gera um File novo — mesmo se `m` já tivesse sido
+          // enviada antes (enviada: true, com backendId/url do backend),
+          // o resultado recortado é tratado como mídia pendente de novo,
+          // pra enviarMidiaPendente subir essa versão. `url`/`backendId`
+          // somem: a partir daqui `arquivo` é a única fonte da imagem
+          // (mesma convenção de mídia recém-adicionada em adicionarMidia).
+          // OBS: como não existe endpoint pra "substituir" uma foto já
+          // publicada, isso cria um registro NOVO no backend em vez de
+          // atualizar o antigo — aceitável aqui porque o backend também
+          // não precisa mais persistir posição/zoom nenhum.
+          return { id: m.id, tipo: 'foto', arquivo: arquivoRecortado, enviada: false };
+        }),
       };
       return novosPontos;
     });
-    setCentralizando(null);
+    setRecortando(null);
   }
 
   async function enviarFotosDoPonto(pontoId, fotos) {
     const formData = new FormData();
     formData.append('ponto', pontoId);
     fotos.forEach((foto) => formData.append('imagens', foto.arquivo));
-    // Enquadramento escolhido no ModalCentralizarMidia, no MESMO índice de
-    // 'imagens' — pra o backend casar cada posição com o arquivo certo.
-    // NOTA: o backend ainda não tem campo pra guardar isso (ver observação
-    // na resposta) — por ora essa lista chega no servidor mas é ignorada
-    // com segurança, sem quebrar o upload.
-    formData.append('posicoes', JSON.stringify(fotos.map((f) => f.posicao || { x: 50, y: 50 })));
-
+    // Sem 'posicoes' — cada imagem já chega recortada em 1:1 pelo
+    // ModalRecortarMidia, então não há mais x/y/escala pra persistir por
+    // foto (ver FotoPontoItinerarioViewSet.create em views.py, que também
+    // pode perder o tratamento de posicao_x/posicao_y/escala).
     const { data } = await api.post('/itineraries/fotos/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -1054,13 +1056,13 @@ function CriarItinerario() {
                     >
                       <MidiaThumb
                         midia={midia}
-                        aoClicarParaCentralizar={() => abrirCentralizacao(pontoAtivo, midia)}
+                        aoClicarParaRecortar={() => abrirRecorte(pontoAtivo, midia)}
                       />
                       {midia.tipo === 'video' && (
                         <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
                       )}
                       {midia.tipo === 'foto' && (
-                        <span className="midia-item__badge-centralizar" title="Ajustar enquadramento">
+                        <span className="midia-item__badge-recorte" title="Recortar imagem">
                           <IconeExpandir size={12} />
                         </span>
                       )}
@@ -1105,11 +1107,11 @@ function CriarItinerario() {
       </div>
 
       <AnimatePresence>
-        {centralizando && (
-          <ModalCentralizarMidia
-            midia={centralizando.midia}
-            onSalvar={salvarCentralizacao}
-            onFechar={fecharCentralizacao}
+        {recortando && (
+          <ModalRecortarMidia
+            midia={recortando.midia}
+            onSalvar={salvarRecorte}
+            onFechar={fecharRecorte}
           />
         )}
       </AnimatePresence>

@@ -1,20 +1,20 @@
 Checklist:
 frontend:
-    Após a correção de mídia salva em rascunho, um bug persistiu no ModalCentralizarMidia
-    - Corrigir bug no ModalCentralizarMidia
-    - Incluir zoom por scroll no ModalCentralizarMidia
-    - Incluir movimentação da imagem em x e y simultaneamente
+    CriarItinerario:
+    - data do itinerário deve ser campo obrigatório para publicação
 
     Configurações:
-        - Criar opção de excluir conta:
-            - pedir para colocar a senha
-            - Validação (tem certeza de que deseja excluir sua conta? Essa ação é irreversível.)
-            - perfil, comentários, mensagens e itinerários de contas excluídas são excluídos e ficam invisíveis para os outros usuários.
-
         - Criar opção de desativar conta:
             - pedir para colocar a senha
             - perfil, comentários, mensagens e itinerários de contas desativadas ficam invisíveis para os outros usuários.
             - desativar por 30, 15, 7 dias; desativar indefinidamente (até logar novamente)
+
+        - Criar opção de excluir conta:
+            - pedir para colocar a senha
+            - Validação (Tem certeza de que deseja excluir sua conta? -> Sua conta foi desativada. Seus dados serão permanentemente excluídos em 30 dias.)
+            - perfil, comentários, mensagens e itinerários de contas excluídas são excluídos e ficam invisíveis para os outros usuários.
+
+        fizesseemailsopraisso
 
         Segurança:
             Autenticação de dois fatores (futuro)

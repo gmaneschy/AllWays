@@ -48,7 +48,7 @@
      criação) — um único lugar pra mudar se a decisão de design mudar.
      Decisão: 6:9 (mais vertical que o 4:5 anterior), Preencher (cover)
      pra fotos com centralização ajustável, Ajustar (contain) sempre pra
-     vídeo — ver CarrosselItinerario.css e ModalCentralizarMidia.css. */
+     vídeo — ver CarrosselItinerario.css e ModalRecortarMidia.css. */
   --razao-midia-card: 1 / 1;
 
   /* 1.7 — Navbar vertical (sidebar fixa à esquerda, expande no hover) */

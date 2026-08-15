@@ -36,6 +36,7 @@ class CriarOuBuscarPlaceView(APIView):
             return Response(PlaceSerializer(place_existente).data)
 
         detalhes = services.buscar_detalhes(place_id)
+        detalhes = services.truncar_campos_para_modelo(Place, detalhes)
         place = Place.objects.create(**detalhes)
         return Response(PlaceSerializer(place).data, status=status.HTTP_201_CREATED)
 
