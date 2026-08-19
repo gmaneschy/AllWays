@@ -10,6 +10,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
+from apps.users.models import User
 from .models import Itinerario, FotoPontoItinerario, PontoItinerario, VideoPontoItinerario
 from .serializers import (
     ItinerarioSerializer, FotoPontoItinerarioSerializer, ItinerarioDetalheSerializer,
@@ -51,13 +52,16 @@ class ItinerarioViewSet(viewsets.ModelViewSet):
                 return qs.none()
             return qs.filter(autor=self.request.user)
 
-        # Não-autenticados e outros usuários só veem publicados
+        # Publicado só conta como visível se o autor também estiver visível
+        # (conta ativa e não excluída) — mesmo filtro usado em
+        # Feed/Explorar/Hashtag/perfil.
+        publicados_visiveis = qs.filter(status='publicado', autor__in=User.objects.visiveis())
+
+        # Não-autenticados e outros usuários só veem publicados visíveis
         if not self.request.user.is_authenticated:
-            return qs.filter(status='publicado')
-        # Dono vê os próprios (inclusive rascunhos) + publicados de outros
-        return qs.filter(
-            status='publicado'
-        ) | qs.filter(autor=self.request.user)
+            return publicados_visiveis
+        # Dono vê os próprios (inclusive rascunhos) + publicados visíveis de outros
+        return publicados_visiveis | qs.filter(autor=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(autor=self.request.user)
@@ -91,7 +95,10 @@ class ItinerarioViewSet(viewsets.ModelViewSet):
 class ItinerarioDetalhePublicoView(APIView):
     """GET /api/itineraries/itinerarios/<id>/detalhe/
     Retorna itinerário completo com pontos, fotos e info do autor.
-    Rascunhos só acessíveis pelo próprio autor."""
+    Rascunhos só acessíveis pelo próprio autor. Itinerário publicado cujo
+    autor está com a conta desativada/excluída também fica invisível para
+    quem não é o dono — mesma regra de visibilidade usada nas listagens
+    (Feed, Explorar, Hashtag, perfil)."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk):
@@ -101,9 +108,23 @@ class ItinerarioDetalhePublicoView(APIView):
             ),
             pk=pk,
         )
-        # Rascunho: só o próprio autor pode ver
+
+        eh_dono = request.user.is_authenticated and request.user == it.autor
+
         if it.status == 'rascunho':
-            if not request.user.is_authenticated or request.user != it.autor:
+            # Rascunho: só o próprio autor pode ver
+            if not eh_dono:
+                return Response(
+                    {'erro': 'Este itinerário não está disponível.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        elif not eh_dono:
+            # Publicado, mas quem está olhando não é o dono: cobre tanto o
+            # SET_NULL (autor apagado, autor_id None) quanto autor com conta
+            # desativada/excluída. O dono só chega aqui autenticado, o que já
+            # implica conta reativada (login sempre reativa), então não
+            # precisa repetir a checagem pra ele.
+            if it.autor_id is None or not User.objects.visiveis().filter(pk=it.autor_id).exists():
                 return Response(
                     {'erro': 'Este itinerário não está disponível.'},
                     status=status.HTTP_404_NOT_FOUND,

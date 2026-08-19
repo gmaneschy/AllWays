@@ -1,8 +1,9 @@
 from datetime import date
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
 
@@ -15,12 +16,35 @@ username_validator = RegexValidator(
 )
 
 
+class UserQuerySet(models.QuerySet):
+    def visiveis(self):
+        """Exclui contas excluídas e contas atualmente desativadas (indefinidas,
+        ou com prazo — enquanto o prazo não vencer). Usar sempre que for listar
+        ou expor conteúdo de terceiros (perfil, comentários, mensagens,
+        itinerários) pra quem não é o próprio dono da conta."""
+        agora = timezone.now()
+        return self.filter(conta_excluida_em__isnull=True).exclude(
+            models.Q(conta_desativada_em__isnull=False) & (
+                models.Q(conta_desativada_ate__isnull=True) |
+                models.Q(conta_desativada_ate__gt=agora)
+            )
+        )
+
+
+class UserManager(DjangoUserManager.from_queryset(UserQuerySet)):
+    """Mantém tudo que o UserManager padrão do Django já fazia (create_user,
+    create_superuser etc.) e soma o .visiveis() do UserQuerySet acima."""
+    pass
+
+
 class User(AbstractUser):
     class Genero(models.TextChoices):
         MASCULINO = 'M', 'Masculino'
         FEMININO = 'F', 'Feminino'
         OUTRO = 'O', 'Outro'
         NAO_INFORMAR = 'N', 'Prefiro não informar'
+
+    objects = UserManager()
 
     # Sobrescreve o username herdado do AbstractUser: funciona como o "@" do
     # usuário (handle público, único, sempre minúsculo).
@@ -76,6 +100,55 @@ class User(AbstractUser):
     ocultar_seguidores = models.BooleanField(default=False)
     ocultar_seguindo = models.BooleanField(default=False)
     ocultar_lugares_seguidos = models.BooleanField(default=False)
+
+    # --- Desativação / exclusão de conta ---
+    conta_desativada_em = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Preenchido quando o usuário desativa a própria conta.",
+    )
+    conta_desativada_ate = models.DateTimeField(
+        null=True, blank=True,
+        help_text=(
+            "Null = desativação indefinida (só reativa fazendo login de novo). "
+            "Preenchida = reativa sozinha nesta data, mesmo sem login."
+        ),
+    )
+    conta_excluida_em = models.DateTimeField(
+        null=True, blank=True,
+        help_text=(
+            "Soft-delete: marca a conta como excluída (irreversível pro usuário). "
+            "Os dados de verdade só são expurgados depois do período de carência "
+            "— ver apps.users.tasks.expurgar_conta_excluida."
+        ),
+    )
+
+    @property
+    def esta_desativada(self):
+        """True se a conta está desativada AGORA — considera o prazo, não só
+        a presença de conta_desativada_em."""
+        if not self.conta_desativada_em:
+            return False
+        if self.conta_desativada_ate and timezone.now() >= self.conta_desativada_ate:
+            return False
+        return True
+
+    @property
+    def esta_excluida(self):
+        return self.conta_excluida_em is not None
+
+    @property
+    def esta_visivel(self):
+        """Espelha UserQuerySet.visiveis() pra checagem em uma instância só
+        (quando não dá pra usar o queryset, ex. dentro de um serializer)."""
+        return not self.esta_excluida and not self.esta_desativada
+
+    def reativar(self):
+        """Chamado no login bem-sucedido (ver apps/users/auth_serializers.py).
+        Idempotente — não faz nada se a conta já estava ativa."""
+        if self.conta_desativada_em:
+            self.conta_desativada_em = None
+            self.conta_desativada_ate = None
+            self.save(update_fields=['conta_desativada_em', 'conta_desativada_ate'])
 
     def save(self, *args, **kwargs):
         # Rede de segurança: garante minúsculo mesmo se o registro não passar

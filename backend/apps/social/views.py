@@ -2,6 +2,7 @@ import os
 import tempfile
 
 from django.conf import settings
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Case, When, Value, IntegerField
 from django.contrib.contenttypes.models import ContentType
@@ -76,6 +77,16 @@ class CurtidaToggleView(APIView):
 
 
 # ─── Follow ───────────────────────────────────────────────────────────────────
+
+def _checar_conta_visivel(dono, request):
+    """404 se a conta 'dono' está desativada/excluída e quem está olhando
+    não é ela mesma — usado em toda rota que resolve um usuário por
+    username antes de expor conteúdo dele pra terceiros (seguidores,
+    lugares seguidos, conversas, comentários, denúncias etc.)."""
+    eh_o_proprio = request.user.is_authenticated and request.user == dono
+    if not eh_o_proprio and not dono.esta_visivel:
+        raise Http404
+
 
 def _checar_lista_visivel(request, dono, campo):
     """Bloqueia (403) o acesso à lista de seguidores/seguindo/lugares em duas
@@ -154,8 +165,11 @@ class SeguidoresUsuarioView(generics.ListAPIView):
 
     def get_queryset(self):
         usuario = get_object_or_404(User, username=self.kwargs['username'])
+        _checar_conta_visivel(usuario, self.request)
         _checar_lista_visivel(self.request, usuario, 'ocultar_seguidores')
-        return User.objects.filter(seguindo__seguido_usuario=usuario)
+        # Não expõe, na lista de QUEM segue "usuario", contas que hoje estão
+        # desativadas/excluídas.
+        return User.objects.visiveis().filter(seguindo__seguido_usuario=usuario)
 
 
 class SeguindoUsuarioView(generics.ListAPIView):
@@ -164,8 +178,9 @@ class SeguindoUsuarioView(generics.ListAPIView):
 
     def get_queryset(self):
         usuario = get_object_or_404(User, username=self.kwargs['username'])
+        _checar_conta_visivel(usuario, self.request)
         _checar_lista_visivel(self.request, usuario, 'ocultar_seguindo')
-        return User.objects.filter(seguidores__seguidor=usuario)
+        return User.objects.visiveis().filter(seguidores__seguidor=usuario)
 
 
 class LugaresSeguidosView(APIView):
@@ -177,6 +192,7 @@ class LugaresSeguidosView(APIView):
 
     def get(self, request, username):
         usuario = get_object_or_404(User, username=username)
+        _checar_conta_visivel(usuario, request)
         _checar_lista_visivel(request, usuario, 'ocultar_lugares_seguidos')
         place_ids = Follow.objects.filter(
             seguidor=usuario, seguido_local__isnull=False
@@ -270,9 +286,16 @@ class ComentariosItinerarioView(APIView):
 
     def get(self, request, itinerario_id):
         it = get_object_or_404(Itinerario, pk=itinerario_id, status='publicado')
+        if it.autor:
+            _checar_conta_visivel(it.autor, request)
+
         # Só as raízes — as respostas vêm aninhadas via CommentSerializer.get_respostas.
+        # Comentários (e respostas) de contas hoje desativadas/excluídas somem
+        # da thread pros outros usuários; NOTE: o filtro de 'respostas' precisa
+        # ser espelhado dentro de CommentSerializer.get_respostas (apps/social/
+        # serializers.py) pra cobrir o nível de resposta também.
         comentarios = (
-            it.comentarios.filter(parent__isnull=True)
+            it.comentarios.filter(parent__isnull=True, autor__in=User.objects.visiveis())
             .select_related('autor')
             .prefetch_related('respostas__autor', 'respostas__responder_para')
             .order_by('criado_em')
@@ -385,7 +408,7 @@ class HashtagFeedView(APIView):
         hashtag = get_object_or_404(Hashtag, nome=nome.lower())
         itinerarios = (
             hashtag.itinerarios
-            .filter(status='publicado')
+            .filter(status='publicado', autor__in=User.objects.visiveis())
             .select_related('autor')
             .prefetch_related('pontos__local', 'pontos__fotos', 'pontos__videos')
             .order_by('-publicado_em')[:40]
@@ -445,8 +468,17 @@ class ConversasView(APIView):
         recebidas = Message.objects.filter(destinatario=user).values_list('remetente_id', flat=True)
         interlocutores_ids = set(enviadas) | set(recebidas)
 
+        # Conversas com contas hoje desativadas/excluídas somem da lista —
+        # o histórico continua existindo (não some por baixo do usuário que
+        # tem a conversa aberta), só não aparece mais aqui nem em buscas.
+        ids_visiveis = set(
+            User.objects.visiveis().filter(pk__in=interlocutores_ids).values_list('id', flat=True)
+        )
+
         conversas = []
         for uid in interlocutores_ids:
+            if uid not in ids_visiveis:
+                continue
             interlocutor = User.objects.get(pk=uid)
             ultima = (
                 Message.objects
@@ -494,6 +526,7 @@ class MensagensConversaView(APIView):
 
     def get(self, request, username):
         outro = get_object_or_404(User, username=username)
+        _checar_conta_visivel(outro, request)
         mensagens = (
             Message.objects
             .filter(
@@ -515,6 +548,7 @@ class MensagensConversaView(APIView):
 
     def post(self, request, username):
         outro = get_object_or_404(User, username=username)
+        _checar_conta_visivel(outro, request)
         if outro == request.user:
             return Response({'erro': 'Você não pode enviar mensagens para si mesmo.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -595,7 +629,7 @@ class UsuariosParaMensagemView(APIView):
 
         # Só usuários seguidos aparecem aqui — mensagem só faz sentido pra
         # quem já está na rede do usuário (diferente da busca geral em BuscaView).
-        qs = User.objects.filter(pk__in=seguidos_ids)
+        qs = User.objects.visiveis().filter(pk__in=seguidos_ids)
         if q:
             if q.startswith('@'):
                 termo = q[1:].strip()
@@ -636,7 +670,7 @@ class BuscaView(APIView):
         else:
             filtro_usuario = Q(username__icontains=q) | Q(nome_exibicao__icontains=q)
 
-        usuarios = User.objects.filter(filtro_usuario)[:8]
+        usuarios = User.objects.visiveis().filter(filtro_usuario)[:8]
         hashtags = Hashtag.objects.filter(nome__icontains=q)[:8]
 
         lugares_banco = Place.objects.filter(nome__icontains=q)[:5]
@@ -741,6 +775,13 @@ class ExplorarView(APIView):
 
         resultado = []
         for it in itinerarios:
+            # Defensivo: gerar_feed_usuario/gerar_feed_principal (apps/feed/
+            # services.py) ainda não filtram por autor visível na origem —
+            # o ideal é mover esse filtro pra lá (no queryset), mas até isso
+            # acontecer isso evita itinerário de conta desativada/excluída
+            # aparecer no Explorar.
+            if it.autor and not it.autor.esta_visivel:
+                continue
             resultado.append({
                 'id': it.id,
                 'titulo': it.titulo,

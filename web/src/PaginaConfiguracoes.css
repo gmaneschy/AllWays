@@ -200,3 +200,99 @@
   align-self: flex-start;
   padding: 8px 18px;
 }
+
+/* --- Zona de risco (desativar / excluir conta) --- */
+
+.config-secao--perigo {
+  border-color: var(--cor-perigo);
+}
+
+.config-secao--perigo .config-secao__titulo {
+  color: var(--cor-perigo);
+}
+
+.config-senha-form--perigo {
+  max-width: 420px;
+  border-bottom: none;
+  padding: 14px 0 4px;
+}
+
+.config-duracao-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.config-duracao-opcao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  cursor: pointer;
+}
+
+.config-checkbox-confirmacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font: var(--fonte-meta);
+  color: var(--texto-principal);
+  cursor: pointer;
+  max-width: 360px;
+}
+
+.config-checkbox-confirmacao input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.config-senha-form__acoes {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.config-btn-perigo-contorno {
+  background: transparent;
+  border: 1px solid var(--cor-perigo);
+  color: var(--cor-perigo);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: var(--fonte-nome-autor);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.config-btn-perigo-contorno:hover {
+  background: rgba(229, 57, 53, 0.08);
+}
+
+.config-btn-perigo {
+  background: var(--cor-perigo);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font: var(--fonte-nome-autor);
+}
+
+.config-btn-perigo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.config-btn-secundario {
+  background: transparent;
+  border: 1px solid var(--borda-padrao);
+  color: var(--texto-secundario);
+  border-radius: 6px;
+  cursor: pointer;
+  font: var(--fonte-nome-autor);
+}
+
+.config-btn-secundario:hover {
+  background: var(--fundo-hover);
+}

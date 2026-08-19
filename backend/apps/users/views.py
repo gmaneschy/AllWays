@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -6,6 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
 from apps.itineraries.models import ItinerarioSalvo, ItinerarioBaixado, Itinerario
 from .models import User
 from .serializers import (
@@ -13,7 +15,9 @@ from .serializers import (
     PerfilPublicoSerializer, PerfilProprioSerializer,
     SelecionarBadgeDestaqueSerializer, EditarPerfilSerializer,
     AlterarSenhaSerializer, ReenviarAtivacaoSerializer,
+    DesativarContaSerializer, ExcluirContaSerializer,
 )
+from .auth_serializers import LoginSerializer
 from .tasks import enviar_email_ativacao
 from .tokens import gerador_token_ativacao
 
@@ -35,6 +39,18 @@ class CadastroView(generics.CreateAPIView):
     def perform_create(self, serializer):
         usuario = serializer.save()
         enviar_email_ativacao.delay(usuario.id)
+
+
+class LoginView(TokenObtainPairView):
+    """POST /api/auth/login/
+    Substitui o TokenObtainPairView padrão do simplejwt: bloqueia login de
+    contas excluídas e reativa automaticamente contas desativadas (timed ou
+    indefinidas) que fizerem login com sucesso. Ver auth_serializers.LoginSerializer.
+
+    IMPORTANTE: troque a view apontada em 'auth/login/' (config/urls.py, ou
+    onde esse endpoint estiver registrado hoje) para esta aqui — senão o
+    comportamento de desativação/exclusão não é respeitado no login."""
+    serializer_class = LoginSerializer
 
 
 class AtivarContaView(APIView):
@@ -140,6 +156,37 @@ class AlterarSenhaView(APIView):
         return Response({'ok': True})
 
 
+class DesativarContaView(APIView):
+    """POST /api/users/me/desativar/  body: {senha, duracao_dias?}
+    duracao_dias omitido/null = indefinida (só reativa com novo login);
+    7, 15 ou 30 = reativa sozinha depois desse prazo (login antes também
+    reativa, ver auth_serializers.LoginSerializer)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = DesativarContaSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({
+            'desativada': True,
+            'desativada_ate': request.user.conta_desativada_ate,
+        })
+
+
+class ExcluirContaView(APIView):
+    """POST /api/users/me/excluir/  body: {senha, confirmar: true}
+    Soft-delete imediato (perfil, comentários, mensagens e itinerários somem
+    pros outros usuários na hora); o expurgo definitivo dos dados roda em
+    background depois do período de carência — ver ExcluirContaSerializer."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ExcluirContaSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'excluida': True})
+
+
 class SelecionarBadgeDestaqueView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -158,8 +205,15 @@ class PerfilView(APIView):
 
     def get(self, request, username):
         usuario = get_object_or_404(User, username=username)
+        dono_esta_vendo = request.user.is_authenticated and request.user == usuario
 
-        if request.user.is_authenticated and request.user == usuario:
+        # Perfil de conta desativada/excluída fica invisível pra qualquer um
+        # que não seja o próprio dono — mesmo comportamento de "não existe"
+        # que um username incorreto teria, pra não vazar se a conta existe.
+        if not dono_esta_vendo and not usuario.esta_visivel:
+            raise Http404
+
+        if dono_esta_vendo:
             serializer = PerfilProprioSerializer(usuario, context={'request': request})
         else:
             serializer = PerfilPublicoSerializer(usuario, context={'request': request})

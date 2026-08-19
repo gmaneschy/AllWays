@@ -193,6 +193,26 @@ export async function alterarSenha(senhaAtual, novaSenha) {
   return data;
 }
 
+// ─── Desativar / excluir conta ─────────────────────────────────────────
+
+// duracaoDias: 7 | 15 | 30 | null (null = desativação indefinida, só
+// reativa fazendo login de novo).
+export async function desativarConta(senha, duracaoDias) {
+  const { data } = await api.post('/users/me/desativar/', {
+    senha,
+    duracao_dias: duracaoDias,
+  });
+  return data; // { desativada, desativada_ate }
+}
+
+export async function excluirConta(senha) {
+  const { data } = await api.post('/users/me/excluir/', {
+    senha,
+    confirmar: true,
+  });
+  return data; // { excluida }
+}
+
 export async function getBadgesItinerarioDisponiveis() {
   const { data } = await api.get('/gamification/badges-itinerario/');
   return data;

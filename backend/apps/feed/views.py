@@ -63,6 +63,11 @@ class FeedPrincipalView(APIView):
 
         resultado = []
         for it in itinerarios:
+            # Defensivo: mesma observação de ExplorarView em apps/social/views.py
+            # — o ideal é isso ser filtrado no queryset de services.py, não aqui.
+            if it.autor and not it.autor.esta_visivel:
+                continue
+
             # it.badges já vem prefetched (com 'badge' junto, via
             # 'badges__badge') — nada disso dispara query nova por item.
             badges_itinerario = [ib.badge for ib in it.badges.all()]

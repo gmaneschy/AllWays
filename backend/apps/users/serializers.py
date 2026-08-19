@@ -189,6 +189,72 @@ class AlterarSenhaSerializer(serializers.Serializer):
         return usuario
 
 
+class DesativarContaSerializer(serializers.Serializer):
+    """Usado em POST /users/me/desativar/. Exige a senha (mesma lógica de
+    AlterarSenhaSerializer: evita desativação por sessão aberta esquecida).
+    duracao_dias null/omitido = desativação indefinida, só reativa fazendo
+    login de novo; 7/15/30 = reativa sozinha depois desse prazo (login
+    antes também reativa — ver User.reativar() e auth_serializers.py)."""
+    DURACOES_VALIDAS = (7, 15, 30)
+
+    senha = serializers.CharField(write_only=True)
+    duracao_dias = serializers.IntegerField(required=False, allow_null=True, default=None)
+
+    def validate_senha(self, value):
+        usuario = self.context['request'].user
+        if not usuario.check_password(value):
+            raise serializers.ValidationError('Senha incorreta.')
+        return value
+
+    def validate_duracao_dias(self, value):
+        if value is not None and value not in self.DURACOES_VALIDAS:
+            raise serializers.ValidationError(
+                'Duração inválida. Use 7, 15, 30 ou não informe (indefinida).'
+            )
+        return value
+
+    def save(self):
+        usuario = self.context['request'].user
+        duracao = self.validated_data.get('duracao_dias')
+        usuario.conta_desativada_em = timezone.now()
+        usuario.conta_desativada_ate = (
+            timezone.now() + timedelta(days=duracao) if duracao else None
+        )
+        usuario.save(update_fields=['conta_desativada_em', 'conta_desativada_ate'])
+        return usuario
+
+
+class ExcluirContaSerializer(serializers.Serializer):
+    """Usado em POST /users/me/excluir/. Senha + confirmação explícita —
+    a tela de Configurações é responsável pelo diálogo "tem certeza?" antes
+    de sequer chamar esse endpoint. Soft-delete: ver User.conta_excluida_em
+    e tasks.expurgar_conta_excluida para o expurgo definitivo."""
+    senha = serializers.CharField(write_only=True)
+    confirmar = serializers.BooleanField()
+
+    def validate_senha(self, value):
+        usuario = self.context['request'].user
+        if not usuario.check_password(value):
+            raise serializers.ValidationError('Senha incorreta.')
+        return value
+
+    def validate_confirmar(self, value):
+        if not value:
+            raise serializers.ValidationError('É necessário confirmar a exclusão da conta.')
+        return value
+
+    def save(self):
+        usuario = self.context['request'].user
+        usuario.conta_excluida_em = timezone.now()
+        usuario.is_active = False
+        usuario.save(update_fields=['conta_excluida_em', 'is_active'])
+
+        from .tasks import expurgar_conta_excluida
+        PERIODO_CARENCIA_SEGUNDOS = 60 * 60 * 24 * 30  # 30 dias
+        expurgar_conta_excluida.apply_async(args=[usuario.id], countdown=PERIODO_CARENCIA_SEGUNDOS)
+        return usuario
+
+
 class ItinerarioResumoSerializer(serializers.ModelSerializer):
     """Versão compacta para listar no perfil — sem pontos aninhados.
     'primeira_midia' e 'total_pontos' alimentam a miniatura do grid no

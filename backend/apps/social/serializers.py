@@ -112,7 +112,11 @@ class CommentSerializer(serializers.ModelSerializer):
         # naturalmente pra elas, sem precisar de um serializer separado.
         if obj.parent_id:
             return []
-        return CommentSerializer(obj.respostas.all(), many=True, context=self.context).data
+        # Mesmo filtro de visibilidade usado em ComentariosItinerarioView pros
+        # comentários-raiz: respostas de autor com conta desativada/excluída
+        # não aparecem pra ninguém além do próprio autor.
+        respostas_visiveis = obj.respostas.filter(autor__in=User.objects.visiveis())
+        return CommentSerializer(respostas_visiveis, many=True, context=self.context).data
 
     def validate(self, data):
         parent = data.get('parent')

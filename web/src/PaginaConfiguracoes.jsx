@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
-import { getConfiguracoes, atualizarConfiguracoes, alterarSenha } from './api';
+import { useNavigate } from 'react-router-dom';
+import {
+  getConfiguracoes, atualizarConfiguracoes, alterarSenha,
+  desativarConta, excluirConta, logout,
+} from './api';
 import { IconeAlerta, IconeSucesso } from './icons';
 import './PaginaConfiguracoes.css';
+
+const DURACOES_DESATIVACAO = [
+  { valor: 7, label: '7 dias' },
+  { valor: 15, label: '15 dias' },
+  { valor: 30, label: '30 dias' },
+  { valor: null, label: 'Indefinidamente' },
+];
 
 /** Switch on/off — puramente visual, quem decide o que "ligado" significa
  * é sempre quem chama (ver as duas exibições invertidas na seção Exibição). */
@@ -27,6 +38,8 @@ function LinhaToggle({ label, ajuda, checked, onChange, disabled }) {
 }
 
 function PaginaConfiguracoes() {
+  const navigate = useNavigate();
+
   const [config, setConfig] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
@@ -37,6 +50,20 @@ function PaginaConfiguracoes() {
   const [senhaErro, setSenhaErro] = useState(null);
   const [senhaSucesso, setSenhaSucesso] = useState(false);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
+
+  // --- Desativar conta ---
+  const [mostrarDesativar, setMostrarDesativar] = useState(false);
+  const [senhaDesativar, setSenhaDesativar] = useState('');
+  const [duracaoDesativar, setDuracaoDesativar] = useState(null);
+  const [erroDesativar, setErroDesativar] = useState(null);
+  const [desativando, setDesativando] = useState(false);
+
+  // --- Excluir conta ---
+  const [mostrarExcluir, setMostrarExcluir] = useState(false);
+  const [senhaExcluir, setSenhaExcluir] = useState('');
+  const [confirmoExclusao, setConfirmoExclusao] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
     async function buscar() {
@@ -96,6 +123,56 @@ function PaginaConfiguracoes() {
       setSenhaErro(mensagem);
     } finally {
       setSalvandoSenha(false);
+    }
+  }
+
+  async function handleDesativarConta(e) {
+    e.preventDefault();
+    setErroDesativar(null);
+
+    if (!senhaDesativar) {
+      setErroDesativar('Informe sua senha.');
+      return;
+    }
+
+    setDesativando(true);
+    try {
+      await desativarConta(senhaDesativar, duracaoDesativar);
+      logout();
+      navigate('/login');
+    } catch (err) {
+      const dados = err.response?.data;
+      const mensagem = dados?.senha?.[0] || dados?.detail || 'Não foi possível desativar a conta.';
+      setErroDesativar(mensagem);
+    } finally {
+      setDesativando(false);
+    }
+  }
+
+  async function handleExcluirConta(e) {
+    e.preventDefault();
+    setErroExcluir(null);
+
+    if (!senhaExcluir) {
+      setErroExcluir('Informe sua senha.');
+      return;
+    }
+    if (!confirmoExclusao) {
+      setErroExcluir('Confirme que você entende que essa ação é irreversível.');
+      return;
+    }
+
+    setExcluindo(true);
+    try {
+      await excluirConta(senhaExcluir);
+      logout();
+      navigate('/login');
+    } catch (err) {
+      const dados = err.response?.data;
+      const mensagem = dados?.senha?.[0] || dados?.detail || 'Não foi possível excluir a conta.';
+      setErroExcluir(mensagem);
+    } finally {
+      setExcluindo(false);
     }
   }
 
@@ -244,6 +321,155 @@ function PaginaConfiguracoes() {
           checked={!config.ocultar_lugares_seguidos}
           onChange={() => alternar('ocultar_lugares_seguidos')}
         />
+      </section>
+
+      {/* ─── Zona de risco: desativar / excluir conta ─── */}
+      <section className="config-secao config-secao--perigo">
+        <h2 className="config-secao__titulo">Desativar ou excluir conta</h2>
+
+        {/* --- Desativar --- */}
+        <div className="config-linha">
+          <div className="config-linha__texto">
+            <p className="config-linha__label">Desativar conta</p>
+            <p className="config-linha__ajuda">
+              Seu perfil, comentários, mensagens e itinerários ficam invisíveis para
+              outras pessoas até você reativar. Fazer login de novo reativa a conta
+              automaticamente, mesmo antes do prazo escolhido.
+            </p>
+          </div>
+          {!mostrarDesativar && (
+            <button
+              type="button"
+              className="config-btn-perigo-contorno"
+              onClick={() => setMostrarDesativar(true)}
+            >
+              Desativar
+            </button>
+          )}
+        </div>
+
+        {mostrarDesativar && (
+          <form onSubmit={handleDesativarConta} className="config-senha-form config-senha-form--perigo">
+            <p className="config-linha__label">Por quanto tempo?</p>
+            <div className="config-duracao-opcoes">
+              {DURACOES_DESATIVACAO.map((opcao) => (
+                <label key={opcao.label} className="config-duracao-opcao">
+                  <input
+                    type="radio"
+                    name="duracao-desativar"
+                    checked={duracaoDesativar === opcao.valor}
+                    onChange={() => setDuracaoDesativar(opcao.valor)}
+                  />
+                  {opcao.label}
+                </label>
+              ))}
+            </div>
+
+            <input
+              type="password"
+              placeholder="Confirme sua senha"
+              value={senhaDesativar}
+              onChange={(e) => setSenhaDesativar(e.target.value)}
+              className="config-input"
+              autoComplete="current-password"
+              required
+            />
+
+            {erroDesativar && (
+              <p className="config-senha-mensagem config-senha-mensagem--erro">
+                <IconeAlerta size={14} /> {erroDesativar}
+              </p>
+            )}
+
+            <div className="config-senha-form__acoes">
+              <button type="submit" disabled={desativando} className="config-btn-perigo config-senha-botao">
+                {desativando ? 'Desativando...' : 'Confirmar desativação'}
+              </button>
+              <button
+                type="button"
+                className="config-btn-secundario config-senha-botao"
+                onClick={() => {
+                  setMostrarDesativar(false);
+                  setSenhaDesativar('');
+                  setErroDesativar(null);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* --- Excluir --- */}
+        <div className="config-linha config-linha--sem-divisor">
+          <div className="config-linha__texto">
+            <p className="config-linha__label">Excluir conta</p>
+            <p className="config-linha__ajuda">
+              Essa ação é irreversível. Seu perfil, comentários, mensagens e
+              itinerários são excluídos e deixam de ficar visíveis para outras pessoas.
+            </p>
+          </div>
+          {!mostrarExcluir && (
+            <button
+              type="button"
+              className="config-btn-perigo-contorno"
+              onClick={() => setMostrarExcluir(true)}
+            >
+              Excluir conta
+            </button>
+          )}
+        </div>
+
+        {mostrarExcluir && (
+          <form onSubmit={handleExcluirConta} className="config-senha-form config-senha-form--perigo">
+            <input
+              type="password"
+              placeholder="Confirme sua senha"
+              value={senhaExcluir}
+              onChange={(e) => setSenhaExcluir(e.target.value)}
+              className="config-input"
+              autoComplete="current-password"
+              required
+            />
+
+            <label className="config-checkbox-confirmacao">
+              <input
+                type="checkbox"
+                checked={confirmoExclusao}
+                onChange={(e) => setConfirmoExclusao(e.target.checked)}
+              />
+              Tenho certeza de que desejo excluir minha conta. Sei que essa ação é irreversível.
+            </label>
+
+            {erroExcluir && (
+              <p className="config-senha-mensagem config-senha-mensagem--erro">
+                <IconeAlerta size={14} /> {erroExcluir}
+              </p>
+            )}
+
+            <div className="config-senha-form__acoes">
+              <button
+                type="submit"
+                disabled={excluindo || !confirmoExclusao}
+                className="config-btn-perigo config-senha-botao"
+              >
+                {excluindo ? 'Excluindo...' : 'Excluir minha conta definitivamente'}
+              </button>
+              <button
+                type="button"
+                className="config-btn-secundario config-senha-botao"
+                onClick={() => {
+                  setMostrarExcluir(false);
+                  setSenhaExcluir('');
+                  setConfirmoExclusao(false);
+                  setErroExcluir(null);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
       </section>
     </div>
   );

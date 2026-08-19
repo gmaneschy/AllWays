@@ -82,3 +82,19 @@ def deletar_contas_nao_ativadas():
     duplicidade independente do status de ativação."""
     limite = timezone.now() - timedelta(days=settings.CONTA_NAO_ATIVADA_EXPIRA_DIAS)
     User.objects.filter(is_active=False, date_joined__lt=limite).delete()
+
+
+@shared_task
+def expurgar_conta_excluida(usuario_id):
+    """Agendada por ExcluirContaSerializer.save() pra rodar ~30 dias depois
+    da exclusão (período de carência). Se a conta ainda estiver marcada como
+    excluída nesse momento, apaga os dados de verdade — cascata do Django
+    cuida de comentários, mensagens, itinerários etc. Se o usuário reativou
+    via suporte nesse meio-tempo (conta_excluida_em voltou a null), a task
+    não faz nada."""
+    from .models import User
+
+    usuario = User.objects.filter(id=usuario_id, conta_excluida_em__isnull=False).first()
+    if not usuario:
+        return
+    usuario.delete()
