@@ -8,6 +8,8 @@ import CarrosselItinerario from './CarrosselItinerario';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
 import ModalDenunciarItinerario from './ModalDenunciarItinerario';
 import { AvisoExcluirItinerario, AvisoExcluirComentario } from './Avisos';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import {
   IconeLike,
   IconeComentario,
@@ -82,6 +84,9 @@ function PaginaItinerario() {
   const [it, setIt] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  // Incrementado por retentarBusca() só pra forçar o useEffect de busca a
+  // rodar de novo — o valor em si não é usado em lugar nenhum.
+  const [tentativa, setTentativa] = useState(0);
   const [salvando, setSalvando] = useState(false);
   const [salvoMsg, setSalvoMsg] = useState(null);
   const [comentarios, setComentarios] = useState([]);
@@ -119,6 +124,7 @@ function PaginaItinerario() {
 
     async function buscar() {
       setCarregando(true);
+      setErro(null);
       try {
         const itRes = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
         if (cancelado) return;
@@ -141,11 +147,7 @@ function PaginaItinerario() {
         setIt(itRes.data);
         setComentarios(comRes.data);
       } catch (err) {
-        if (!cancelado) {
-          setErro(err.response?.status === 404
-            ? 'Itinerário não encontrado ou não disponível.'
-            : 'Erro ao carregar itinerário.');
-        }
+        if (!cancelado) setErro(classificarErro(err));
       } finally {
         if (!cancelado) setCarregando(false);
       }
@@ -153,7 +155,11 @@ function PaginaItinerario() {
     buscar();
     return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, tentativa]);
+
+  function retentarBusca() {
+    setTentativa((t) => t + 1);
+  }
 
   // Enquanto algum vídeo ainda estiver 'processando' (compressão async no
   // backend), repolla o detalhe do itinerário até todos saírem desse estado.
@@ -327,7 +333,13 @@ function PaginaItinerario() {
   }
 
   if (carregando) return <p className="pagina-itinerario__carregando">Carregando...</p>;
-  if (erro) return <p className="pagina-itinerario__erro">{erro}</p>;
+  if (erro) {
+    return (
+      <div className="pagina-itinerario pagina-itinerario--erro">
+        <EstadoErro erro={erro} onRetentar={retentarBusca} />
+      </div>
+    );
+  }
   if (!it) return null;
 
   const ehAutor = usuarioLogado?.username === it.autor_username;

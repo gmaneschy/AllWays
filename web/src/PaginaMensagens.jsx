@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import {
   IconeLike,
   IconePin,
@@ -284,6 +286,11 @@ function PaginaMensagens() {
   const [enviando, setEnviando] = useState(false);
   const [carregandoConversas, setCarregandoConversas] = useState(true);
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
+  const [erroConversas, setErroConversas] = useState(null);
+  const [erroMensagens, setErroMensagens] = useState(null);
+  // Incrementado por retentarMensagens() só pra forçar o efeito de polling
+  // a rodar de novo (busca imediata + reabre o setInterval do zero).
+  const [tentativaMensagens, setTentativaMensagens] = useState(0);
   const [mostraSeletor, setMostraSeletor] = useState(false);
   const [previewImagem, setPreviewImagem] = useState(null); // {file, url}
   const [previewVideo, setPreviewVideo] = useState(null); // {file, url}
@@ -291,6 +298,13 @@ function PaginaMensagens() {
   const inputRef = useRef(null);
   const midiaInputRef = useRef(null);
   const pollingRef = useRef(null);
+  // O callback do setInterval é criado uma vez, quando o efeito de
+  // polling roda — se ele lesse `mensagens.length` direto, estaria sempre
+  // vendo o valor de quando o polling começou (closure obsoleta, mesmo
+  // problema que já resolvemos assim no Feed.jsx). Um ref sempre atualizado
+  // evita isso.
+  const temMensagensRef = useRef(false);
+  useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
 
   const { gravando, iniciarGravacao, pararGravacao } = useGravacaoAudio(enviarAudio);
 
@@ -300,16 +314,23 @@ function PaginaMensagens() {
     try {
       const res = await api.get('/social/mensagens/');
       setConversas(res.data);
-    } catch (_) {} finally { setCarregandoConversas(false); }
+      setErroConversas(null);
+    } catch (err) {
+      // Só mostra erro de inbox se ainda não há nada na tela — uma
+      // atualização de bastidor que falha (ex: rede caiu por 1s) não deve
+      // substituir a lista de conversas que o usuário já está vendo.
+      if (conversas.length === 0) setErroConversas(classificarErro(err));
+    } finally { setCarregandoConversas(false); }
   }
 
   useEffect(() => {
     if (!conversaAtiva) return;
     setSearchParams({ com: conversaAtiva });
+    setErroMensagens(null);
     buscarMensagensAtivas({ inicial: true });
     pollingRef.current = setInterval(() => buscarMensagensAtivas({ inicial: false }), 5000);
     return () => clearInterval(pollingRef.current);
-  }, [conversaAtiva]);
+  }, [conversaAtiva, tentativaMensagens]);
 
   async function buscarMensagensAtivas({ inicial = false } = {}) {
     if (!conversaAtiva) return;
@@ -317,11 +338,33 @@ function PaginaMensagens() {
     try {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
       setMensagens(res.data);
+      setErroMensagens(null);
       // A GET acima já marca como lidas (no backend) as mensagens que o
       // outro me mandou — atualiza a lista de conversas pra refletir isso
       // (tira o destaque de "não lida" no item dessa conversa).
       buscarConversas();
-    } catch (_) {} finally { if (inicial) setCarregandoMensagens(false); }
+    } catch (err) {
+      const classificado = classificarErro(err);
+      if (!classificado.podeRetentar) {
+        // Erro definitivo (404 = essa conversa/usuário não existe, 403 =
+        // sem permissão, etc.) — insistir a cada 5s não vai fazer o
+        // endpoint passar a existir. Era exatamente isso que causava o
+        // loop de GETs repetidos no console: o catch vazio deixava o
+        // setInterval martelando um 404 pra sempre.
+        clearInterval(pollingRef.current);
+        setErroMensagens(classificado);
+      } else if (inicial || !temMensagensRef.current) {
+        // Erro transitório (rede, timeout, servidor) mas ainda sem nada
+        // na tela — vale avisar em vez de deixar o painel vazio parado.
+        setErroMensagens(classificado);
+      }
+      // Erro transitório numa atualização de bastidor com mensagens já
+      // visíveis: não interrompe a UI, o próximo poll tenta de novo sozinho.
+    } finally { if (inicial) setCarregandoMensagens(false); }
+  }
+
+  function retentarMensagens() {
+    setTentativaMensagens((t) => t + 1);
   }
 
   async function handleCurtirMensagem(mensagemId) {
@@ -467,35 +510,41 @@ function PaginaMensagens() {
         {mostraSeletor && <SeletorDestinatario onSelecionar={selecionarDestinatario} />}
 
         <div className="mensagens-inbox__lista">
-          {carregandoConversas && <p className="mensagens-inbox__estado">Carregando...</p>}
-          {!carregandoConversas && conversas.length === 0 && !mostraSeletor && (
-            <p className="mensagens-inbox__estado">Nenhuma conversa ainda.</p>
+          {erroConversas ? (
+            <EstadoErro erro={erroConversas} onRetentar={buscarConversas} tamanho="inline" />
+          ) : (
+            <>
+              {carregandoConversas && <p className="mensagens-inbox__estado">Carregando...</p>}
+              {!carregandoConversas && conversas.length === 0 && !mostraSeletor && (
+                <p className="mensagens-inbox__estado">Nenhuma conversa ainda.</p>
+              )}
+              {conversas.map((c) => {
+                const enviadaPorEle = !!(
+                  c.ultima_mensagem?.texto && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
+                );
+                return (
+                  <div
+                    key={c.usuario.username}
+                    onClick={() => { setConversaAtiva(c.usuario.username); setMostraSeletor(false); }}
+                    className={`conversa-item${conversaAtiva === c.usuario.username ? ' conversa-item--ativa' : ''}`}
+                  >
+                    <Avatar usuario={c.usuario} tamanho={40} />
+                    <div className="conversa-item__info">
+                      <div className="conversa-item__nome-linha">
+                        {enviadaPorEle && <span className="conversa-item__ponto-novo" />}
+                        <span className={`conversa-item__nome${enviadaPorEle ? ' conversa-item__nome--destaque' : ''}`}>
+                          {c.usuario.username}
+                        </span>
+                      </div>
+                      <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
+                        {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
           )}
-          {conversas.map((c) => {
-            const enviadaPorEle = !!(
-              c.ultima_mensagem?.texto && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
-            );
-            return (
-              <div
-                key={c.usuario.username}
-                onClick={() => { setConversaAtiva(c.usuario.username); setMostraSeletor(false); }}
-                className={`conversa-item${conversaAtiva === c.usuario.username ? ' conversa-item--ativa' : ''}`}
-              >
-                <Avatar usuario={c.usuario} tamanho={40} />
-                <div className="conversa-item__info">
-                  <div className="conversa-item__nome-linha">
-                    {enviadaPorEle && <span className="conversa-item__ponto-novo" />}
-                    <span className={`conversa-item__nome${enviadaPorEle ? ' conversa-item__nome--destaque' : ''}`}>
-                      {c.usuario.username}
-                    </span>
-                  </div>
-                  <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
-                    {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -513,15 +562,21 @@ function PaginaMensagens() {
           </div>
 
           <div className="mensagens-lista">
-            {carregandoMensagens && mensagens.length === 0 && <p className="mensagens-lista__estado">Carregando...</p>}
-            {mensagens.length === 0 && !carregandoMensagens && (
-              <p className="mensagens-lista__estado">Nenhuma mensagem ainda. Diga olá! 👋</p>
+            {erroMensagens ? (
+              <EstadoErro erro={erroMensagens} onRetentar={retentarMensagens} tamanho="inline" />
+            ) : (
+              <>
+                {carregandoMensagens && mensagens.length === 0 && <p className="mensagens-lista__estado">Carregando...</p>}
+                {mensagens.length === 0 && !carregandoMensagens && (
+                  <p className="mensagens-lista__estado">Nenhuma mensagem ainda. Diga olá! 👋</p>
+                )}
+                {mensagens.map((m) => {
+                  const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
+                  return <BolhaMensagem key={m.id} m={m} minha={minha} onCurtir={handleCurtirMensagem} />;
+                })}
+                <div ref={fimRef} />
+              </>
             )}
-            {mensagens.map((m) => {
-              const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-              return <BolhaMensagem key={m.id} m={m} minha={minha} onCurtir={handleCurtirMensagem} />;
-            })}
-            <div ref={fimRef} />
           </div>
 
           {/* Preview de imagem antes de enviar */}

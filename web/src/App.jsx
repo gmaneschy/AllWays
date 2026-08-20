@@ -16,6 +16,8 @@ import PaginaItinerario from './PaginaItinerario';
 import PaginaHashtag from './PaginaHashtag';
 import PaginaNotificacoes from './PaginaNotificacoes';
 import PaginaConfiguracoes from './PaginaConfiguracoes';
+import PaginaNaoEncontrada from './PaginaNaoEncontrada';
+import AvisoOffline from './AvisoOffline';
 import { PaginaSemNavbar } from './layoutRotas';
 
 function App() {
@@ -39,6 +41,7 @@ function AppLayout() {
 
   return (
     <>
+      <AvisoOffline />
       <Navbar />
       <main className={`app__conteudo${semNavbar ? ' app__conteudo--sem-navbar' : ''}`}>
         <Routes>
@@ -138,6 +141,11 @@ function AppLayout() {
               </RotaProtegida>
             }
           />
+          {/* Coringa — precisa ficar por último; qualquer caminho que não
+              bateu com nenhuma rota acima cai aqui. Não usa RotaProtegida
+              nem RotaPublica de propósito: uma URL quebrada deve mostrar
+              "não encontrado" pra qualquer um, logado ou não. */}
+          <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </main>
     </>

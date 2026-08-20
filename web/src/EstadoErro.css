@@ -1,0 +1,97 @@
+/*
+  EstadoErro.css — usa só tokens de theme.css, sem cores hardcoded,
+  pra acompanhar automaticamente qualquer ajuste futuro na paleta.
+*/
+
+.estado-erro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+/* ─── Variante "pagina" — substitui o conteúdo principal da tela ───────── */
+.estado-erro--pagina {
+  min-height: 60vh;
+  justify-content: center;
+  padding: 32px 24px;
+  margin: 0 auto;
+  max-width: 380px;
+}
+
+/* ─── Variante "inline" — compacta, pra caber num card/seção ───────────── */
+.estado-erro--inline {
+  padding: 20px 16px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* ─── Círculo do ícone ───────────────────────────────────────────────── */
+.estado-erro__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+  margin-bottom: 12px;
+}
+
+.estado-erro--inline .estado-erro__icone {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 8px;
+}
+
+/* Erros "de sistema" (offline, timeout, servidor fora do ar, 5xx) usam o
+   tom de perigo — são falhas de verdade, diferente de um 404 esperado. */
+.estado-erro__icone--critico {
+  background: color-mix(in srgb, var(--cor-perigo) 12%, transparent);
+  color: var(--cor-perigo);
+}
+
+/* ─── Texto ──────────────────────────────────────────────────────────── */
+.estado-erro__titulo {
+  font: var(--fonte-titulo-secao);
+  color: var(--texto-principal);
+  margin: 0;
+}
+
+.estado-erro__mensagem {
+  font: var(--fonte-corpo);
+  color: var(--texto-secundario);
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* ─── Ações ──────────────────────────────────────────────────────────── */
+.estado-erro__acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.estado-erro__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.estado-erro__link-inicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  text-decoration: none;
+}
+
+.estado-erro__link-inicio:hover {
+  color: var(--cor-primaria);
+}

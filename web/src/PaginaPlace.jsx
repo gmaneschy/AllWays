@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api, { estaLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import { IconeSeguir, IconeSucesso, IconeSeguranca, IconePreco, IconePin, IconeLike } from './icons';
 import './PaginaPlace.css';
 
@@ -26,21 +28,26 @@ function PaginaPlace() {
     verificarFollow();
   }, [placeId, logado]);
 
-  useEffect(() => {
-    async function buscar() {
-      setCarregando(true);
-      setErro(null);
-      try {
-        const resposta = await api.get(`/places/${placeId}/detalhe/`);
-        setDados(resposta.data);
-      } catch (err) {
-        setErro(err.response?.data?.erro || 'Erro ao carregar o local.');
-      } finally {
-        setCarregando(false);
-      }
+  const buscarDados = useCallback(async () => {
+    setCarregando(true);
+    setErro(null);
+    try {
+      const resposta = await api.get(`/places/${placeId}/detalhe/`);
+      setDados(resposta.data);
+    } catch (err) {
+      const classificado = classificarErro(err);
+      // Se o backend mandou uma mensagem específica (ex: "local removido"),
+      // ela tem prioridade sobre a mensagem genérica do tipo classificado.
+      const mensagemBackend = err.response?.data?.erro;
+      setErro(mensagemBackend ? { ...classificado, mensagem: mensagemBackend } : classificado);
+    } finally {
+      setCarregando(false);
     }
-    if (placeId) buscar();
   }, [placeId]);
+
+  useEffect(() => {
+    if (placeId) buscarDados();
+  }, [placeId, buscarDados]);
 
   async function alternarSeguir() {
     if (enviandoFollow) return;
@@ -85,7 +92,7 @@ function PaginaPlace() {
   }
 
   if (carregando) return <p className="pagina-place__carregando">Carregando...</p>;
-  if (erro) return <p className="pagina-place__erro">{erro}</p>;
+  if (erro) return <EstadoErro erro={erro} onRetentar={buscarDados} tamanho="pagina" />;
   if (!dados) return null;
 
   const { place, comentarios, fotos } = dados;

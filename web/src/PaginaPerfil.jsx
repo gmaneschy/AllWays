@@ -3,10 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import api, { getUsuarioLogado, getMinhasConquistas, selecionarBadgeDestaque, getConfiguracoes, atualizarConfiguracoes, editarPerfil, getMe } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import CardItinerarioResumo from './CardItinerarioResumo';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import { IconeFechar, IconeSeguir, IconeEditar } from './icons';
 import './PaginaPerfil.css';
 
-function ModalListaUsuarios({ titulo, tipo, itens, onFechar }) {
+function ModalListaUsuarios({ titulo, tipo, itens, carregando, erro, onRetentar, onFechar }) {
   const ehLugares = tipo === 'lugares';
 
   return (
@@ -19,29 +21,36 @@ function ModalListaUsuarios({ titulo, tipo, itens, onFechar }) {
           </button>
         </div>
 
-        {itens.length === 0 && (
-          <p className="modal-usuarios__vazio">
-            {ehLugares ? 'Nenhum lugar seguido ainda.' : 'Ninguém por aqui ainda.'}
-          </p>
+        {erro ? (
+          <EstadoErro erro={erro} onRetentar={onRetentar} tamanho="inline" />
+        ) : (
+          <>
+            {carregando && <p className="modal-usuarios__vazio">Carregando...</p>}
+            {!carregando && itens.length === 0 && (
+              <p className="modal-usuarios__vazio">
+                {ehLugares ? 'Nenhum lugar seguido ainda.' : 'Ninguém por aqui ainda.'}
+              </p>
+            )}
+            {!carregando && (
+              ehLugares
+                ? itens.map((p) => (
+                    <Link key={p.id} to={`/place/${p.id}`} onClick={onFechar} className="usuario-item">
+                      <div className="usuario-item__avatar-vazio">{p.nome[0].toUpperCase()}</div>
+                      <span>{p.nome}</span>
+                    </Link>
+                  ))
+                : itens.map((u) => (
+                    <Link key={u.id} to={`/perfil/${u.username}`} onClick={onFechar} className="usuario-item">
+                      {u.foto_perfil
+                        ? <img src={u.foto_perfil} alt="" className="usuario-item__avatar" />
+                        : <div className="usuario-item__avatar-vazio">{u.username[0].toUpperCase()}</div>
+                      }
+                      <span>{u.username}</span>
+                    </Link>
+                  ))
+            )}
+          </>
         )}
-
-        {ehLugares
-          ? itens.map((p) => (
-              <Link key={p.id} to={`/place/${p.id}`} onClick={onFechar} className="usuario-item">
-                <div className="usuario-item__avatar-vazio">{p.nome[0].toUpperCase()}</div>
-                <span>{p.nome}</span>
-              </Link>
-            ))
-          : itens.map((u) => (
-              <Link key={u.id} to={`/perfil/${u.username}`} onClick={onFechar} className="usuario-item">
-                {u.foto_perfil
-                  ? <img src={u.foto_perfil} alt="" className="usuario-item__avatar" />
-                  : <div className="usuario-item__avatar-vazio">{u.username[0].toUpperCase()}</div>
-                }
-                <span>{u.username}</span>
-              </Link>
-            ))
-        }
       </div>
     </div>
   );
@@ -51,7 +60,7 @@ function ModalListaUsuarios({ titulo, tipo, itens, onFechar }) {
  * no formato [{ id, badge: { id, nome, icone, nivel, tipo_nome }, contexto, conquistado_em }, ...].
  * Agrupa por família (tipo_nome) só pra organização visual — a seleção em si é sempre
  * de UM badge (BadgeUsuario) só, respeitando a regra de exclusividade. */
-function ModalSelecaoBadge({ conquistas, idAtual, selecionando, onSelecionar, onFechar }) {
+function ModalSelecaoBadge({ conquistas, idAtual, selecionando, carregando, erro, erroSelecao, onRetentar, onSelecionar, onFechar }) {
   const grupos = conquistas.reduce((acc, c) => {
     const chave = c.badge.tipo_nome;
     (acc[chave] = acc[chave] || []).push(c);
@@ -68,37 +77,50 @@ function ModalSelecaoBadge({ conquistas, idAtual, selecionando, onSelecionar, on
           </button>
         </div>
 
-        <button
-          onClick={() => onSelecionar(null)}
-          disabled={selecionando}
-          className={`modal-badge__opcao${idAtual == null ? ' modal-badge__opcao--selecionada' : ''}`}
-        >
-          Nenhuma badge exibida
-        </button>
+        {erro ? (
+          <EstadoErro erro={erro} onRetentar={onRetentar} tamanho="inline" />
+        ) : (
+          <>
+            {/* Erro de uma tentativa de seleção (não de carregamento) — fica
+                visível aqui dentro porque este modal é um overlay de tela
+                cheia; mostrar em qualquer lugar fora dele deixaria a
+                mensagem escondida atrás do próprio modal. */}
+            {erroSelecao && <p className="modal-editar__erro">{erroSelecao}</p>}
 
-        {conquistas.length === 0 && (
-          <p className="modal-badge__vazio">Você ainda não conquistou nenhuma badge.</p>
-        )}
+            <button
+              onClick={() => onSelecionar(null)}
+              disabled={selecionando}
+              className={`modal-badge__opcao${idAtual == null ? ' modal-badge__opcao--selecionada' : ''}`}
+            >
+              Nenhuma badge exibida
+            </button>
 
-        {Object.entries(grupos).map(([tipoNome, itens]) => (
-          <div key={tipoNome} className="modal-badge__grupo">
-            <div className="modal-badge__grupo-titulo">{tipoNome}</div>
-            {itens.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => onSelecionar(c.badge.id)}
-                disabled={selecionando}
-                className={`modal-badge__item${idAtual === c.badge.id ? ' modal-badge__item--selecionada' : ''}`}
-              >
-                <img src={c.badge.icone} alt="" className="modal-badge__item-icone" />
-                <div>
-                  <div className="modal-badge__item-nome">{c.badge.nome}</div>
-                  {c.contexto && <div className="modal-badge__item-contexto">{c.contexto}</div>}
-                </div>
-              </button>
+            {carregando && <p className="modal-badge__vazio">Carregando...</p>}
+            {!carregando && conquistas.length === 0 && (
+              <p className="modal-badge__vazio">Você ainda não conquistou nenhuma badge.</p>
+            )}
+
+            {!carregando && Object.entries(grupos).map(([tipoNome, itens]) => (
+              <div key={tipoNome} className="modal-badge__grupo">
+                <div className="modal-badge__grupo-titulo">{tipoNome}</div>
+                {itens.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => onSelecionar(c.badge.id)}
+                    disabled={selecionando}
+                    className={`modal-badge__item${idAtual === c.badge.id ? ' modal-badge__item--selecionada' : ''}`}
+                  >
+                    <img src={c.badge.icone} alt="" className="modal-badge__item-icone" />
+                    <div>
+                      <div className="modal-badge__item-nome">{c.badge.nome}</div>
+                      {c.contexto && <div className="modal-badge__item-contexto">{c.contexto}</div>}
+                    </div>
+                  </button>
+                ))}
+              </div>
             ))}
-          </div>
-        ))}
+          </>
+        )}
       </div>
     </div>
   );
@@ -206,16 +228,29 @@ function PaginaPerfil() {
   const usuarioLogado = getUsuarioLogado();
   const [perfil, setPerfil] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  // Erro do carregamento PRINCIPAL da página (GET /users/:username/) — objeto
+  // de classificarErro, controla a troca da página inteira pelo <EstadoErro>.
   const [erro, setErro] = useState(null);
   const [aba, setAba] = useState('publicados');
   const [enviandoFollow, setEnviandoFollow] = useState(false);
-  const [modalAberto, setModalAberto] = useState(null); // 'seguidores' | 'seguindo' | null
+  // Erro de UMA tentativa de seguir/deixar de seguir — separado de `erro`
+  // porque antes os dois compartilhavam o mesmo estado e, se o follow
+  // falhasse depois do perfil já ter carregado com sucesso, não havia
+  // problema visual; mas reutilizar `erro` aqui colidiria com a nova
+  // lógica de "página inteira vira EstadoErro se erro && !perfil".
+  const [erroFollow, setErroFollow] = useState(null);
+  const [modalAberto, setModalAberto] = useState(null); // 'seguidores' | 'seguindo' | 'lugares' | null
   const [listaModal, setListaModal] = useState([]);
+  const [carregandoModalLista, setCarregandoModalLista] = useState(false);
+  const [erroModalLista, setErroModalLista] = useState(null);
 
   // Badge de destaque
   const [modalBadgeAberto, setModalBadgeAberto] = useState(false);
   const [conquistas, setConquistas] = useState([]);
+  const [carregandoConquistas, setCarregandoConquistas] = useState(false);
+  const [erroConquistas, setErroConquistas] = useState(null);
   const [selecionandoBadge, setSelecionandoBadge] = useState(false);
+  const [erroBadge, setErroBadge] = useState(null);
   const [badgeDestaqueRealId, setBadgeDestaqueRealId] = useState(usuarioLogado?.badge_destaque?.id ?? null);
 
   // Configurações (toggle exibir_badges) — só relevante no próprio perfil
@@ -225,7 +260,13 @@ function PaginaPerfil() {
   // Edição de perfil (nome de exibição + bio)
   const [modalEditarAberto, setModalEditarAberto] = useState(false);
   const [meEdicao, setMeEdicao] = useState(null);
+  const [carregandoEdicao, setCarregandoEdicao] = useState(false);
+  // Erro de CARREGAR os dados pro modal (GET /users/me/) — objeto de
+  // classificarErro, mostrado no lugar do formulário enquanto meEdicao for null.
+  const [erroCarregarEdicao, setErroCarregarEdicao] = useState(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  // Erro de SALVAR o formulário (validação de campo do backend, ex: nome em
+  // cooldown) — string simples, exibido dentro do próprio ModalEditarPerfil.
   const [erroEdicao, setErroEdicao] = useState(null);
 
   async function buscarPerfil() {
@@ -235,7 +276,7 @@ function PaginaPerfil() {
       const resposta = await api.get(`/users/${username}/`);
       setPerfil(resposta.data);
     } catch (err) {
-      setErro('Usuário não encontrado.');
+      setErro(classificarErro(err));
     } finally {
       setCarregando(false);
     }
@@ -255,6 +296,7 @@ function PaginaPerfil() {
   async function alternarSeguir() {
     if (enviandoFollow) return;
     setEnviandoFollow(true);
+    setErroFollow(null);
     try {
       const resposta = await api.post('/social/follow/', { tipo: 'usuario', alvo_id: perfil.id });
       const { seguindo, solicitado } = resposta.data;
@@ -280,7 +322,7 @@ function PaginaPerfil() {
         };
       });
     } catch (err) {
-      setErro('Não foi possível atualizar o follow agora.');
+      setErroFollow(classificarErro(err).mensagem);
     } finally {
       setEnviandoFollow(false);
     }
@@ -289,35 +331,51 @@ function PaginaPerfil() {
   async function abrirModal(tipo) {
     setModalAberto(tipo);
     setListaModal([]); // limpa antes de buscar, senão o formato antigo (usuário/lugar) fica incompatível com o novo 'tipo' até a resposta chegar
+    setErroModalLista(null);
+    setCarregandoModalLista(true);
     try {
       const resposta = await api.get(`/social/usuarios/${username}/${tipo}/`);
       setListaModal(resposta.data);
     } catch (err) {
-      setListaModal([]);
+      setErroModalLista(classificarErro(err));
+    } finally {
+      setCarregandoModalLista(false);
     }
+  }
+
+  function retentarModalLista() {
+    if (modalAberto) abrirModal(modalAberto);
   }
 
   async function abrirModalBadge() {
     setModalBadgeAberto(true);
+    setErroBadge(null);
+    setErroConquistas(null);
+    setCarregandoConquistas(true);
     try {
       const dados = await getMinhasConquistas();
       setConquistas(dados);
-    } catch (_) {
-      setConquistas([]);
+    } catch (err) {
+      setErroConquistas(classificarErro(err));
+    } finally {
+      setCarregandoConquistas(false);
     }
   }
 
   async function handleSelecionarBadge(badgeId) {
     if (selecionandoBadge) return;
     setSelecionandoBadge(true);
+    setErroBadge(null);
     try {
       const meAtualizado = await selecionarBadgeDestaque(badgeId);
       setBadgeDestaqueRealId(meAtualizado.badge_destaque?.id ?? null);
       // Reflete a mudança na tela sem precisar refazer o GET completo do perfil
       setPerfil((prev) => ({ ...prev, badge_destaque: meAtualizado.exibir_badges ? meAtualizado.badge_destaque : null }));
       setModalBadgeAberto(false);
-    } catch (_) {
-      setErro('Não foi possível atualizar a badge de destaque.');
+    } catch (err) {
+      // Mostrado DENTRO do ModalSelecaoBadge (erroSelecao) — não em `erro`,
+      // que ficaria escondido atrás do overlay do modal.
+      setErroBadge(classificarErro(err).mensagem);
     } finally {
       setSelecionandoBadge(false);
     }
@@ -340,14 +398,19 @@ function PaginaPerfil() {
 
   async function abrirModalEditar() {
     setErroEdicao(null);
+    setErroCarregarEdicao(null);
+    setMeEdicao(null);
     setModalEditarAberto(true);
+    setCarregandoEdicao(true);
     try {
       // Busca fresca: dias_para_trocar_nome_exibicao precisa vir calculado
       // na hora, não do localStorage (que pode estar desatualizado).
       const me = await getMe();
       setMeEdicao(me);
-    } catch (_) {
-      setErroEdicao('Não foi possível carregar seus dados agora.');
+    } catch (err) {
+      setErroCarregarEdicao(classificarErro(err));
+    } finally {
+      setCarregandoEdicao(false);
     }
   }
 
@@ -365,8 +428,11 @@ function PaginaPerfil() {
       setModalEditarAberto(false);
     } catch (err) {
       const dados = err.response?.data;
+      // Erro de validação de campo específico tem prioridade — é mais
+      // preciso que a mensagem genérica de classificarErro. Só cai pro
+      // genérico (rede, 500, etc.) quando o backend não apontou um campo.
       const mensagem = dados?.nome_exibicao?.[0] || dados?.bio?.[0] || dados?.foto_perfil?.[0]
-        || 'Não foi possível salvar as alterações.';
+        || classificarErro(err).mensagem;
       setErroEdicao(mensagem);
     } finally {
       setSalvandoPerfil(false);
@@ -384,7 +450,7 @@ function PaginaPerfil() {
   }
 
   if (carregando) return <p className="pagina-perfil__carregando">Carregando...</p>;
-  if (erro && !perfil) return <p className="pagina-perfil__erro">{erro}</p>;
+  if (erro && !perfil) return <EstadoErro erro={erro} onRetentar={buscarPerfil} tamanho="pagina" />;
   if (!perfil) return null;
 
   const abas = [
@@ -468,7 +534,7 @@ function PaginaPerfil() {
         </div>
       </div>
 
-      {erro && <p className="perfil-erro">{erro}</p>}
+      {erroFollow && <p className="perfil-erro">{erroFollow}</p>}
 
       {/* Painel de gerenciamento — só o dono do perfil vê */}
       {ehProprioPerfil && (
@@ -543,6 +609,9 @@ function PaginaPerfil() {
           }
           tipo={modalAberto}
           itens={listaModal}
+          carregando={carregandoModalLista}
+          erro={erroModalLista}
+          onRetentar={retentarModalLista}
           onFechar={() => setModalAberto(null)}
         />
       )}
@@ -552,9 +621,34 @@ function PaginaPerfil() {
           conquistas={conquistas}
           idAtual={badgeDestaqueRealId}
           selecionando={selecionandoBadge}
+          carregando={carregandoConquistas}
+          erro={erroConquistas}
+          erroSelecao={erroBadge}
+          onRetentar={abrirModalBadge}
           onSelecionar={handleSelecionarBadge}
-          onFechar={() => setModalBadgeAberto(false)}
+          onFechar={() => { setModalBadgeAberto(false); setErroBadge(null); }}
         />
+      )}
+
+      {/* Enquanto os dados de edição (GET /users/me/) ainda não chegaram —
+          ou falharam — mostra um shell do modal com carregando/EstadoErro
+          no lugar do formulário. Sem isso, uma falha aqui deixava o modal
+          "aberto" mas completamente vazio e sem feedback nenhum. */}
+      {modalEditarAberto && !meEdicao && (
+        <div onClick={() => setModalEditarAberto(false)} className="modal-overlay">
+          <div onClick={(e) => e.stopPropagation()} className="modal-box modal-box--media">
+            <div className="modal-box__header">
+              <strong>Editar perfil</strong>
+              <button onClick={() => setModalEditarAberto(false)} className="modal-box__fechar">
+                <IconeFechar size={18} />
+              </button>
+            </div>
+            {carregandoEdicao
+              ? <p className="modal-usuarios__vazio">Carregando...</p>
+              : <EstadoErro erro={erroCarregarEdicao} onRetentar={abrirModalEditar} tamanho="inline" />
+            }
+          </div>
+        </div>
       )}
 
       {modalEditarAberto && meEdicao && (

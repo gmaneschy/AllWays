@@ -36,6 +36,9 @@ function Navbar() {
   useEffect(() => {
     if (!logado) return;
     async function buscarContador() {
+      // Impede requisições 401 caso a sessão seja limpa antes do componente desmontar
+      if (!estaLogado()) return;
+
       try {
         const { total } = await getNotificacoesNaoLidas();
         setNaoLidas(total);
@@ -49,6 +52,9 @@ function Navbar() {
   useEffect(() => {
     if (!logado) return;
     async function buscarContadorMensagens() {
+      // Impede requisições 401 caso a sessão seja limpa antes do componente desmontar
+      if (!estaLogado()) return;
+
       try {
         const { total } = await getMensagensNaoLidas();
         setMensagensNaoLidas(total);

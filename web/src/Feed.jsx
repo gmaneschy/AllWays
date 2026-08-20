@@ -2,6 +2,8 @@ import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react
 import api, { curtir } from './api';
 import FeedCard from './FeedCard';
 import ModalCompartilharItinerario from './ModalCompartilharItinerario';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import { lerCacheFeed, salvarCacheFeed } from './feedCache';
 import './Feed.css';
 
@@ -41,35 +43,42 @@ function Feed() {
   useEffect(() => { itinerariosRef.current = itinerarios; }, [itinerarios]);
   useEffect(() => { temMaisRef.current = temMais; }, [temMais]);
 
+  // Ref "vivo enquanto montado" — substitui o `cancelado` local que existia
+  // dentro do efeito de carga inicial. Precisou virar ref porque agora
+  // buscarPrimeiroLote também é chamada de fora do efeito (pelo botão
+  // "Tentar novamente" do EstadoErro), então a guarda contra setState após
+  // unmount não pode mais viver só no escopo do efeito.
+  const montadoRef = useRef(true);
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => { montadoRef.current = false; };
+  }, []);
+
+  const buscarPrimeiroLote = useCallback(async () => {
+    setCarregando(true);
+    setErro(null);
+    try {
+      const resposta = await api.get('/feed/principal/', {
+        params: { pagina: 1, por_pagina: POR_PAGINA },
+      });
+      if (!montadoRef.current) return;
+      setItinerarios(resposta.data.resultados);
+      setTemMais(resposta.data.tem_mais);
+      paginaRef.current = 1;
+    } catch (err) {
+      if (montadoRef.current) setErro(classificarErro(err));
+    } finally {
+      if (montadoRef.current) setCarregando(false);
+    }
+  }, []);
+
   // Carga do primeiro lote — só roda se não veio nada do cache. Se veio,
   // o estado já está hidratado e não faz sentido buscar de novo (e
   // sobrescrever o que o usuário já tinha rolado).
   useEffect(() => {
-    if (cacheInicial) return undefined;
-    let cancelado = false;
-
-    async function buscarPrimeiroLote() {
-      setCarregando(true);
-      setErro(null);
-      try {
-        const resposta = await api.get('/feed/principal/', {
-          params: { pagina: 1, por_pagina: POR_PAGINA },
-        });
-        if (cancelado) return;
-        setItinerarios(resposta.data.resultados);
-        setTemMais(resposta.data.tem_mais);
-        paginaRef.current = 1;
-      } catch (err) {
-        if (!cancelado) setErro('Erro ao carregar o feed.');
-      } finally {
-        if (!cancelado) setCarregando(false);
-      }
-    }
-
+    if (cacheInicial) return;
     buscarPrimeiroLote();
-    return () => { cancelado = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cacheInicial, buscarPrimeiroLote]);
 
   // Restaura a posição de rolagem quando o feed foi hidratado do cache.
   // useLayoutEffect (em vez de useEffect) roda antes do navegador pintar
@@ -173,7 +182,7 @@ function Feed() {
   }, []);
 
   if (carregando) return <p className="feed-estado">Carregando feed...</p>;
-  if (erro) return <p className="feed-estado erro">{erro}</p>;
+  if (erro) return <EstadoErro erro={erro} onRetentar={buscarPrimeiroLote} tamanho="pagina" />;
 
   return (
     <div className="feed-pagina">

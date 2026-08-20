@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import api from './api';
 import CardItinerarioResumo from './CardItinerarioResumo';
 import { IconeHashtag } from './icons';
+import { classificarErro } from './erros';
+import EstadoErro from './EstadoErro';
 import './PaginaHashtag.css';
 
 function PaginaHashtag() {
@@ -19,7 +21,15 @@ function PaginaHashtag() {
         const res = await api.get(`/social/hashtag/${nome}/`);
         setDados(res.data);
       } catch (err) {
-        setErro(err.response?.status === 404 ? `Hashtag #${nome} não encontrada.` : 'Erro ao carregar.');
+        // Substituindo o texto simples pelo objeto estruturado
+        const erroClassificado = classificarErro(err);
+
+        // Personaliza a mensagem se for um erro 404
+        if (erroClassificado.tipo === 'nao_encontrado') {
+           erroClassificado.mensagem = `Hashtag #${nome} não encontrada.`;
+        }
+
+        setErro(erroClassificado);
       } finally {
         setCarregando(false);
       }
@@ -28,7 +38,24 @@ function PaginaHashtag() {
   }, [nome]);
 
   if (carregando) return <p className="pagina-hashtag__carregando">Carregando...</p>;
-  if (erro) return <p className="pagina-hashtag__erro">{erro}</p>;
+
+  // Renderizar o novo componente, passando a função "buscar" caso o erro seja retentável
+  if (erro) return (
+      <EstadoErro
+        erro={erro}
+        tamanho="pagina"
+        onRetentar={() => {
+            // Recriar a função de busca ou re-disparar o fetch
+            setCarregando(true);
+            setErro(null);
+            api.get(`/social/hashtag/${nome}/`)
+               .then(res => setDados(res.data))
+               .catch(err => setErro(classificarErro(err)))
+               .finally(() => setCarregando(false));
+        }}
+      />
+  );
+
   if (!dados) return null;
 
   return (

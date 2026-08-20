@@ -3,9 +3,6 @@ frontend:
     CriarItinerario:
     - data do itinerário deve ser campo obrigatório para publicação
 
-    Configurações:
-        Desativação ou exclusão de conta deve refletir na contagem de seguidores.
-
         Segurança:
             Autenticação de dois fatores (futuro)
 

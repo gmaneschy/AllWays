@@ -1,0 +1,19 @@
+.aviso-offline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font: var(--fonte-meta);
+  color: #fff;
+  background: var(--cor-perigo);
+}
+
+.aviso-offline--reconectado {
+  background: var(--cor-sucesso);
+}

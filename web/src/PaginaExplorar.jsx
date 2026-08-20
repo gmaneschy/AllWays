@@ -4,6 +4,8 @@ import CardItinerarioResumo from './CardItinerarioResumo';
 import api from './api';
 import { lerCacheExplorar, salvarCacheExplorar } from './explorarCache';
 import { IconeBuscar, IconeFechar, IconePin, IconeCarregando, IconeHashtag } from './icons';
+import EstadoErro from './EstadoErro';
+import { classificarErro } from './erros';
 import './PaginaExplorar.css';
 
 const POR_PAGINA = 10;
@@ -80,6 +82,9 @@ function PaginaExplorar() {
   const [carregandoFeed, setCarregandoFeed] = useState(!cacheInicial);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [temMais, setTemMais] = useState(cacheInicial?.temMais ?? true);
+  const [erroFeed, setErroFeed] = useState(null);
+  const [erroMais, setErroMais] = useState(null);
+  const [erroBusca, setErroBusca] = useState(null);
   const inputRef = useRef(null);
 
   // Mesmo esquema de refs do Feed.jsx: página e guarda de disparo duplo em
@@ -118,30 +123,36 @@ function PaginaExplorar() {
     // Caso contrário: mantém dropdown aberto com os resultados já exibidos
   }
 
+  // Busca o primeiro lote — extraída do useEffect pra poder ser chamada de
+  // novo pelo botão "Tentar novamente" do EstadoErro sem duplicar lógica.
+  const buscarFeedInicial = useCallback(async (sinal) => {
+    setCarregandoFeed(true);
+    setErroFeed(null);
+    try {
+      const res = await api.get('/social/explorar/', {
+        params: { pagina: 1, por_pagina: POR_PAGINA },
+      });
+      if (sinal?.cancelado) return;
+      setFeed(res.data.resultados);
+      setTemMais(res.data.tem_mais);
+      paginaRef.current = 1;
+    } catch (err) {
+      if (sinal?.cancelado) return;
+      setTemMais(false);
+      setErroFeed(classificarErro(err));
+    } finally {
+      if (!sinal?.cancelado) setCarregandoFeed(false);
+    }
+  }, []);
+
   // Carrega o primeiro lote ao entrar na página — só roda se não veio nada
   // do cache. Se veio, o estado já está hidratado e não faz sentido buscar
   // de novo (e sobrescrever o que o usuário já tinha rolado).
   useEffect(() => {
     if (cacheInicial) return undefined;
-    let cancelado = false;
-
-    async function buscarFeed() {
-      try {
-        const res = await api.get('/social/explorar/', {
-          params: { pagina: 1, por_pagina: POR_PAGINA },
-        });
-        if (cancelado) return;
-        setFeed(res.data.resultados);
-        setTemMais(res.data.tem_mais);
-        paginaRef.current = 1;
-      } catch (_) {
-        if (!cancelado) setTemMais(false);
-      } finally {
-        if (!cancelado) setCarregandoFeed(false);
-      }
-    }
-    buscarFeed();
-    return () => { cancelado = true; };
+    const sinal = { cancelado: false };
+    buscarFeedInicial(sinal);
+    return () => { sinal.cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -178,6 +189,7 @@ function PaginaExplorar() {
     if (carregandoMaisRef.current || !temMais) return;
     carregandoMaisRef.current = true;
     setCarregandoMais(true);
+    setErroMais(null);
 
     try {
       const proximaPagina = paginaRef.current + 1;
@@ -187,9 +199,10 @@ function PaginaExplorar() {
       setFeed((prev) => [...prev, ...res.data.resultados]);
       setTemMais(res.data.tem_mais);
       paginaRef.current = proximaPagina;
-    } catch (_) {
-      // Silencioso — a sentinela continua visível e uma nova rolagem até
-      // ela tenta carregar o mesmo lote de novo.
+    } catch (err) {
+      // Mostra EstadoErro inline com botão de retentar — sem isso, a
+      // sentinela ficaria tentando de novo silenciosamente a cada scroll.
+      setErroMais(classificarErro(err));
     } finally {
       carregandoMaisRef.current = false;
       setCarregandoMais(false);
@@ -208,36 +221,46 @@ function PaginaExplorar() {
       ([entrada]) => {
         if (entrada.isIntersecting) carregarProximoLote();
       },
-      { rootMargin: '600px' },
+      { rootMargin: '100px' },
     );
 
     observer.observe(alvo);
     return () => observer.disconnect();
-  }, [query, carregandoFeed, temMais, carregarProximoLote]);
+    // erroMais entra nas deps porque a sentinela só é renderizada quando
+    // !erroMais — sem isso, o observer não seria reanexado depois que um
+    // retry manual bem-sucedido faz a sentinela voltar ao DOM.
+  }, [query, carregandoFeed, temMais, erroMais, carregarProximoLote]);
 
   // handleCurtir removido — CardItinerarioResumo não tem mais botão de
   // curtir (card simplificado, sem essa ação).
 
 
-  // Busca ao digitar (debounced)
+  // Busca ao digitar (debounced). Extraída em useCallback pra o botão
+  // "Tentar novamente" do dropdown poder repetir a mesma busca.
   const queryDebounced = useDebounce(query, 300);
+
+  const buscarResultados = useCallback(async (q) => {
+    setBuscando(true);
+    setErroBusca(null);
+    try {
+      const res = await api.get(`/social/busca/?q=${encodeURIComponent(q)}`);
+      setResultados(res.data);
+    } catch (err) {
+      setResultados(null);
+      setErroBusca(classificarErro(err));
+    } finally {
+      setBuscando(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!queryDebounced.trim()) {
       setResultados(null);
+      setErroBusca(null);
       return;
     }
-    async function buscar() {
-      setBuscando(true);
-      try {
-        const res = await api.get(`/social/busca/?q=${encodeURIComponent(queryDebounced)}`);
-        setResultados(res.data);
-      } catch (_) {
-        setResultados(null);
-      }
-      finally { setBuscando(false); }
-    }
-    buscar();
-  }, [queryDebounced]);
+    buscarResultados(queryDebounced);
+  }, [queryDebounced, buscarResultados]);
 
   const temResultados = resultados && (
     resultados.usuarios.length > 0 ||
@@ -272,11 +295,19 @@ function PaginaExplorar() {
           <div className="pagina-explorar__dropdown">
             {buscando && <p className="pagina-explorar__dropdown-estado">Buscando...</p>}
 
-            {!buscando && !temResultados && (
+            {!buscando && erroBusca && (
+              <EstadoErro
+                erro={erroBusca}
+                tamanho="inline"
+                onRetentar={() => buscarResultados(queryDebounced)}
+              />
+            )}
+
+            {!buscando && !erroBusca && !temResultados && (
               <p className="pagina-explorar__dropdown-estado">Nenhum resultado para "{query}"</p>
             )}
 
-            {!buscando && temResultados && (
+            {!buscando && !erroBusca && temResultados && (
               <>
                 <SecaoBusca
                   titulo="Usuários"
@@ -332,21 +363,43 @@ function PaginaExplorar() {
       {!query && (
         <>
           {carregandoFeed && <p className="pagina-explorar__estado">Carregando...</p>}
-          {!carregandoFeed && feed.length === 0 && (
+
+          {!carregandoFeed && erroFeed && feed.length === 0 && (
+            <EstadoErro
+              erro={erroFeed}
+              tamanho="pagina"
+              onRetentar={() => buscarFeedInicial()}
+            />
+          )}
+
+          {!carregandoFeed && !erroFeed && feed.length === 0 && (
             <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>
           )}
-          <div className="grid-itinerarios">
-            {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} />)}
-          </div>
+
+          {(!erroFeed || feed.length > 0) && (
+            <div className="grid-itinerarios">
+              {feed.map((it) => <CardItinerarioResumo key={it.id} it={it} />)}
+            </div>
+          )}
 
           {/* Sentinela: invisível, só existe pro IntersectionObserver ter
-              algo pra vigiar. Some quando não há mais lotes pra buscar. */}
-          {temMais && !carregandoFeed && (
+              algo pra vigiar. Some quando não há mais lotes ou quando o
+              último lote falhou (nesse caso mostramos erro + retry manual
+              em vez de deixar o observer tentar de novo silenciosamente). */}
+          {temMais && !carregandoFeed && !erroMais && (
             <div ref={sentinelaRef} className="pagina-explorar__sentinela" aria-hidden="true" />
           )}
 
           {carregandoMais && (
             <p className="pagina-explorar__estado pagina-explorar__estado--carregando-mais">Carregando mais...</p>
+          )}
+
+          {erroMais && !carregandoMais && (
+            <EstadoErro
+              erro={erroMais}
+              tamanho="inline"
+              onRetentar={carregarProximoLote}
+            />
           )}
         </>
       )}
