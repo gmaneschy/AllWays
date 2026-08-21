@@ -25,6 +25,19 @@ def validar_itinerario_para_publicacao(itinerario):
     if not itinerario.titulo:
         erros.append("Título é obrigatório.")
 
+    # data_inicio/data_fim ficam null=True/blank=True no model de propósito
+    # (rascunho não precisa de data) — a obrigatoriedade é só na publicação,
+    # igual ao padrão já usado pros campos de PontoItinerario em
+    # CAMPOS_OBRIGATORIOS_PONTO.
+    if not itinerario.data_inicio:
+        erros.append("Data de início é obrigatória para publicar.")
+
+    if itinerario.tipo == 'multi_day':
+        if not itinerario.data_fim:
+            erros.append("Data de término é obrigatória para publicar um itinerário de múltiplos dias.")
+        elif itinerario.data_inicio and itinerario.data_fim < itinerario.data_inicio:
+            erros.append("Data de término não pode ser anterior à data de início.")
+
     pontos = list(itinerario.pontos.all())
     if not pontos:
         erros.append("O itinerário precisa de pelo menos um ponto.")

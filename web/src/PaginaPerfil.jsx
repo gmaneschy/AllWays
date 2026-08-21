@@ -459,6 +459,8 @@ function PaginaPerfil() {
     ...(perfil.rascunhos ? [{ key: 'rascunhos', label: 'Rascunhos' }] : []),
   ];
 
+  // Ordem (mais recente primeiro) já vem garantida do backend — ver
+  // get_itinerarios_publicados/get_rascunhos/get_salvos em serializers.py.
   const itinerariosAba = {
     publicados: perfil.itinerarios_publicados,
     salvos: perfil.salvos || [],

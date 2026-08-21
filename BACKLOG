@@ -1,13 +1,10 @@
 Checklist:
 frontend:
-    CriarItinerario:
-    - data do itinerário deve ser campo obrigatório para publicação
+    Segurança:
+        Autenticação de dois fatores (futuro)
 
-        Segurança:
-            Autenticação de dois fatores (futuro)
-
-        Idioma:
-            Mudar idioma do aplicativo (futuro)
+    Idioma:
+        Mudar idioma do aplicativo (futuro)
 
 Tela admin
 http://localhost:8000/admin/

@@ -385,7 +385,7 @@ class PerfilPublicoSerializer(serializers.ModelSerializer):
     def get_itinerarios_publicados(self, obj):
         if not self._pode_ver_conteudo(obj):
             return []
-        qs = Itinerario.objects.filter(autor=obj, status='publicado').prefetch_related('pontos__fotos', 'pontos__videos')
+        qs = Itinerario.objects.filter(autor=obj, status='publicado').order_by('-publicado_em').prefetch_related('pontos__fotos', 'pontos__videos')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
     def _pode_ver_conteudo(self, obj):
@@ -434,13 +434,16 @@ class PerfilProprioSerializer(PerfilPublicoSerializer):
         fields = PerfilPublicoSerializer.Meta.fields + ['rascunhos', 'salvos', 'email']
 
     def get_rascunhos(self, obj):
-        qs = Itinerario.objects.filter(autor=obj, status='rascunho').prefetch_related('pontos__fotos', 'pontos__videos')
+        # Itinerario não tem campo de "criado em" (só publicado_em, que fica
+        # null em rascunho) — '-id' é o proxy de recência aqui, já que IDs
+        # são sempre crescentes por ordem de criação.
+        qs = Itinerario.objects.filter(autor=obj, status='rascunho').order_by('-id').prefetch_related('pontos__fotos', 'pontos__videos')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
     def get_salvos(self, obj):
         qs = Itinerario.objects.filter(
             salvos_por__usuario=obj
-        ).select_related('autor').prefetch_related('pontos__fotos', 'pontos__videos')
+        ).select_related('autor').prefetch_related('pontos__fotos', 'pontos__videos').order_by('-salvos_por__salvo_em')
         return ItinerarioResumoSerializer(qs, many=True, context=self.context).data
 
 
