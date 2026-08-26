@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { IconeAlerta } from './icons';
 import './Avisos.css';
 
@@ -22,18 +23,28 @@ import './Avisos.css';
  *
  * `carregando` desabilita os dois botões e troca o texto do de confirmar
  * (útil enquanto a ação em si — ex: a chamada à API — está em andamento).
+ *
+ * textoConfirmar/textoCancelar são opcionais: quando quem chama não passa
+ * nada, caem no padrão traduzido ("Confirmar"/"Cancelar"). Não dá pra usar
+ * valor-padrão de parâmetro aqui porque t() só existe dentro do corpo do
+ * componente — por isso o fallback com `??` abaixo, em vez de no
+ * destructuring dos props.
  */
 function ModalConfirmacao({
   aberto,
   titulo,
   mensagem,
-  textoConfirmar = 'Confirmar',
-  textoCancelar = 'Cancelar',
+  textoConfirmar,
+  textoCancelar,
   perigo = false,
   carregando = false,
   onConfirmar,
   onCancelar,
 }) {
+  const { t } = useTranslation('common');
+  const confirmarLabel = textoConfirmar ?? t('avisos.confirmar');
+  const cancelarLabel = textoCancelar ?? t('avisos.cancelar');
+
   return (
     <AnimatePresence>
       {aberto && (
@@ -66,14 +77,14 @@ function ModalConfirmacao({
                 disabled={carregando}
                 className="aviso-box__botao aviso-box__botao--cancelar"
               >
-                {textoCancelar}
+                {cancelarLabel}
               </button>
               <button
                 onClick={onConfirmar}
                 disabled={carregando}
                 className={`aviso-box__botao${perigo ? ' aviso-box__botao--perigo' : ' aviso-box__botao--primario'}`}
               >
-                {carregando ? 'Aguarde...' : textoConfirmar}
+                {carregando ? t('avisos.aguarde') : confirmarLabel}
               </button>
             </div>
           </motion.div>
@@ -90,12 +101,13 @@ function ModalConfirmacao({
  * "excluindo" de quem chama, pra desabilitar os botões durante a chamada
  * à API. */
 export function AvisoExcluirRascunho({ aberto, carregando, onConfirmar, onCancelar }) {
+  const { t } = useTranslation('common');
   return (
     <ModalConfirmacao
       aberto={aberto}
-      titulo="Excluir rascunho"
-      mensagem="Tem certeza de que deseja excluir este rascunho? Essa ação não pode ser desfeita."
-      textoConfirmar="Excluir"
+      titulo={t('avisos.excluir_rascunho.titulo')}
+      mensagem={t('avisos.excluir_rascunho.mensagem')}
+      textoConfirmar={t('avisos.excluir_rascunho.confirmar')}
       perigo
       carregando={carregando}
       onConfirmar={onConfirmar}
@@ -109,12 +121,13 @@ export function AvisoExcluirRascunho({ aberto, carregando, onConfirmar, onCancel
  * diferente da de rascunho — aqui já pode existir curtidas e comentários
  * de outras pessoas, que se perdem junto. */
 export function AvisoExcluirItinerario({ aberto, carregando, onConfirmar, onCancelar }) {
+  const { t } = useTranslation('common');
   return (
     <ModalConfirmacao
       aberto={aberto}
-      titulo="Excluir itinerário"
-      mensagem="Tem certeza de que deseja excluir este itinerário? Curtidas e comentários também serão perdidos, e essa ação não pode ser desfeita."
-      textoConfirmar="Excluir"
+      titulo={t('avisos.excluir_itinerario.titulo')}
+      mensagem={t('avisos.excluir_itinerario.mensagem')}
+      textoConfirmar={t('avisos.excluir_itinerario.confirmar')}
       perigo
       carregando={carregando}
       onConfirmar={onConfirmar}
@@ -129,12 +142,13 @@ export function AvisoExcluirItinerario({ aberto, carregando, onConfirmar, onCanc
  * ainda, então o que se perde é só o preenchimento local daquele ponto
  * (campos e mídias já adicionadas), não curtidas/comentários de terceiros. */
 export function AvisoRemoverPonto({ aberto, onConfirmar, onCancelar }) {
+  const { t } = useTranslation('common');
   return (
     <ModalConfirmacao
       aberto={aberto}
-      titulo="Remover ponto"
-      mensagem="Tem certeza de que deseja remover este ponto do itinerário? Os dados preenchidos e as mídias adicionadas para ele serão perdidos."
-      textoConfirmar="Remover"
+      titulo={t('avisos.remover_ponto.titulo')}
+      mensagem={t('avisos.remover_ponto.mensagem')}
+      textoConfirmar={t('avisos.remover_ponto.confirmar')}
       perigo
       onConfirmar={onConfirmar}
       onCancelar={onCancelar}
@@ -146,14 +160,20 @@ export function AvisoRemoverPonto({ aberto, onConfirmar, onCancelar }) {
  * na PaginaItinerario, antes de disparar a chamada de apagar. É a mesma
  * chamada de API pros dois casos (thread de 1 nível só), então um único
  * componente resolve — `ehResposta` só ajusta o texto pra ficar claro o
- * que está sendo removido. */
+ * que está sendo removido.
+ *
+ * Mensagem completa por variante (em vez de interpolar só "esta
+ * resposta"/"este comentário" dentro de uma frase única) porque
+ * concordância de gênero/ordem de palavras nem sempre sobrevive a esse
+ * tipo de substituição em outros idiomas. */
 export function AvisoExcluirComentario({ aberto, ehResposta = false, carregando, onConfirmar, onCancelar }) {
+  const { t } = useTranslation('common');
   return (
     <ModalConfirmacao
       aberto={aberto}
-      titulo={ehResposta ? 'Excluir resposta' : 'Excluir comentário'}
-      mensagem={`Tem certeza de que deseja excluir ${ehResposta ? 'esta resposta' : 'este comentário'}? Essa ação não pode ser desfeita.`}
-      textoConfirmar="Excluir"
+      titulo={ehResposta ? t('avisos.excluir_comentario.titulo_resposta') : t('avisos.excluir_comentario.titulo')}
+      mensagem={ehResposta ? t('avisos.excluir_comentario.mensagem_resposta') : t('avisos.excluir_comentario.mensagem_comentario')}
+      textoConfirmar={t('avisos.excluir_comentario.confirmar')}
       perigo
       carregando={carregando}
       onConfirmar={onConfirmar}
@@ -166,12 +186,13 @@ export function AvisoExcluirComentario({ aberto, ehResposta = false, carregando,
  * uma ação destrutiva como excluir algo, é só encerrar a sessão atual, e
  * o usuário loga de volta a hora que quiser. */
 export function AvisoSair({ aberto, onConfirmar, onCancelar }) {
+  const { t } = useTranslation('common');
   return (
     <ModalConfirmacao
       aberto={aberto}
-      titulo="Sair da conta"
-      mensagem="Tem certeza de que deseja sair?"
-      textoConfirmar="Sair"
+      titulo={t('avisos.sair.titulo')}
+      mensagem={t('avisos.sair.mensagem')}
+      textoConfirmar={t('avisos.sair.confirmar')}
       onConfirmar={onConfirmar}
       onCancelar={onCancelar}
     />

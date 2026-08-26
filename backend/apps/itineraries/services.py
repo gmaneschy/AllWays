@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from apps.places.services import calcular_distancia
 from .models import PontoItinerario
 
@@ -23,36 +24,48 @@ def validar_itinerario_para_publicacao(itinerario):
     erros = []
 
     if not itinerario.titulo:
-        erros.append("Título é obrigatório.")
+        erros.append(_("Título é obrigatório."))
 
     # data_inicio/data_fim ficam null=True/blank=True no model de propósito
     # (rascunho não precisa de data) — a obrigatoriedade é só na publicação,
     # igual ao padrão já usado pros campos de PontoItinerario em
     # CAMPOS_OBRIGATORIOS_PONTO.
     if not itinerario.data_inicio:
-        erros.append("Data de início é obrigatória para publicar.")
+        erros.append(_("Data de início é obrigatória para publicar."))
 
     if itinerario.tipo == 'multi_day':
         if not itinerario.data_fim:
-            erros.append("Data de término é obrigatória para publicar um itinerário de múltiplos dias.")
+            erros.append(_("Data de término é obrigatória para publicar um itinerário de múltiplos dias."))
         elif itinerario.data_inicio and itinerario.data_fim < itinerario.data_inicio:
-            erros.append("Data de término não pode ser anterior à data de início.")
+            erros.append(_("Data de término não pode ser anterior à data de início."))
 
     pontos = list(itinerario.pontos.all())
     if not pontos:
-        erros.append("O itinerário precisa de pelo menos um ponto.")
+        erros.append(_("O itinerário precisa de pelo menos um ponto."))
 
     for ponto in pontos:
-        prefixo = f"Ponto #{ponto.ordem}"
+        # 'prefixo' não pode mais ser uma f-string pré-montada: precisa
+        # entrar como argumento nomeado do %-formatting de cada mensagem,
+        # senão o texto "Ponto #N" fica fora do alcance do gettext_lazy e
+        # makemessages não extrai nada disso corretamente.
+        numero_ponto = ponto.ordem
 
         for campo in CAMPOS_OBRIGATORIOS_PONTO:
-            if not getattr(ponto, campo):
-                erros.append(f"{prefixo}: campo '{campo}' é obrigatório para publicar.")
+            erros.append(
+                _("Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar.")
+                % {'numero': numero_ponto, 'campo': campo}
+            )
 
         if ponto.entrada_gratuita and ponto.preco_medio is not None:
-            erros.append(f"{prefixo}: local gratuito não deve ter avaliação de preço.")
+            erros.append(
+                _("Ponto #%(numero)s: local gratuito não deve ter avaliação de preço.")
+                % {'numero': numero_ponto}
+            )
         if not ponto.entrada_gratuita and ponto.preco_medio is None:
-            erros.append(f"{prefixo}: informe a avaliação de preço, ou marque como entrada gratuita.")
+            erros.append(
+                _("Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada gratuita.")
+                % {'numero': numero_ponto}
+            )
 
         # Vídeo em 'processando' conta como mídia válida — a compressão
         # roda em background (até 15min, ver tasks.py) e não é razoável
@@ -61,7 +74,10 @@ def validar_itinerario_para_publicacao(itinerario):
         tem_foto = ponto.fotos.exists()
         tem_video_valido = ponto.videos.exclude(status='erro').exists()
         if not tem_foto and not tem_video_valido:
-            erros.append(f"{prefixo}: adicione pelo menos uma foto ou vídeo.")
+            erros.append(
+                _("Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo.")
+                % {'numero': numero_ponto}
+            )
 
     if erros:
         raise DjangoValidationError(erros)

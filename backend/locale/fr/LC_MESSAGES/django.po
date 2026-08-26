@@ -1,0 +1,183 @@
+# French translation.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: French <LL@li.org>\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: apps/itineraries/serializers.py:73
+msgid "O itinerário precisa de pelo menos 1 local."
+msgstr "L'itinéraire nécessite au moins 1 lieu."
+
+#: apps/itineraries/serializers.py:78
+msgid "A data do itinerário não pode ser no futuro."
+msgstr "La date de l'itinéraire ne peut pas être dans le futur."
+
+#: apps/itineraries/serializers.py:92
+#, python-brace-format
+msgid ""
+"Não é possível publicar diretamente por aqui. Salve como rascunho, envie as "
+"fotos/vídeos de cada ponto e então chame POST /itinerarios/{id}/publicar/."
+msgstr ""
+"Il n'est pas possible de publier directement depuis ici. Enregistrez comme "
+"brouillon, envoyez les photos/vidéos de chaque point, puis appelez POST "
+"/itinerarios/{id}/publicar/."
+
+#: apps/itineraries/services.py:27
+msgid "Título é obrigatório."
+msgstr "Le titre est obligatoire."
+
+#: apps/itineraries/services.py:34
+msgid "Data de início é obrigatória para publicar."
+msgstr "La date de début est obligatoire pour publier."
+
+#: apps/itineraries/services.py:38
+msgid ""
+"Data de término é obrigatória para publicar um itinerário de múltiplos dias."
+msgstr ""
+"La date de fin est obligatoire pour publier un itinéraire de plusieurs "
+"jours."
+
+#: apps/itineraries/services.py:40
+msgid "Data de término não pode ser anterior à data de início."
+msgstr "La date de fin ne peut pas être antérieure à la date de début."
+
+#: apps/itineraries/services.py:44
+msgid "O itinerário precisa de pelo menos um ponto."
+msgstr "L'itinéraire nécessite au moins un point."
+
+#: apps/itineraries/services.py:55
+#, python-format
+msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
+msgstr ""
+"Point n°%(numero)s : le champ '%(campo)s' est obligatoire pour publier."
+
+#: apps/itineraries/services.py:61
+#, python-format
+msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
+msgstr ""
+"Point n°%(numero)s : un lieu gratuit ne doit pas avoir d'évaluation de "
+"prix."
+
+#: apps/itineraries/services.py:66
+#, python-format
+msgid ""
+"Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
+"gratuita."
+msgstr ""
+"Point n°%(numero)s : indiquez l'évaluation de prix, ou marquez comme "
+"entrée gratuite."
+
+#: apps/itineraries/services.py:78
+#, python-format
+msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
+msgstr "Point n°%(numero)s : ajoutez au moins une photo ou une vidéo."
+
+#: apps/social/serializers.py:45
+msgid "Você não pode seguir a si mesmo."
+msgstr "Vous ne pouvez pas vous suivre vous-même."
+
+#: apps/social/serializers.py:79
+msgid "Descreva o motivo da denúncia."
+msgstr "Décrivez le motif du signalement."
+
+#: apps/social/serializers.py:126
+msgid ""
+"Respostas devem apontar `parent` para o comentário raiz da thread, não para "
+"outra resposta."
+msgstr ""
+"Les réponses doivent faire pointer `parent` vers le commentaire racine du "
+"fil, et non vers une autre réponse."
+
+#: apps/social/serializers.py:226
+msgid "Mensagem de texto não pode ser vazia."
+msgstr "Le message texte ne peut pas être vide."
+
+#: apps/social/serializers.py:228
+msgid "Mensagem de imagem requer um arquivo."
+msgstr "Le message image nécessite un fichier."
+
+#: apps/social/serializers.py:230
+msgid "Mensagem de áudio requer um arquivo."
+msgstr "Le message audio nécessite un fichier."
+
+#: apps/social/serializers.py:232
+msgid "Mensagem de vídeo requer um arquivo."
+msgstr "Le message vidéo nécessite un fichier."
+
+#: apps/social/serializers.py:234
+msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
+msgstr ""
+"Le message d'itinéraire nécessite un itinerario_id valide et publié."
+
+#: apps/users/serializers.py:53
+msgid ""
+"Use de 3 a 20 caracteres: comece com uma letra e use apenas letras "
+"minúsculas, números, \".\" ou \"_\"."
+msgstr ""
+"Utilisez de 3 à 20 caractères : commencez par une lettre et utilisez "
+"uniquement des lettres minuscules, des chiffres, \".\" ou \"_\"."
+
+#: apps/users/serializers.py:57
+msgid "Este nome de usuário já está em uso."
+msgstr "Ce nom d'utilisateur est déjà utilisé."
+
+#: apps/users/serializers.py:68
+msgid "Este e-mail já está associado a uma conta."
+msgstr "Cet e-mail est déjà associé à un compte."
+
+#: apps/users/serializers.py:74 apps/users/serializers.py:134
+msgid "Informe um nome de exibição."
+msgstr "Indiquez un nom d'affichage."
+
+#: apps/users/serializers.py:79
+msgid "Data de nascimento não pode estar no futuro."
+msgstr "La date de naissance ne peut pas être dans le futur."
+
+#: apps/users/serializers.py:83
+#, python-format
+msgid "É necessário ter ao menos %(idade)d anos para se cadastrar."
+msgstr "Vous devez avoir au moins %(idade)d ans pour vous inscrire."
+
+#: apps/users/serializers.py:142
+#, python-format
+msgid "Você poderá trocar o nome de exibição novamente em %(dias)d dia."
+msgid_plural ""
+"Você poderá trocar o nome de exibição novamente em %(dias)d dias."
+msgstr[0] ""
+"Vous pourrez modifier à nouveau votre nom d'affichage dans %(dias)d jour."
+msgstr[1] ""
+"Vous pourrez modifier à nouveau votre nom d'affichage dans %(dias)d jours."
+
+#: apps/users/serializers.py:180
+msgid "Senha atual incorreta."
+msgstr "Mot de passe actuel incorrect."
+
+#: apps/users/serializers.py:209 apps/users/serializers.py:241
+msgid "Senha incorreta."
+msgstr "Mot de passe incorrect."
+
+#: apps/users/serializers.py:215
+msgid "Duração inválida. Use 7, 15, 30 ou não informe (indefinida)."
+msgstr ""
+"Durée invalide. Utilisez 7, 15, 30 ou laissez vide (indéfinie)."
+
+#: apps/users/serializers.py:246
+msgid "É necessário confirmar a exclusão da conta."
+msgstr "Vous devez confirmer la suppression du compte."
+
+#: apps/users/serializers.py:462
+msgid "Você ainda não conquistou este distintivo."
+msgstr "Vous n'avez pas encore obtenu ce badge."

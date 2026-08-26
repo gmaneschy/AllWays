@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import CardItinerarioResumo from './CardItinerarioResumo';
 import api from './api';
 import { lerCacheExplorar, salvarCacheExplorar } from './explorarCache';
@@ -29,7 +30,6 @@ function LugarResultado({ lugar, onNavegar }) {
       navigate(`/place/${lugar.id}`);
       return;
     }
-    // Lugar do Google: criar no banco primeiro, depois navegar
     setSalvando(true);
     try {
       const res = await api.post('/places/', { place_id: lugar.place_id });
@@ -68,14 +68,12 @@ function SecaoBusca({ titulo, itens, renderItem }) {
 }
 
 function PaginaExplorar() {
+  const { t } = useTranslation('feed');
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState(null);
   const [buscando, setBuscando] = useState(false);
 
-  // Lido uma única vez, na montagem — useState com inicializador "lazy"
-  // (função) garante que lerCacheExplorar() só roda na primeira
-  // renderização, não em toda re-render. Mesmo padrão do Feed.jsx.
   const [cacheInicial] = useState(() => lerCacheExplorar());
 
   const [feed, setFeed] = useState(cacheInicial?.feed ?? []);
@@ -87,17 +85,10 @@ function PaginaExplorar() {
   const [erroBusca, setErroBusca] = useState(null);
   const inputRef = useRef(null);
 
-  // Mesmo esquema de refs do Feed.jsx: página e guarda de disparo duplo em
-  // ref (não state), pra o callback do IntersectionObserver sempre ler o
-  // valor mais atual em vez de fechar sobre uma renderização antiga.
   const paginaRef = useRef(cacheInicial?.pagina ?? 1);
   const carregandoMaisRef = useRef(false);
   const sentinelaRef = useRef(null);
 
-  // Refs "espelho" do state mais atual, mantidos só pra salvar o cache no
-  // unmount — mesmo motivo do Feed.jsx: um cleanup com deps [] fecha sobre
-  // os valores da PRIMEIRA renderização, então ler de state direto no
-  // cleanup salvaria sempre o feed vazio de antes do fetch terminar.
   const feedRef = useRef(feed);
   const temMaisRef = useRef(temMais);
   useEffect(() => { feedRef.current = feed; }, [feed]);
@@ -107,24 +98,18 @@ function PaginaExplorar() {
     if (e.key !== 'Enter') return;
     const q = query.trim();
     if (!q) return;
-    // Hashtag: #exemplo ou simplesmente "exemplo" com # na frente
     if (q.startsWith('#')) {
       const nome = q.slice(1).toLowerCase();
       if (nome) { setQuery(''); navigate(`/hashtag/${nome}`); }
     }
-    // Usuário único nos resultados → navega direto
     else if (resultados?.usuarios?.length === 1 && resultados.lugares.length === 0 && resultados.hashtags.length === 0) {
       setQuery(''); navigate(`/perfil/${resultados.usuarios[0].username}`);
     }
-    // Lugar único salvo no banco → navega direto
     else if (resultados?.lugares?.length === 1 && resultados.lugares[0].tipo === 'salvo' && resultados.usuarios.length === 0) {
       setQuery(''); navigate(`/place/${resultados.lugares[0].id}`);
     }
-    // Caso contrário: mantém dropdown aberto com os resultados já exibidos
   }
 
-  // Busca o primeiro lote — extraída do useEffect pra poder ser chamada de
-  // novo pelo botão "Tentar novamente" do EstadoErro sem duplicar lógica.
   const buscarFeedInicial = useCallback(async (sinal) => {
     setCarregandoFeed(true);
     setErroFeed(null);
@@ -145,9 +130,6 @@ function PaginaExplorar() {
     }
   }, []);
 
-  // Carrega o primeiro lote ao entrar na página — só roda se não veio nada
-  // do cache. Se veio, o estado já está hidratado e não faz sentido buscar
-  // de novo (e sobrescrever o que o usuário já tinha rolado).
   useEffect(() => {
     if (cacheInicial) return undefined;
     const sinal = { cancelado: false };
@@ -156,21 +138,13 @@ function PaginaExplorar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Restaura a posição de rolagem quando o grid foi hidratado do cache.
-  // useLayoutEffect (em vez de useEffect) roda antes do navegador pintar a
-  // tela, evitando o "pulo" visual de aparecer no topo e só depois ir pra
-  // posição salva.
   useLayoutEffect(() => {
     if (cacheInicial?.scrollY) {
       window.scrollTo(0, cacheInicial.scrollY);
     }
-    // roda só uma vez, na montagem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Salva o cache quando o componente desmonta (ex: usuário clicou num
-  // card e navegou pra PaginaItinerario ou PlacePage). Só salva se há
-  // pelo menos um item carregado — cache vazio não ajuda em nada.
   useEffect(() => {
     return () => {
       if (feedRef.current.length > 0) {
@@ -184,7 +158,6 @@ function PaginaExplorar() {
     };
   }, []);
 
-  // Próximos lotes — mesmo padrão do carregarProximoLote do Feed.jsx.
   const carregarProximoLote = useCallback(async () => {
     if (carregandoMaisRef.current || !temMais) return;
     carregandoMaisRef.current = true;
@@ -200,8 +173,6 @@ function PaginaExplorar() {
       setTemMais(res.data.tem_mais);
       paginaRef.current = proximaPagina;
     } catch (err) {
-      // Mostra EstadoErro inline com botão de retentar — sem isso, a
-      // sentinela ficaria tentando de novo silenciosamente a cada scroll.
       setErroMais(classificarErro(err));
     } finally {
       carregandoMaisRef.current = false;
@@ -209,9 +180,6 @@ function PaginaExplorar() {
     }
   }, [temMais]);
 
-  // Observa a sentinela no fim do grid: quando ela entra na viewport,
-  // busca o próximo lote. Só ativa fora do modo de busca (query vazia),
-  // já que a sentinela só existe no grid do feed, não no dropdown.
   useEffect(() => {
     if (query || carregandoFeed || !temMais) return undefined;
     const alvo = sentinelaRef.current;
@@ -226,17 +194,8 @@ function PaginaExplorar() {
 
     observer.observe(alvo);
     return () => observer.disconnect();
-    // erroMais entra nas deps porque a sentinela só é renderizada quando
-    // !erroMais — sem isso, o observer não seria reanexado depois que um
-    // retry manual bem-sucedido faz a sentinela voltar ao DOM.
   }, [query, carregandoFeed, temMais, erroMais, carregarProximoLote]);
 
-  // handleCurtir removido — CardItinerarioResumo não tem mais botão de
-  // curtir (card simplificado, sem essa ação).
-
-
-  // Busca ao digitar (debounced). Extraída em useCallback pra o botão
-  // "Tentar novamente" do dropdown poder repetir a mesma busca.
   const queryDebounced = useDebounce(query, 300);
 
   const buscarResultados = useCallback(async (q) => {
@@ -281,7 +240,7 @@ function PaginaExplorar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleEnter}
-          placeholder="Buscar usuários, lugares ou hashtags..."
+          placeholder={t('explorar.placeholder_busca')}
           className={`pagina-explorar__input${query ? ' pagina-explorar__input--ativo' : ''}`}
         />
         {query && (
@@ -293,7 +252,7 @@ function PaginaExplorar() {
         {/* Dropdown de resultados */}
         {query && (
           <div className="pagina-explorar__dropdown">
-            {buscando && <p className="pagina-explorar__dropdown-estado">Buscando...</p>}
+            {buscando && <p className="pagina-explorar__dropdown-estado">{t('explorar.buscando')}</p>}
 
             {!buscando && erroBusca && (
               <EstadoErro
@@ -304,13 +263,13 @@ function PaginaExplorar() {
             )}
 
             {!buscando && !erroBusca && !temResultados && (
-              <p className="pagina-explorar__dropdown-estado">Nenhum resultado para "{query}"</p>
+              <p className="pagina-explorar__dropdown-estado">{t('explorar.nenhum_resultado', { query })}</p>
             )}
 
             {!buscando && !erroBusca && temResultados && (
               <>
                 <SecaoBusca
-                  titulo="Usuários"
+                  titulo={t('explorar.secao_usuarios')}
                   itens={resultados.usuarios}
                   renderItem={(u) => (
                     <Link key={u.id} to={`/perfil/${u.username}`} onClick={() => setQuery('')} className="resultado-usuario">
@@ -329,7 +288,7 @@ function PaginaExplorar() {
                 />
 
                 <SecaoBusca
-                  titulo="Lugares"
+                  titulo={t('explorar.secao_lugares')}
                   itens={resultados.lugares}
                   renderItem={(p) => (
                     <LugarResultado key={p.id ?? p.place_id} lugar={p} onNavegar={() => setQuery('')} />
@@ -337,7 +296,7 @@ function PaginaExplorar() {
                 />
 
                 <SecaoBusca
-                  titulo="Hashtags"
+                  titulo={t('explorar.secao_hashtags')}
                   itens={resultados.hashtags}
                   renderItem={(h) => (
                     <Link key={h.id} to={`/hashtag/${h.nome}`} onClick={() => setQuery('')} className="resultado-hashtag">
@@ -347,7 +306,7 @@ function PaginaExplorar() {
                       <div>
                         <div className="resultado-hashtag__nome">#{h.nome}</div>
                         <div className="resultado-hashtag__contagem">
-                          {h.total_itinerarios} itinerário{h.total_itinerarios !== 1 ? 's' : ''}
+                          {t('explorar.hashtag_contagem', { count: h.total_itinerarios })}
                         </div>
                       </div>
                     </Link>
@@ -362,7 +321,7 @@ function PaginaExplorar() {
       {/* Feed de itinerários */}
       {!query && (
         <>
-          {carregandoFeed && <p className="pagina-explorar__estado">Carregando...</p>}
+          {carregandoFeed && <p className="pagina-explorar__estado">{t('explorar.carregando')}</p>}
 
           {!carregandoFeed && erroFeed && feed.length === 0 && (
             <EstadoErro
@@ -373,7 +332,7 @@ function PaginaExplorar() {
           )}
 
           {!carregandoFeed && !erroFeed && feed.length === 0 && (
-            <p className="pagina-explorar__estado">Nenhum itinerário publicado ainda.</p>
+            <p className="pagina-explorar__estado">{t('explorar.nenhum_itinerario')}</p>
           )}
 
           {(!erroFeed || feed.length > 0) && (
@@ -382,16 +341,12 @@ function PaginaExplorar() {
             </div>
           )}
 
-          {/* Sentinela: invisível, só existe pro IntersectionObserver ter
-              algo pra vigiar. Some quando não há mais lotes ou quando o
-              último lote falhou (nesse caso mostramos erro + retry manual
-              em vez de deixar o observer tentar de novo silenciosamente). */}
           {temMais && !carregandoFeed && !erroMais && (
             <div ref={sentinelaRef} className="pagina-explorar__sentinela" aria-hidden="true" />
           )}
 
           {carregandoMais && (
-            <p className="pagina-explorar__estado pagina-explorar__estado--carregando-mais">Carregando mais...</p>
+            <p className="pagina-explorar__estado pagina-explorar__estado--carregando-mais">{t('explorar.carregando_mais')}</p>
           )}
 
           {erroMais && !carregandoMais && (

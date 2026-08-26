@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "Feed",
+    "explorar": "Entdecken",
+    "criar_itinerario": "Reiseroute erstellen",
+    "mensagens": "Nachrichten",
+    "notificacoes": "Benachrichtigungen",
+    "configuracoes": "Einstellungen",
+    "sair": "Abmelden",
+    "entrar": "Anmelden"
+  },
+  "offline": {
+    "reconectado": "Verbindung wiederhergestellt",
+    "sem_conexao": "Du bist offline — einige Aktionen könnten fehlschlagen"
+  },
+  "avisos": {
+    "confirmar": "Bestätigen",
+    "cancelar": "Abbrechen",
+    "aguarde": "Bitte warten...",
+    "excluir_rascunho": {
+      "titulo": "Entwurf löschen",
+      "mensagem": "Möchtest du diesen Entwurf wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirmar": "Löschen"
+    },
+    "excluir_itinerario": {
+      "titulo": "Reiseroute löschen",
+      "mensagem": "Möchtest du diese Reiseroute wirklich löschen? Likes und Kommentare gehen ebenfalls verloren, und diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirmar": "Löschen"
+    },
+    "remover_ponto": {
+      "titulo": "Punkt entfernen",
+      "mensagem": "Möchtest du diesen Punkt wirklich aus der Reiseroute entfernen? Die eingegebenen Daten und hinzugefügten Medien für diesen Punkt gehen verloren.",
+      "confirmar": "Entfernen"
+    },
+    "excluir_comentario": {
+      "titulo": "Kommentar löschen",
+      "titulo_resposta": "Antwort löschen",
+      "mensagem_comentario": "Möchtest du diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "mensagem_resposta": "Möchtest du diese Antwort wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirmar": "Löschen"
+    },
+    "sair": {
+      "titulo": "Abmelden",
+      "mensagem": "Möchtest du dich wirklich abmelden?",
+      "confirmar": "Abmelden"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "Etwas ist schiefgelaufen",
+    "mensagem_padrao": "Ein unerwarteter Fehler ist aufgetreten.",
+    "tentar_novamente": "Erneut versuchen",
+    "voltar_inicio": "Zurück zur Startseite"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "Seite nicht gefunden",
+    "mensagem": "Die Adresse, auf die du zugreifen wolltest, existiert nicht."
+  },
+  "erros": {
+    "offline_titulo": "Keine Verbindung",
+    "offline_mensagem": "Überprüfe deine Internetverbindung und versuche es erneut.",
+    "timeout_titulo": "Die Anfrage hat zu lange gedauert",
+    "timeout_mensagem": "Der Server hat nicht rechtzeitig geantwortet. Bitte versuche es erneut.",
+    "servidor_indisponivel_titulo": "Verbindung nicht möglich",
+    "servidor_indisponivel_mensagem": "Der Server ist möglicherweise nicht erreichbar. Bitte versuche es in Kürze erneut.",
+    "nao_encontrado_titulo": "Nicht gefunden",
+    "nao_encontrado_mensagem": "Der gesuchte Inhalt existiert nicht mehr oder wurde entfernt.",
+    "nao_autenticado_titulo": "Sitzung abgelaufen",
+    "nao_autenticado_mensagem": "Bitte melde dich erneut an, um fortzufahren.",
+    "sem_permissao_titulo": "Zugriff verweigert",
+    "sem_permissao_mensagem": "Du hast keine Berechtigung, diesen Inhalt anzuzeigen.",
+    "muitas_requisicoes_titulo": "Nicht so schnell",
+    "muitas_requisicoes_mensagem": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
+    "servidor_titulo": "Serverfehler",
+    "servidor_mensagem": "Auf unserer Seite ist etwas schiefgelaufen. Wir wissen bereits Bescheid — bitte versuche es in Kürze erneut.",
+    "requisicao_invalida_titulo": "Konnte nicht abgeschlossen werden",
+    "requisicao_invalida_mensagem": "Die Anfrage konnte nicht verarbeitet werden.",
+    "desconhecido_titulo": "Etwas ist schiefgelaufen",
+    "desconhecido_mensagem": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut."
+  },
+  "video_validacao": {
+    "excede_tamanho": "Das Video überschreitet {{mb}}MB.",
+    "excede_duracao": "Das Video überschreitet {{segundos}} Sekunden Länge.",
+    "erro_leitura": "Das ausgewählte Video konnte nicht gelesen werden."
+  }
+}

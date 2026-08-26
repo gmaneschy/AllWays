@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
 import EstadoErro from './EstadoErro';
 import { classificarErro } from './erros';
@@ -38,6 +39,7 @@ function Avatar({ usuario, tamanho = 40 }) {
 }
 
 function SeletorDestinatario({ onSelecionar }) {
+  const { t } = useTranslation('social');
   const [query, setQuery] = useState('');
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -57,19 +59,19 @@ function SeletorDestinatario({ onSelecionar }) {
 
   return (
     <div className="seletor-destinatario">
-      <p className="seletor-destinatario__titulo">Nova conversa</p>
+      <p className="seletor-destinatario__titulo">{t('mensagens.nova_conversa')}</p>
       <input
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar entre quem você segue..."
+        placeholder={t('mensagens.buscar_seguidos')}
         className="form-input"
         style={{ marginBottom: 0 }}
       />
       <div className="seletor-destinatario__resultados">
-        {carregando && <p className="seletor-destinatario__estado">Carregando...</p>}
+        {carregando && <p className="seletor-destinatario__estado">{t('mensagens.carregando')}</p>}
         {!carregando && usuarios.length === 0 && (
-          <p className="seletor-destinatario__estado">Nenhum usuário encontrado.</p>
+          <p className="seletor-destinatario__estado">{t('mensagens.nenhum_usuario')}</p>
         )}
         {usuarios.map((u) => (
           <div key={u.id} onClick={() => onSelecionar(u)} className="seletor-destinatario__item">
@@ -88,7 +90,6 @@ function SeletorDestinatario({ onSelecionar }) {
 }
 
 function StatusLeitura({ minha, lida }) {
-  // Só faz sentido pras MINHAS mensagens — é o "check duplo" de quem enviou.
   if (!minha) return null;
   return lida
     ? <IconeLidoDuplo size={13} className="bolha-status-leitura bolha-status-leitura--lida" />
@@ -104,10 +105,6 @@ function SeloCurtida({ curtido, minha }) {
   );
 }
 
-/** Distingue clique único de duplo-clique manualmente. Necessário porque as
- * bolhas de imagem e itinerário já têm uma ação de clique único (abrir a
- * imagem / navegar pro itinerário) — sem isso, um duplo-clique real
- * dispararia as duas ações (a de clique único E a de curtir) juntas. */
 function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
   const timerRef = useRef(null);
   return function handleClick(e) {
@@ -125,19 +122,18 @@ function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
 }
 
 function BolhaMensagem({ m, minha, onCurtir }) {
+  const { t, i18n } = useTranslation('social');
   const navigate = useNavigate();
   const wrapperClasse = `bolha-wrapper ${minha ? 'bolha-wrapper--minha' : 'bolha-wrapper--deles'}`;
   const horaFora = `bolha-hora-fora ${minha ? 'bolha-hora-fora--minha' : 'bolha-hora-fora--deles'}`;
-  const hora = new Date(m.enviada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // Antes: locale 'pt-BR' fixo — mesmo bug já corrigido em
+  // PaginaItinerario/PaginaNotificacoes. Agora usa i18n.language.
+  const hora = new Date(m.enviada_em).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
 
   function handleDuploClique() {
     onCurtir(m.id);
   }
 
-  // Ação de clique único: só existe de fato pra imagem (abrir em nova aba) e
-  // itinerário (navegar); pros outros tipos não faz nada — mas o hook
-  // precisa ser chamado incondicionalmente aqui em cima (Rules of Hooks),
-  // não dentro de cada `if` de tipo abaixo.
   function handleCliqueUnico() {
     if (m.tipo === 'imagem') {
       window.open(m.imagem, '_blank');
@@ -158,19 +154,19 @@ function BolhaMensagem({ m, minha, onCurtir }) {
             className={`bolha-itinerario${minha ? ' bolha-itinerario--minha' : ''}`}
           >
             <div className="bolha-itinerario__label">
-              <IconePin size={12} /> Itinerário compartilhado
+              <IconePin size={12} /> {t('mensagens.itinerario_compartilhado')}
             </div>
             <div className="bolha-itinerario__titulo">{preview.titulo}</div>
             {preview.lugar_principal && (
               <div className="bolha-itinerario__lugar">
                 {preview.lugar_principal.nome}
-                {preview.total_pontos > 1 ? ` + ${preview.total_pontos - 1} lugar${preview.total_pontos > 2 ? 'es' : ''}` : ''}
+                {preview.total_pontos > 1 ? ` + ${t('mensagens.mais_lugares', { count: preview.total_pontos - 1 })}` : ''}
               </div>
             )}
           </div>
         ) : (
           <div className="bolha-itinerario--indisponivel">
-            <IconePin size={13} /> Itinerário indisponível
+            <IconePin size={13} /> {t('mensagens.itinerario_indisponivel')}
           </div>
         )}
         <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
@@ -191,10 +187,10 @@ function BolhaMensagem({ m, minha, onCurtir }) {
             className="bolha-video"
           />
         ) : m.video_status === 'erro' ? (
-          <div className="bolha-video-erro">Falha ao processar vídeo</div>
+          <div className="bolha-video-erro">{t('itinerarios:carrossel.video_falha')}</div>
         ) : (
           <div className="bolha-video-processando">
-            <IconeVideo size={14} /> Processando vídeo...
+            <IconeVideo size={14} /> {t('itinerarios:carrossel.video_processando')}
           </div>
         )}
         <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
@@ -244,7 +240,7 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   );
 }
 
-function useGravacaoAudio(onGravado) {
+function useGravacaoAudio(onGravado, t) {
   const [gravando, setGravando] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -264,7 +260,7 @@ function useGravacaoAudio(onGravado) {
       mediaRecorderRef.current = mr;
       setGravando(true);
     } catch (_) {
-      alert('Permissão de microfone negada.');
+      alert(t('mensagens.permissao_microfone_negada'));
     }
   }
 
@@ -277,6 +273,7 @@ function useGravacaoAudio(onGravado) {
 }
 
 function PaginaMensagens() {
+  const { t } = useTranslation(['social', 'itinerarios', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
   const usuarioLogado = getUsuarioLogado();
   const [conversas, setConversas] = useState([]);
@@ -288,25 +285,18 @@ function PaginaMensagens() {
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const [erroConversas, setErroConversas] = useState(null);
   const [erroMensagens, setErroMensagens] = useState(null);
-  // Incrementado por retentarMensagens() só pra forçar o efeito de polling
-  // a rodar de novo (busca imediata + reabre o setInterval do zero).
   const [tentativaMensagens, setTentativaMensagens] = useState(0);
   const [mostraSeletor, setMostraSeletor] = useState(false);
-  const [previewImagem, setPreviewImagem] = useState(null); // {file, url}
-  const [previewVideo, setPreviewVideo] = useState(null); // {file, url}
+  const [previewImagem, setPreviewImagem] = useState(null);
+  const [previewVideo, setPreviewVideo] = useState(null);
   const fimRef = useRef(null);
   const inputRef = useRef(null);
   const midiaInputRef = useRef(null);
   const pollingRef = useRef(null);
-  // O callback do setInterval é criado uma vez, quando o efeito de
-  // polling roda — se ele lesse `mensagens.length` direto, estaria sempre
-  // vendo o valor de quando o polling começou (closure obsoleta, mesmo
-  // problema que já resolvemos assim no Feed.jsx). Um ref sempre atualizado
-  // evita isso.
   const temMensagensRef = useRef(false);
   useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
 
-  const { gravando, iniciarGravacao, pararGravacao } = useGravacaoAudio(enviarAudio);
+  const { gravando, iniciarGravacao, pararGravacao } = useGravacaoAudio(enviarAudio, t);
 
   useEffect(() => { buscarConversas(); }, []);
 
@@ -316,9 +306,6 @@ function PaginaMensagens() {
       setConversas(res.data);
       setErroConversas(null);
     } catch (err) {
-      // Só mostra erro de inbox se ainda não há nada na tela — uma
-      // atualização de bastidor que falha (ex: rede caiu por 1s) não deve
-      // substituir a lista de conversas que o usuário já está vendo.
       if (conversas.length === 0) setErroConversas(classificarErro(err));
     } finally { setCarregandoConversas(false); }
   }
@@ -339,27 +326,15 @@ function PaginaMensagens() {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
       setMensagens(res.data);
       setErroMensagens(null);
-      // A GET acima já marca como lidas (no backend) as mensagens que o
-      // outro me mandou — atualiza a lista de conversas pra refletir isso
-      // (tira o destaque de "não lida" no item dessa conversa).
       buscarConversas();
     } catch (err) {
       const classificado = classificarErro(err);
       if (!classificado.podeRetentar) {
-        // Erro definitivo (404 = essa conversa/usuário não existe, 403 =
-        // sem permissão, etc.) — insistir a cada 5s não vai fazer o
-        // endpoint passar a existir. Era exatamente isso que causava o
-        // loop de GETs repetidos no console: o catch vazio deixava o
-        // setInterval martelando um 404 pra sempre.
         clearInterval(pollingRef.current);
         setErroMensagens(classificado);
       } else if (inicial || !temMensagensRef.current) {
-        // Erro transitório (rede, timeout, servidor) mas ainda sem nada
-        // na tela — vale avisar em vez de deixar o painel vazio parado.
         setErroMensagens(classificado);
       }
-      // Erro transitório numa atualização de bastidor com mensagens já
-      // visíveis: não interrompe a UI, o próximo poll tenta de novo sozinho.
     } finally { if (inicial) setCarregandoMensagens(false); }
   }
 
@@ -466,7 +441,7 @@ function PaginaMensagens() {
       atualizarPreviewConversas('🎬 Vídeo', 'video');
       buscarConversas();
     } catch (err) {
-      alert(err.response?.data?.erro || 'Não foi possível enviar o vídeo.');
+      alert(err.response?.data?.erro || t('mensagens.erro_enviar_video'));
     }
     finally { setEnviando(false); setPreviewVideo(null); }
   }
@@ -479,6 +454,8 @@ function PaginaMensagens() {
     if (file.type.startsWith('video/')) {
       const resultado = await validarVideoLocal(file);
       if (!resultado.valido) {
+        // resultado.erro vem de validarVideoLocal (api.js) — stand-by,
+        // fora do escopo deste componente.
         alert(resultado.erro);
         return;
       }
@@ -486,7 +463,7 @@ function PaginaMensagens() {
     } else if (file.type.startsWith('image/')) {
       setPreviewImagem({ file, url: URL.createObjectURL(file) });
     } else {
-      alert('Formato não suportado. Envie uma imagem ou um vídeo.');
+      alert(t('mensagens.erro_formato_nao_suportado'));
     }
   }
 
@@ -495,15 +472,14 @@ function PaginaMensagens() {
   return (
     <div className="pagina-mensagens">
 
-      {/* ── Inbox ── */}
       <div className="mensagens-inbox">
         <div className="mensagens-inbox__header">
-          <strong className="mensagens-inbox__titulo">Mensagens</strong>
+          <strong className="mensagens-inbox__titulo">{t('common:navbar.mensagens')}</strong>
           <button
             onClick={() => setMostraSeletor((v) => !v)}
             className={`btn-toggle-nova${mostraSeletor ? ' btn-toggle-nova--cancelar' : ''}`}
           >
-            {mostraSeletor ? 'Cancelar' : <><IconeAdicionar size={13} /> Nova</>}
+            {mostraSeletor ? t('common:avisos.cancelar') : <><IconeAdicionar size={13} /> {t('mensagens.nova')}</>}
           </button>
         </div>
 
@@ -514,9 +490,9 @@ function PaginaMensagens() {
             <EstadoErro erro={erroConversas} onRetentar={buscarConversas} tamanho="inline" />
           ) : (
             <>
-              {carregandoConversas && <p className="mensagens-inbox__estado">Carregando...</p>}
+              {carregandoConversas && <p className="mensagens-inbox__estado">{t('mensagens.carregando')}</p>}
               {!carregandoConversas && conversas.length === 0 && !mostraSeletor && (
-                <p className="mensagens-inbox__estado">Nenhuma conversa ainda.</p>
+                <p className="mensagens-inbox__estado">{t('mensagens.nenhuma_conversa')}</p>
               )}
               {conversas.map((c) => {
                 const enviadaPorEle = !!(
@@ -537,7 +513,7 @@ function PaginaMensagens() {
                         </span>
                       </div>
                       <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
-                        {c.ultima_mensagem?.minha ? 'Você: ' : ''}{c.ultima_mensagem?.texto || ''}
+                        {c.ultima_mensagem?.minha ? t('mensagens.prefixo_voce') : ''}{c.ultima_mensagem?.texto || ''}
                       </div>
                     </div>
                   </div>
@@ -548,11 +524,10 @@ function PaginaMensagens() {
         </div>
       </div>
 
-      {/* ── Chat ── */}
       {!conversaAtiva ? (
         <div className="chat-painel__vazio">
           <IconeMensagem size={40} />
-          <span>Selecione uma conversa ou inicie uma nova</span>
+          <span>{t('mensagens.selecione_conversa')}</span>
         </div>
       ) : (
         <div className="chat-painel">
@@ -566,9 +541,9 @@ function PaginaMensagens() {
               <EstadoErro erro={erroMensagens} onRetentar={retentarMensagens} tamanho="inline" />
             ) : (
               <>
-                {carregandoMensagens && mensagens.length === 0 && <p className="mensagens-lista__estado">Carregando...</p>}
+                {carregandoMensagens && mensagens.length === 0 && <p className="mensagens-lista__estado">{t('mensagens.carregando')}</p>}
                 {mensagens.length === 0 && !carregandoMensagens && (
-                  <p className="mensagens-lista__estado">Nenhuma mensagem ainda. Diga olá! 👋</p>
+                  <p className="mensagens-lista__estado">{t('mensagens.nenhuma_mensagem')}</p>
                 )}
                 {mensagens.map((m) => {
                   const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
@@ -579,7 +554,6 @@ function PaginaMensagens() {
             )}
           </div>
 
-          {/* Preview de imagem antes de enviar */}
           {previewImagem && (
             <div className="preview-midia">
               <img src={previewImagem.url} alt="preview" className="preview-midia__imagem" />
@@ -587,7 +561,7 @@ function PaginaMensagens() {
                 onClick={() => enviarImagem(previewImagem.file)}
                 disabled={enviando}
                 className="btn-primario"
-                title="Enviar foto"
+                title={t('mensagens.enviar_foto')}
               >
                 <IconeEnviar size={18} />
               </button>
@@ -597,7 +571,6 @@ function PaginaMensagens() {
             </div>
           )}
 
-          {/* Preview de vídeo antes de enviar */}
           {previewVideo && (
             <div className="preview-midia">
               <video src={previewVideo.url} muted className="preview-midia__video" />
@@ -605,7 +578,7 @@ function PaginaMensagens() {
                 onClick={() => enviarVideo(previewVideo.file)}
                 disabled={enviando}
                 className="btn-primario"
-                title="Enviar vídeo"
+                title={t('mensagens.enviar_video')}
               >
                 <IconeEnviar size={18} />
               </button>
@@ -615,18 +588,15 @@ function PaginaMensagens() {
             </div>
           )}
 
-          {/* Barra de input */}
           <div className="barra-input">
-            {/* Botão de mídia (foto ou vídeo) */}
             <input ref={midiaInputRef} type="file" accept="image/*,video/*" onChange={handleMidiaSelect} style={{ display: 'none' }} />
-            <button onClick={() => midiaInputRef.current?.click()} title="Enviar foto ou vídeo" className="barra-input__icone-btn">
+            <button onClick={() => midiaInputRef.current?.click()} title={t('mensagens.enviar_foto_ou_video')} className="barra-input__icone-btn">
               <IconeAnexo size={20} />
             </button>
 
-            {/* Botão áudio */}
             <button
               onClick={gravando ? pararGravacao : iniciarGravacao}
-              title={gravando ? 'Parar gravação' : 'Gravar áudio'}
+              title={gravando ? t('mensagens.parar_gravacao') : t('mensagens.gravar_audio')}
               className={`barra-input__icone-btn${gravando ? ' barra-input__icone-btn--gravando' : ''}`}
             >
               {gravando ? <IconePararGravacao size={18} /> : <IconeMicrofone size={20} />}
@@ -637,7 +607,7 @@ function PaginaMensagens() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && enviarTexto()}
-              placeholder={gravando ? 'Gravando... clique em parar para enviar' : 'Digite uma mensagem...'}
+              placeholder={gravando ? t('mensagens.placeholder_gravando') : t('mensagens.placeholder_mensagem')}
               disabled={gravando}
               className="barra-input__texto"
             />
@@ -646,7 +616,7 @@ function PaginaMensagens() {
               onClick={enviarTexto}
               disabled={enviando || !texto.trim() || gravando}
               className="barra-input__enviar"
-              title="Enviar mensagem"
+              title={t('social:comentarios.publicar')}
             >
               <IconeEnviar size={18} />
             </button>

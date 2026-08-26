@@ -1,0 +1,34 @@
+{
+  "feed": {
+    "carregando": "Feed wird geladen...",
+    "vazio": "Noch keine Reiserouten veröffentlicht.",
+    "carregando_mais": "Weitere werden geladen..."
+  },
+  "feed_card": {
+    "curtir": "Gefällt mir",
+    "comentar": "Kommentieren",
+    "compartilhar": "Teilen",
+    "contagem_curtidas_one": "{{count}} Like",
+    "contagem_curtidas_other": "{{count}} Likes"
+  },
+  "explorar": {
+    "placeholder_busca": "Nutzer, Orte oder Hashtags suchen...",
+    "buscando": "Suche läuft...",
+    "nenhum_resultado": "Keine Ergebnisse für \"{{query}}\"",
+    "secao_usuarios": "Nutzer",
+    "secao_lugares": "Orte",
+    "secao_hashtags": "Hashtags",
+    "hashtag_contagem_one": "{{count}} Reiseroute",
+    "hashtag_contagem_other": "{{count}} Reiserouten",
+    "carregando": "Wird geladen...",
+    "nenhum_itinerario": "Noch keine Reiserouten veröffentlicht.",
+    "carregando_mais": "Weitere werden geladen..."
+  },
+  "hashtag": {
+    "carregando": "Wird geladen...",
+    "nao_encontrada": "Hashtag #{{nome}} nicht gefunden.",
+    "contagem_one": "{{count}} Reiseroute",
+    "contagem_other": "{{count}} Reiserouten",
+    "vazio": "Noch keine Reiserouten mit diesem Hashtag veröffentlicht."
+  }
+}

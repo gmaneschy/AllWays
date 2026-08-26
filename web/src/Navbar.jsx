@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { estaLogado, getUsuarioLogado, logout, getNotificacoesNaoLidas, getMensagensNaoLidas } from './api';
 import PainelNotificacoes from './PainelNotificacoes';
 import { AvisoSair } from './Avisos';
@@ -17,12 +18,16 @@ import {
 } from './icons';
 import './Navbar.css';
 
+// labelKey em vez de label: este array é módulo-level, fora do componente,
+// então não tem acesso ao t() do react-i18next (hooks só funcionam dentro
+// do corpo da função). A tradução é resolvida no map(), já dentro do render.
 const LINKS_PUBLICOS = [
-  { to: '/', label: 'Feed', Icone: IconeInicio },
-  { to: '/explorar', label: 'Explorar', Icone: IconeExplorarNav },
+  { to: '/', labelKey: 'navbar.feed', Icone: IconeInicio },
+  { to: '/explorar', labelKey: 'navbar.explorar', Icone: IconeExplorarNav },
 ];
 
 function Navbar() {
+  const { t } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
   const logado = estaLogado();
@@ -106,17 +111,17 @@ function Navbar() {
     <nav className={`navbar${painelAberto ? ' navbar--expandido' : ''}`}>
       {/* ─── Topo: navegação principal ─── */}
       <div className="navbar__secao">
-        {LINKS_PUBLICOS.map(({ to, label, Icone }) => (
+        {LINKS_PUBLICOS.map(({ to, labelKey, Icone }) => (
           <Link key={to} to={to} className={classeLink(to)}>
             <Icone size={22} className="navbar__icone" />
-            <span className="navbar__label">{label}</span>
+            <span className="navbar__label">{t(labelKey)}</span>
           </Link>
         ))}
 
         {logado && (
           <Link to="/criar" className={classeLink('/criar')}>
             <IconeCriarItinerario size={22} className="navbar__icone" />
-            <span className="navbar__label">Criar Itinerário</span>
+            <span className="navbar__label">{t('navbar.criar_itinerario')}</span>
           </Link>
         )}
 
@@ -130,7 +135,7 @@ function Navbar() {
                 </span>
               )}
             </span>
-            <span className="navbar__label">Mensagens</span>
+            <span className="navbar__label">{t('navbar.mensagens')}</span>
           </Link>
         )}
 
@@ -148,7 +153,7 @@ function Navbar() {
                   </span>
                 )}
               </span>
-              <span className="navbar__label">Notificações</span>
+              <span className="navbar__label">{t('navbar.notificacoes')}</span>
             </button>
 
             {painelAberto && (
@@ -171,17 +176,17 @@ function Navbar() {
             </Link>
             <Link to="/configuracoes" className={classeLink('/configuracoes')}>
               <IconeConfiguracoes size={22} className="navbar__icone" />
-              <span className="navbar__label">Configurações</span>
+              <span className="navbar__label">{t('navbar.configuracoes')}</span>
             </Link>
             <button onClick={handleLogout} className="navbar__link navbar__botao">
               <IconeSair size={22} className="navbar__icone" />
-              <span className="navbar__label">Sair</span>
+              <span className="navbar__label">{t('navbar.sair')}</span>
             </button>
           </>
         ) : (
           <Link to="/login" className={classeLink('/login')}>
             <IconeEntrar size={22} className="navbar__icone" />
-            <span className="navbar__label">Entrar</span>
+            <span className="navbar__label">{t('navbar.entrar')}</span>
           </Link>
         )}
       </div>

@@ -1,0 +1,8 @@
+{
+  "modal_badge": {
+    "titulo": "Choose featured badge",
+    "nenhuma_exibida": "No badge displayed",
+    "carregando": "Loading...",
+    "vazio": "You haven't earned any badges yet."
+  }
+}

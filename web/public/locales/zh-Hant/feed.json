@@ -1,0 +1,34 @@
+{
+  "feed": {
+    "carregando": "正在載入動態...",
+    "vazio": "尚未有已發布的行程。",
+    "carregando_mais": "正在載入更多..."
+  },
+  "feed_card": {
+    "curtir": "按讚",
+    "comentar": "留言",
+    "compartilhar": "分享",
+    "contagem_curtidas_one": "{{count}} 個讚",
+    "contagem_curtidas_other": "{{count}} 個讚"
+  },
+  "explorar": {
+    "placeholder_busca": "搜尋使用者、地點或主題標籤...",
+    "buscando": "正在搜尋...",
+    "nenhum_resultado": "找不到與「{{query}}」相關的結果",
+    "secao_usuarios": "使用者",
+    "secao_lugares": "地點",
+    "secao_hashtags": "主題標籤",
+    "hashtag_contagem_one": "{{count}} 個行程",
+    "hashtag_contagem_other": "{{count}} 個行程",
+    "carregando": "正在載入...",
+    "nenhum_itinerario": "尚未有已發布的行程。",
+    "carregando_mais": "正在載入更多..."
+  },
+  "hashtag": {
+    "carregando": "正在載入...",
+    "nao_encontrada": "找不到主題標籤 #{{nome}}。",
+    "contagem_one": "{{count}} 個行程",
+    "contagem_other": "{{count}} 個行程",
+    "vazio": "尚未有使用此主題標籤發布的行程。"
+  }
+}

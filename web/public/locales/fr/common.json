@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "Fil d'actualité",
+    "explorar": "Explorer",
+    "criar_itinerario": "Créer un itinéraire",
+    "mensagens": "Messages",
+    "notificacoes": "Notifications",
+    "configuracoes": "Paramètres",
+    "sair": "Se déconnecter",
+    "entrar": "Se connecter"
+  },
+  "offline": {
+    "reconectado": "Connexion rétablie",
+    "sem_conexao": "Vous êtes hors ligne — certaines actions peuvent échouer"
+  },
+  "avisos": {
+    "confirmar": "Confirmer",
+    "cancelar": "Annuler",
+    "aguarde": "Veuillez patienter...",
+    "excluir_rascunho": {
+      "titulo": "Supprimer le brouillon",
+      "mensagem": "Êtes-vous sûr de vouloir supprimer ce brouillon ? Cette action est irréversible.",
+      "confirmar": "Supprimer"
+    },
+    "excluir_itinerario": {
+      "titulo": "Supprimer l'itinéraire",
+      "mensagem": "Êtes-vous sûr de vouloir supprimer cet itinéraire ? Les mentions J'aime et les commentaires seront également perdus, et cette action est irréversible.",
+      "confirmar": "Supprimer"
+    },
+    "remover_ponto": {
+      "titulo": "Retirer le point",
+      "mensagem": "Êtes-vous sûr de vouloir retirer ce point de l'itinéraire ? Les données saisies et les médias ajoutés pour ce point seront perdus.",
+      "confirmar": "Retirer"
+    },
+    "excluir_comentario": {
+      "titulo": "Supprimer le commentaire",
+      "titulo_resposta": "Supprimer la réponse",
+      "mensagem_comentario": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.",
+      "mensagem_resposta": "Êtes-vous sûr de vouloir supprimer cette réponse ? Cette action est irréversible.",
+      "confirmar": "Supprimer"
+    },
+    "sair": {
+      "titulo": "Se déconnecter du compte",
+      "mensagem": "Êtes-vous sûr de vouloir vous déconnecter ?",
+      "confirmar": "Se déconnecter"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "Une erreur est survenue",
+    "mensagem_padrao": "Une erreur inattendue s'est produite.",
+    "tentar_novamente": "Réessayer",
+    "voltar_inicio": "Retour à l'accueil"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "Page introuvable",
+    "mensagem": "L'adresse que vous avez essayé d'accéder n'existe pas."
+  },
+  "erros": {
+    "offline_titulo": "Aucune connexion",
+    "offline_mensagem": "Vérifiez votre connexion internet et réessayez.",
+    "timeout_titulo": "La requête a pris trop de temps",
+    "timeout_mensagem": "Le serveur n'a pas répondu à temps. Réessayez.",
+    "servidor_indisponivel_titulo": "Connexion impossible",
+    "servidor_indisponivel_mensagem": "Le serveur est peut-être indisponible. Réessayez dans quelques instants.",
+    "nao_encontrado_titulo": "Introuvable",
+    "nao_encontrado_mensagem": "Le contenu que vous recherchez n'existe pas ou a été supprimé.",
+    "nao_autenticado_titulo": "Session expirée",
+    "nao_autenticado_mensagem": "Reconnectez-vous pour continuer.",
+    "sem_permissao_titulo": "Accès refusé",
+    "sem_permissao_mensagem": "Vous n'avez pas la permission de voir ce contenu.",
+    "muitas_requisicoes_titulo": "Doucement",
+    "muitas_requisicoes_mensagem": "Trop de requêtes en peu de temps. Patientez un instant et réessayez.",
+    "servidor_titulo": "Erreur serveur",
+    "servidor_mensagem": "Une erreur est survenue de notre côté. Nous en sommes déjà informés — réessayez dans quelques instants.",
+    "requisicao_invalida_titulo": "Impossible de terminer",
+    "requisicao_invalida_mensagem": "La requête n'a pas pu être traitée.",
+    "desconhecido_titulo": "Une erreur est survenue",
+    "desconhecido_mensagem": "Une erreur inattendue s'est produite. Réessayez."
+  },
+  "video_validacao": {
+    "excede_tamanho": "La vidéo dépasse {{mb}} Mo.",
+    "excede_duracao": "La vidéo dépasse {{segundos}} secondes de durée.",
+    "erro_leitura": "Impossible de lire la vidéo sélectionnée."
+  }
+}

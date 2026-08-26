@@ -1,0 +1,34 @@
+{
+  "feed": {
+    "carregando": "Chargement du fil d'actualité...",
+    "vazio": "Aucun itinéraire publié pour le moment.",
+    "carregando_mais": "Chargement de plus de contenu..."
+  },
+  "feed_card": {
+    "curtir": "J'aime",
+    "comentar": "Commenter",
+    "compartilhar": "Partager",
+    "contagem_curtidas_one": "{{count}} mention J'aime",
+    "contagem_curtidas_other": "{{count}} mentions J'aime"
+  },
+  "explorar": {
+    "placeholder_busca": "Rechercher des utilisateurs, des lieux ou des hashtags...",
+    "buscando": "Recherche en cours...",
+    "nenhum_resultado": "Aucun résultat pour \"{{query}}\"",
+    "secao_usuarios": "Utilisateurs",
+    "secao_lugares": "Lieux",
+    "secao_hashtags": "Hashtags",
+    "hashtag_contagem_one": "{{count}} itinéraire",
+    "hashtag_contagem_other": "{{count}} itinéraires",
+    "carregando": "Chargement...",
+    "nenhum_itinerario": "Aucun itinéraire publié pour le moment.",
+    "carregando_mais": "Chargement de plus de contenu..."
+  },
+  "hashtag": {
+    "carregando": "Chargement...",
+    "nao_encontrada": "Hashtag #{{nome}} introuvable.",
+    "contagem_one": "{{count}} itinéraire",
+    "contagem_other": "{{count}} itinéraires",
+    "vazio": "Aucun itinéraire publié avec ce hashtag pour le moment."
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api, { estaLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import EstadoErro from './EstadoErro';
@@ -8,6 +9,7 @@ import { IconeSeguir, IconeSucesso, IconeSeguranca, IconePreco, IconePin, IconeL
 import './PaginaPlace.css';
 
 function PaginaPlace() {
+  const { t } = useTranslation(['places', 'feed']);
   const { placeId } = useParams();
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -17,7 +19,6 @@ function PaginaPlace() {
   const logado = estaLogado();
 
   useEffect(() => {
-    // Verificar se já segue este local (só se logado)
     async function verificarFollow() {
       if (!logado || !placeId) return;
       try {
@@ -36,8 +37,7 @@ function PaginaPlace() {
       setDados(resposta.data);
     } catch (err) {
       const classificado = classificarErro(err);
-      // Se o backend mandou uma mensagem específica (ex: "local removido"),
-      // ela tem prioridade sobre a mensagem genérica do tipo classificado.
+      // mensagemBackend vem do backend (ex: "local removido") — stand-by
       const mensagemBackend = err.response?.data?.erro;
       setErro(mensagemBackend ? { ...classificado, mensagem: mensagemBackend } : classificado);
     } finally {
@@ -91,7 +91,7 @@ function PaginaPlace() {
     }
   }
 
-  if (carregando) return <p className="pagina-place__carregando">Carregando...</p>;
+  if (carregando) return <p className="pagina-place__carregando">{t('pagina_place.carregando')}</p>;
   if (erro) return <EstadoErro erro={erro} onRetentar={buscarDados} tamanho="pagina" />;
   if (!dados) return null;
 
@@ -112,7 +112,7 @@ function PaginaPlace() {
             className={seguindo ? 'btn-outline btn-outline--ativo' : 'btn-primario'}
           >
             {seguindo ? <IconeSucesso size={16} /> : <IconeSeguir size={16} />}
-            {seguindo ? 'Seguindo' : 'Seguir lugar'}
+            {seguindo ? t('pagina_place.seguindo') : t('pagina_place.seguir_lugar')}
           </button>
         )}
       </div>
@@ -122,28 +122,28 @@ function PaginaPlace() {
 
       <div className="pagina-place__stats">
         <div>
-          <p className="pagina-place__stat-label"><IconeSeguranca size={15} /> Segurança média</p>
+          <p className="pagina-place__stat-label"><IconeSeguranca size={15} /> {t('pagina_place.seguranca_media')}</p>
           <p className="pagina-place__stat-valor">
-            {place.seguranca_media ? `${place.seguranca_media.toFixed(1)} / 5` : '— sem avaliações'}
+            {place.seguranca_media ? t('pagina_place.media_de_5', { valor: place.seguranca_media.toFixed(1) }) : t('pagina_place.sem_avaliacoes')}
           </p>
         </div>
         <div>
-          <p className="pagina-place__stat-label"><IconePreco size={15} /> Custo-benefício médio</p>
+          <p className="pagina-place__stat-label"><IconePreco size={15} /> {t('pagina_place.custo_beneficio_medio')}</p>
           <p className="pagina-place__stat-valor">
-            {place.preco_medio_geral ? `${place.preco_medio_geral.toFixed(1)} / 5` : '— sem avaliações'}
+            {place.preco_medio_geral ? t('pagina_place.media_de_5', { valor: place.preco_medio_geral.toFixed(1) }) : t('pagina_place.sem_avaliacoes')}
           </p>
         </div>
       </div>
 
       {fotos.length > 0 && (
         <>
-          <h2 className="pagina-place__secao-titulo">Fotos</h2>
+          <h2 className="pagina-place__secao-titulo">{t('pagina_place.fotos_titulo')}</h2>
           <div className="pagina-place__fotos-grid">
             {fotos.map((url, i) => (
               <img
                 key={i}
                 src={url}
-                alt={`Foto ${i + 1} de ${place.nome}`}
+                alt={t('pagina_place.foto_alt', { numero: i + 1, nome: place.nome })}
                 className="pagina-place__foto"
               />
             ))}
@@ -151,9 +151,9 @@ function PaginaPlace() {
         </>
       )}
 
-      <h2 className="pagina-place__secao-titulo">Comentários de quem visitou</h2>
+      <h2 className="pagina-place__secao-titulo">{t('pagina_place.comentarios_titulo')}</h2>
       {comentarios.length === 0 && (
-        <p className="pagina-place__comentarios-vazio">Ainda não há comentários para este local.</p>
+        <p className="pagina-place__comentarios-vazio">{t('pagina_place.sem_comentarios')}</p>
       )}
 
       {comentarios.map((c) => (
@@ -169,11 +169,17 @@ function PaginaPlace() {
             <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
           </div>
           <p className="comentario-place__origem">
-            do itinerário "
+            {/* Prefixo/sufixo em vez de interpolar o Link dentro de uma
+                única string — evita quebrar a ordem das palavras em
+                idiomas que reposicionariam o nome do itinerário. Word
+                order pode ainda variar entre idiomas (ex: alemão), então
+                revisitar com <Trans> se algum idioma do Tier 1/2 soar
+                estranho aqui. */}
+            {t('pagina_place.origem_prefixo')}
             <Link to={`/itinerario/${c.itinerario_id}`} className="comentario-place__origem">
               {c.itinerario_titulo}
             </Link>
-            "
+            {t('pagina_place.origem_sufixo')}
           </p>
           <p className="comentario-place__texto">"{c.texto}"</p>
 
@@ -183,7 +189,7 @@ function PaginaPlace() {
                 <img
                   key={j}
                   src={url}
-                  alt={`Foto do comentário de ${c.autor_nome}`}
+                  alt={t('pagina_place.foto_comentario_alt', { nome: c.autor_nome })}
                   className="comentario-place__foto"
                 />
               ))}

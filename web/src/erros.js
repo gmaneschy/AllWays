@@ -10,6 +10,14 @@
 // mensagem     — uma frase, tom direto (sem jargão técnico pro usuário final)
 // podeRetentar — se faz sentido mostrar botão "Tentar novamente"
 //                (não faz sentido pra 404/403/401 — retentar não muda nada)
+//
+// Módulo utilitário puro (não é componente React), sem acesso ao hook
+// useTranslation — usa a instância global do i18next diretamente, mesmo
+// padrão já usado em extrairMensagensErro (CriarItinerario.jsx) e
+// tempoRelativo (PaginaNotificacoes.jsx/PainelNotificacoes.jsx). Todas as
+// chaves vivem no namespace 'common', sob 'erros'.
+
+import i18n from './i18n';
 
 export function classificarErro(err) {
   // Sem `err.response` = a requisição não completou. Três causas possíveis:
@@ -19,23 +27,23 @@ export function classificarErro(err) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       return {
         tipo: 'offline',
-        titulo: 'Sem conexão',
-        mensagem: 'Verifique sua internet e tente novamente.',
+        titulo: i18n.t('common:erros.offline_titulo'),
+        mensagem: i18n.t('common:erros.offline_mensagem'),
         podeRetentar: true,
       };
     }
     if (err?.code === 'ECONNABORTED') {
       return {
         tipo: 'timeout',
-        titulo: 'A requisição demorou demais',
-        mensagem: 'O servidor não respondeu a tempo. Tente novamente.',
+        titulo: i18n.t('common:erros.timeout_titulo'),
+        mensagem: i18n.t('common:erros.timeout_mensagem'),
         podeRetentar: true,
       };
     }
     return {
       tipo: 'servidor_indisponivel',
-      titulo: 'Não foi possível conectar',
-      mensagem: 'O servidor pode estar fora do ar. Tente novamente em instantes.',
+      titulo: i18n.t('common:erros.servidor_indisponivel_titulo'),
+      mensagem: i18n.t('common:erros.servidor_indisponivel_mensagem'),
       podeRetentar: true,
     };
   }
@@ -45,8 +53,8 @@ export function classificarErro(err) {
   if (status === 404) {
     return {
       tipo: 'nao_encontrado',
-      titulo: 'Não encontrado',
-      mensagem: 'O conteúdo que você procura não existe ou foi removido.',
+      titulo: i18n.t('common:erros.nao_encontrado_titulo'),
+      mensagem: i18n.t('common:erros.nao_encontrado_mensagem'),
       podeRetentar: false,
     };
   }
@@ -54,8 +62,8 @@ export function classificarErro(err) {
   if (status === 401) {
     return {
       tipo: 'nao_autenticado',
-      titulo: 'Sessão expirada',
-      mensagem: 'Faça login novamente para continuar.',
+      titulo: i18n.t('common:erros.nao_autenticado_titulo'),
+      mensagem: i18n.t('common:erros.nao_autenticado_mensagem'),
       podeRetentar: false,
     };
   }
@@ -63,8 +71,8 @@ export function classificarErro(err) {
   if (status === 403) {
     return {
       tipo: 'sem_permissao',
-      titulo: 'Acesso negado',
-      mensagem: 'Você não tem permissão para ver este conteúdo.',
+      titulo: i18n.t('common:erros.sem_permissao_titulo'),
+      mensagem: i18n.t('common:erros.sem_permissao_mensagem'),
       podeRetentar: false,
     };
   }
@@ -72,8 +80,8 @@ export function classificarErro(err) {
   if (status === 429) {
     return {
       tipo: 'muitas_requisicoes',
-      titulo: 'Calma lá',
-      mensagem: 'Muitas requisições em pouco tempo. Aguarde um instante e tente de novo.',
+      titulo: i18n.t('common:erros.muitas_requisicoes_titulo'),
+      mensagem: i18n.t('common:erros.muitas_requisicoes_mensagem'),
       podeRetentar: true,
     };
   }
@@ -81,8 +89,8 @@ export function classificarErro(err) {
   if (status >= 500) {
     return {
       tipo: 'servidor',
-      titulo: 'Erro no servidor',
-      mensagem: 'Algo deu errado do nosso lado. Já estamos cientes — tente novamente em instantes.',
+      titulo: i18n.t('common:erros.servidor_titulo'),
+      mensagem: i18n.t('common:erros.servidor_mensagem'),
       podeRetentar: true,
     };
   }
@@ -90,18 +98,22 @@ export function classificarErro(err) {
   if (status >= 400) {
     // 400/422 etc — geralmente o backend manda um `detail` explicando o
     // que faltou; usa ele quando existir em vez de um texto genérico.
+    // err.response?.data?.detail vem do BACKEND — stand-by até os
+    // serializers usarem gettext_lazy (ver resposta no chat). Só o
+    // fallback ("A requisição não pôde ser processada.") sai traduzido
+    // daqui quando o backend não manda nada.
     return {
       tipo: 'requisicao_invalida',
-      titulo: 'Não foi possível completar',
-      mensagem: err.response?.data?.detail || 'A requisição não pôde ser processada.',
+      titulo: i18n.t('common:erros.requisicao_invalida_titulo'),
+      mensagem: err.response?.data?.detail || i18n.t('common:erros.requisicao_invalida_mensagem'),
       podeRetentar: false,
     };
   }
 
   return {
     tipo: 'desconhecido',
-    titulo: 'Algo deu errado',
-    mensagem: 'Ocorreu um erro inesperado. Tente novamente.',
+    titulo: i18n.t('common:erros.desconhecido_titulo'),
+    mensagem: i18n.t('common:erros.desconhecido_mensagem'),
     podeRetentar: true,
   };
 }

@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "Feed",
+    "explorar": "Esplora",
+    "criar_itinerario": "Crea itinerario",
+    "mensagens": "Messaggi",
+    "notificacoes": "Notifiche",
+    "configuracoes": "Impostazioni",
+    "sair": "Esci",
+    "entrar": "Accedi"
+  },
+  "offline": {
+    "reconectado": "Connessione ripristinata",
+    "sem_conexao": "Sei offline — alcune azioni potrebbero non funzionare"
+  },
+  "avisos": {
+    "confirmar": "Conferma",
+    "cancelar": "Annulla",
+    "aguarde": "Attendere...",
+    "excluir_rascunho": {
+      "titulo": "Elimina bozza",
+      "mensagem": "Sei sicuro di voler eliminare questa bozza? Questa azione non può essere annullata.",
+      "confirmar": "Elimina"
+    },
+    "excluir_itinerario": {
+      "titulo": "Elimina itinerario",
+      "mensagem": "Sei sicuro di voler eliminare questo itinerario? Anche i like e i commenti andranno persi, e questa azione non può essere annullata.",
+      "confirmar": "Elimina"
+    },
+    "remover_ponto": {
+      "titulo": "Rimuovi tappa",
+      "mensagem": "Sei sicuro di voler rimuovere questa tappa dall'itinerario? I dati inseriti e i contenuti multimediali aggiunti per questa tappa andranno persi.",
+      "confirmar": "Rimuovi"
+    },
+    "excluir_comentario": {
+      "titulo": "Elimina commento",
+      "titulo_resposta": "Elimina risposta",
+      "mensagem_comentario": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
+      "mensagem_resposta": "Sei sicuro di voler eliminare questa risposta? Questa azione non può essere annullata.",
+      "confirmar": "Elimina"
+    },
+    "sair": {
+      "titulo": "Esci dall'account",
+      "mensagem": "Sei sicuro di voler uscire?",
+      "confirmar": "Esci"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "Qualcosa è andato storto",
+    "mensagem_padrao": "Si è verificato un errore imprevisto.",
+    "tentar_novamente": "Riprova",
+    "voltar_inicio": "Torna alla home"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "Pagina non trovata",
+    "mensagem": "L'indirizzo che hai provato a raggiungere non esiste."
+  },
+  "erros": {
+    "offline_titulo": "Nessuna connessione",
+    "offline_mensagem": "Controlla la tua connessione internet e riprova.",
+    "timeout_titulo": "La richiesta ha impiegato troppo tempo",
+    "timeout_mensagem": "Il server non ha risposto in tempo. Riprova.",
+    "servidor_indisponivel_titulo": "Impossibile connettersi",
+    "servidor_indisponivel_mensagem": "Il server potrebbe non essere disponibile. Riprova tra qualche istante.",
+    "nao_encontrado_titulo": "Non trovato",
+    "nao_encontrado_mensagem": "Il contenuto che cerchi non esiste o è stato rimosso.",
+    "nao_autenticado_titulo": "Sessione scaduta",
+    "nao_autenticado_mensagem": "Accedi di nuovo per continuare.",
+    "sem_permissao_titulo": "Accesso negato",
+    "sem_permissao_mensagem": "Non hai il permesso di visualizzare questo contenuto.",
+    "muitas_requisicoes_titulo": "Calma",
+    "muitas_requisicoes_mensagem": "Troppe richieste in poco tempo. Attendi un momento e riprova.",
+    "servidor_titulo": "Errore del server",
+    "servidor_mensagem": "Qualcosa è andato storto da parte nostra. Ne siamo già a conoscenza — riprova tra qualche istante.",
+    "requisicao_invalida_titulo": "Impossibile completare",
+    "requisicao_invalida_mensagem": "Non è stato possibile elaborare la richiesta.",
+    "desconhecido_titulo": "Qualcosa è andato storto",
+    "desconhecido_mensagem": "Si è verificato un errore imprevisto. Riprova."
+  },
+  "video_validacao": {
+    "excede_tamanho": "Il video supera {{mb}}MB.",
+    "excede_duracao": "Il video supera {{segundos}} secondi di durata.",
+    "erro_leitura": "Non è stato possibile leggere il video selezionato."
+  }
+}

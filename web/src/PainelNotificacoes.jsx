@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from './i18n';
 import { getNotificacoes, marcarNotificacaoLida, marcarTodasNotificacoesLidas, responderSolicitacaoSeguir } from './api';
 import {
   IconeNotificacao,
@@ -21,16 +23,17 @@ const ICONE_TIPO = {
 function tempoRelativo(dataIso) {
   const diffMs = Date.now() - new Date(dataIso).getTime();
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return 'agora';
-  if (min < 60) return `${min}min`;
+  if (min < 1) return i18n.t('social:notificacoes.tempo_agora');
+  if (min < 60) return i18n.t('social:notificacoes.tempo_min', { min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
+  if (h < 24) return i18n.t('social:notificacoes.tempo_h', { h });
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(dataIso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  if (d < 7) return i18n.t('social:notificacoes.tempo_d', { d });
+  return new Date(dataIso).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
 }
 
 function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
+  const { t } = useTranslation('social');
   const navigate = useNavigate();
   const [notificacoes, setNotificacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -87,18 +90,18 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
   return (
     <div className="painel-notificacoes">
       <div className="painel-notificacoes__header">
-        <strong className="painel-notificacoes__titulo">Notificações</strong>
+        <strong className="painel-notificacoes__titulo">{t('notificacoes.titulo')}</strong>
         {temNaoLidas && (
           <button onClick={handleMarcarTodas} className="painel-notificacoes__marcar-todas">
-            Marcar todas como lidas
+            {t('notificacoes.marcar_todas')}
           </button>
         )}
       </div>
 
       <div className="painel-notificacoes__lista">
-        {carregando && <p className="painel-notificacoes__vazio">Carregando...</p>}
+        {carregando && <p className="painel-notificacoes__vazio">{t('notificacoes.carregando')}</p>}
         {!carregando && notificacoes.length === 0 && (
-          <p className="painel-notificacoes__vazio">Nenhuma notificação ainda.</p>
+          <p className="painel-notificacoes__vazio">{t('notificacoes.nenhuma')}</p>
         )}
         {notificacoes.map((n) => {
           const IconeTipo = ICONE_TIPO[n.tipo] || IconeNotificacao;
@@ -128,7 +131,7 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
                       className="btn-primario"
                       style={{ padding: '4px 12px', fontSize: 13 }}
                     >
-                      Aceitar
+                      {t('notificacoes.aceitar')}
                     </button>
                     <button
                       onClick={() => handleResponderSolicitacao(n, false)}
@@ -136,13 +139,13 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
                       className="btn-outline"
                       style={{ padding: '4px 12px', fontSize: 13 }}
                     >
-                      Recusar
+                      {t('notificacoes.recusar')}
                     </button>
                   </div>
                 )}
                 {ehSolicitacao && resposta && (
                   <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texto-secundario)' }}>
-                    {resposta === 'aceito' ? 'Solicitação aceita' : 'Solicitação recusada'}
+                    {resposta === 'aceito' ? t('notificacoes.solicitacao_aceita') : t('notificacoes.solicitacao_recusada')}
                   </div>
                 )}
               </div>
@@ -153,7 +156,7 @@ function PainelNotificacoes({ onFechar, onMudouNaoLidas }) {
       </div>
 
       <Link to="/notificacoes" onClick={onFechar} className="painel-notificacoes__ver-todas">
-        Ver todas
+        {t('notificacoes.ver_todas')}
       </Link>
     </div>
   );

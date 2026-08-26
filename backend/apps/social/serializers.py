@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext_lazy as _, ngettext_lazy
 from rest_framework import serializers
 from apps.users.models import User
 from apps.places.models import Place
@@ -41,7 +42,7 @@ class FollowSerializer(serializers.ModelSerializer):
         if tipo == 'usuario':
             alvo = get_object_or_404(User, pk=alvo_id)
             if alvo == request.user:
-                raise serializers.ValidationError("Você não pode seguir a si mesmo.")
+                raise serializers.ValidationError(_("Você não pode seguir a si mesmo."))
             data['seguido_usuario'] = alvo
         else:
             data['seguido_local'] = get_object_or_404(Place, pk=alvo_id)
@@ -75,7 +76,7 @@ class DenunciaSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if data.get('motivo') == Denuncia.MOTIVO_OUTRO and not data.get('detalhe', '').strip():
-            raise serializers.ValidationError({'detalhe': 'Descreva o motivo da denúncia.'})
+            raise serializers.ValidationError({'detalhe': _('Descreva o motivo da denúncia.')})
         return data
 
 
@@ -122,7 +123,7 @@ class CommentSerializer(serializers.ModelSerializer):
         parent = data.get('parent')
         if parent and parent.parent_id:
             raise serializers.ValidationError(
-                "Respostas devem apontar `parent` para o comentário raiz da thread, não para outra resposta."
+                _("Respostas devem apontar `parent` para o comentário raiz da thread, não para outra resposta.")
             )
         return data
 
@@ -222,15 +223,15 @@ class MessageSerializer(serializers.ModelSerializer):
     def validate(self, data):
         tipo = data.get('tipo', 'texto')
         if tipo == 'texto' and not data.get('texto', '').strip():
-            raise serializers.ValidationError("Mensagem de texto não pode ser vazia.")
+            raise serializers.ValidationError(_("Mensagem de texto não pode ser vazia."))
         if tipo == 'imagem' and not data.get('imagem'):
-            raise serializers.ValidationError("Mensagem de imagem requer um arquivo.")
+            raise serializers.ValidationError(_("Mensagem de imagem requer um arquivo."))
         if tipo == 'audio' and not data.get('audio'):
-            raise serializers.ValidationError("Mensagem de áudio requer um arquivo.")
+            raise serializers.ValidationError(_("Mensagem de áudio requer um arquivo."))
         if tipo == 'video' and not data.get('video'):
-            raise serializers.ValidationError("Mensagem de vídeo requer um arquivo.")
+            raise serializers.ValidationError(_("Mensagem de vídeo requer um arquivo."))
         if tipo == 'itinerario' and not data.get('itinerario'):
-            raise serializers.ValidationError("Mensagem de itinerário requer um itinerario_id válido e publicado.")
+            raise serializers.ValidationError(_("Mensagem de itinerário requer um itinerario_id válido e publicado."))
         return data
 
 class NotificationSerializer(serializers.ModelSerializer):

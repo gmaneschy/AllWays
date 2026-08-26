@@ -1,0 +1,177 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: apps/itineraries/serializers.py:73
+msgid "O itinerário precisa de pelo menos 1 local."
+msgstr "L'itinerario deve avere almeno 1 luogo."
+
+#: apps/itineraries/serializers.py:78
+msgid "A data do itinerário não pode ser no futuro."
+msgstr "La data dell'itinerario non può essere nel futuro."
+
+#: apps/itineraries/serializers.py:92
+#, python-brace-format
+msgid ""
+"Não é possível publicar diretamente por aqui. Salve como rascunho, envie as "
+"fotos/vídeos de cada ponto e então chame POST /itinerarios/{id}/publicar/."
+msgstr ""
+"Non è possibile pubblicare direttamente da qui. Salva come bozza, invia le "
+"foto/i video di ogni tappa e poi chiama POST /itinerarios/{id}/publicar/."
+
+#: apps/itineraries/services.py:27
+msgid "Título é obrigatório."
+msgstr "Il titolo è obbligatorio."
+
+#: apps/itineraries/services.py:34
+msgid "Data de início é obrigatória para publicar."
+msgstr "La data di inizio è obbligatoria per pubblicare."
+
+#: apps/itineraries/services.py:38
+msgid ""
+"Data de término é obrigatória para publicar um itinerário de múltiplos dias."
+msgstr ""
+"La data di fine è obbligatoria per pubblicare un itinerario di più giorni."
+
+#: apps/itineraries/services.py:40
+msgid "Data de término não pode ser anterior à data de início."
+msgstr "La data di fine non può essere precedente alla data di inizio."
+
+#: apps/itineraries/services.py:44
+msgid "O itinerário precisa de pelo menos um ponto."
+msgstr "L'itinerario deve avere almeno una tappa."
+
+#: apps/itineraries/services.py:55
+#, python-format
+msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
+msgstr ""
+"Tappa #%(numero)s: il campo '%(campo)s' è obbligatorio per pubblicare."
+
+#: apps/itineraries/services.py:61
+#, python-format
+msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
+msgstr ""
+"Tappa #%(numero)s: un luogo gratuito non deve avere una fascia di prezzo."
+
+#: apps/itineraries/services.py:66
+#, python-format
+msgid ""
+"Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
+"gratuita."
+msgstr ""
+"Tappa #%(numero)s: indica la fascia di prezzo oppure segna come ingresso "
+"gratuito."
+
+#: apps/itineraries/services.py:78
+#, python-format
+msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
+msgstr "Tappa #%(numero)s: aggiungi almeno una foto o un video."
+
+#: apps/social/serializers.py:45
+msgid "Você não pode seguir a si mesmo."
+msgstr "Non puoi seguire te stesso."
+
+#: apps/social/serializers.py:79
+msgid "Descreva o motivo da denúncia."
+msgstr "Descrivi il motivo della segnalazione."
+
+#: apps/social/serializers.py:126
+msgid ""
+"Respostas devem apontar `parent` para o comentário raiz da thread, não para "
+"outra resposta."
+msgstr ""
+"Le risposte devono avere `parent` impostato sul commento principale della "
+"discussione, non su un'altra risposta."
+
+#: apps/social/serializers.py:226
+msgid "Mensagem de texto não pode ser vazia."
+msgstr "Il messaggio di testo non può essere vuoto."
+
+#: apps/social/serializers.py:228
+msgid "Mensagem de imagem requer um arquivo."
+msgstr "Il messaggio con immagine richiede un file."
+
+#: apps/social/serializers.py:230
+msgid "Mensagem de áudio requer um arquivo."
+msgstr "Il messaggio audio richiede un file."
+
+#: apps/social/serializers.py:232
+msgid "Mensagem de vídeo requer um arquivo."
+msgstr "Il messaggio video richiede un file."
+
+#: apps/social/serializers.py:234
+msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
+msgstr ""
+"Il messaggio con itinerario richiede un itinerario_id valido e pubblicato."
+
+#: apps/users/serializers.py:53
+msgid ""
+"Use de 3 a 20 caracteres: comece com uma letra e use apenas letras "
+"minúsculas, números, \".\" ou \"_\"."
+msgstr ""
+"Usa da 3 a 20 caratteri: inizia con una lettera e usa solo lettere "
+"minuscole, numeri, \".\" o \"_\"."
+
+#: apps/users/serializers.py:57
+msgid "Este nome de usuário já está em uso."
+msgstr "Questo nome utente è già in uso."
+
+#: apps/users/serializers.py:68
+msgid "Este e-mail já está associado a uma conta."
+msgstr "Questa e-mail è già associata a un account."
+
+#: apps/users/serializers.py:74 apps/users/serializers.py:134
+msgid "Informe um nome de exibição."
+msgstr "Inserisci un nome visualizzato."
+
+#: apps/users/serializers.py:79
+msgid "Data de nascimento não pode estar no futuro."
+msgstr "La data di nascita non può essere nel futuro."
+
+#: apps/users/serializers.py:83
+#, python-format
+msgid "É necessário ter ao menos %(idade)d anos para se cadastrar."
+msgstr "È necessario avere almeno %(idade)d anni per registrarsi."
+
+#: apps/users/serializers.py:142
+#, python-format
+msgid "Você poderá trocar o nome de exibição novamente em %(dias)d dia."
+msgid_plural ""
+"Você poderá trocar o nome de exibição novamente em %(dias)d dias."
+msgstr[0] "Potrai cambiare di nuovo il nome visualizzato tra %(dias)d giorno."
+msgstr[1] "Potrai cambiare di nuovo il nome visualizzato tra %(dias)d giorni."
+
+#: apps/users/serializers.py:180
+msgid "Senha atual incorreta."
+msgstr "Password attuale non corretta."
+
+#: apps/users/serializers.py:209 apps/users/serializers.py:241
+msgid "Senha incorreta."
+msgstr "Password non corretta."
+
+#: apps/users/serializers.py:215
+msgid "Duração inválida. Use 7, 15, 30 ou não informe (indefinida)."
+msgstr "Durata non valida. Usa 7, 15, 30 oppure non specificare (indefinita)."
+
+#: apps/users/serializers.py:246
+msgid "É necessário confirmar a exclusão da conta."
+msgstr "È necessario confermare l'eliminazione dell'account."
+
+#: apps/users/serializers.py:462
+msgid "Você ainda não conquistou este distintivo."
+msgstr "Non hai ancora ottenuto questo distintivo."

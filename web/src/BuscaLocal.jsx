@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from './api';
 import { IconeSucesso, IconeTrocar } from './icons';
 import './BuscaLocal.css';
@@ -6,6 +7,7 @@ import './BuscaLocal.css';
 const DEBOUNCE_MS = 400;
 
 function BuscaLocal({ onSelecionar, localSelecionado }) {
+  const { t } = useTranslation('places');
   const [texto, setTexto] = useState('');
   const [sugestoes, setSugestoes] = useState([]);
   const timeoutRef = useRef(null);
@@ -52,7 +54,7 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
           onClick={() => onSelecionar(null)}
           className="busca-local__trocar"
         >
-          <IconeTrocar size={13} /> trocar
+          <IconeTrocar size={13} /> {t('busca_local.trocar')}
         </button>
       </div>
     );
@@ -64,7 +66,7 @@ function BuscaLocal({ onSelecionar, localSelecionado }) {
         type="text"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
-        placeholder="Buscar local..."
+        placeholder={t('busca_local.placeholder')}
         className="form-input"
       />
       {sugestoes.length > 0 && (

@@ -1,7 +1,8 @@
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _, ngettext_lazy
 from rest_framework import serializers
 from apps.gamification.models import BadgeItinerario, ItinerarioBadge
-from apps.gamification.serializers import BadgeItinerarioSerializer, BadgeUsuarioSerializer
+from apps.gamification.serializers import BadgeItinerarioSerializer
 from .models import Itinerario, PontoItinerario, FotoPontoItinerario, VideoPontoItinerario
 from . import services as itinerario_services
 
@@ -69,12 +70,12 @@ class ItinerarioSerializer(serializers.ModelSerializer):
 
     def validate_pontos(self, value):
         if len(value) == 0:
-            raise serializers.ValidationError("O itinerário precisa de pelo menos 1 local.")
+            raise serializers.ValidationError(_("O itinerário precisa de pelo menos 1 local."))
         return value
 
     def validate_data_inicio(self, value):
         if value and value > timezone.now().date():
-            raise serializers.ValidationError("A data do itinerário não pode ser no futuro.")
+            raise serializers.ValidationError(_("A data do itinerário não pode ser no futuro."))
         return value
 
     def validate(self, data):
@@ -88,9 +89,9 @@ class ItinerarioSerializer(serializers.ModelSerializer):
 
         if status_novo == 'publicado' and not ja_publicado:
             raise serializers.ValidationError({
-                'status': "Não é possível publicar diretamente por aqui. Salve como rascunho, "
+                'status': _("Não é possível publicar diretamente por aqui. Salve como rascunho, "
                           "envie as fotos/vídeos de cada ponto e então chame "
-                          "POST /itinerarios/{id}/publicar/."
+                          "POST /itinerarios/{id}/publicar/.")
             })
         return data
 

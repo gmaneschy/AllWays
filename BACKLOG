@@ -1,10 +1,22 @@
 Checklist:
 frontend:
+    Por algum motivo a página do site, em qualquer página que seja, atualiza sozinha de tempos em tempos.
+    No console, aparece:
+    client:851 [vite] connecting...
+    client:955 [vite] connected.
+    Reload provavelmente está relacionado ao vite.
+
     Segurança:
         Autenticação de dois fatores (futuro)
 
     Idioma:
-        Mudar idioma do aplicativo (futuro)
+        Mudar idioma do site:
+            Idiomas:
+                Tier 1: PT, EN, ES, FR, DE, IT, ZH, JA
+                Tier 2: KO, RU, AR (Árabe), TR (Turco), NL (Holandês), HI (Hindi), ID (Indonésio), VI (Vietnamita), TH (Tailandês)
+                O Tier 2 é implementado orientado por dados reais e demanda dos usuários.
+
+Criar badges restantes e suas traduções.
 
 Tela admin
 http://localhost:8000/admin/
@@ -36,6 +48,11 @@ CTRL+C to stop.
 # Terminal 4 - subir versão (print) do componente para o Chromatic
 npx chromatic --project-token=chpt_6d076130ba669b8
 
+# Ao adicionar um novo pacote no backend, primeiro adicionar ao requirements.txt, e então:
+docker compose build backend
+docker compose up -d
+ou
+docker compose up -d --build
 
 Futuro:
 Quando o aplicativo estiver em produção, é necessário:

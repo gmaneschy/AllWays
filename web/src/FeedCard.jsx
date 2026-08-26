@@ -1,6 +1,7 @@
 import { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import api, { curtir, getUsuarioLogado } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
@@ -15,48 +16,35 @@ import {
 } from './icons';
 import './FeedCard.css';
 
-const TIPO_LABEL = {
-  day_trip: 'Day Trip',
-  multi_day: 'Multi-Day Trip',
-};
-
 function formatarData(dataIso) {
   if (!dataIso) return null;
   const [ano, mes, dia] = dataIso.split('-');
   return `${dia}/${mes}/${ano}`;
 }
 
-/** Card individual do feed. Memoizado — ver Feed.jsx pra explicação de por
- * que isso importa (evita re-renderizar todos os cards ao abrir o modal
- * de compartilhar de um único card).
- *
- * O carrossel de mídia (foto/vídeo + barra segmentada + info do ponto)
- * mora em CarrosselItinerario — mesmo componente usado pela
- * PaginaItinerario, pra garantir que os dois lugares mostrem os pontos do
- * itinerário exatamente da mesma forma. */
 const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }) {
+  const { t } = useTranslation(['feed', 'social', 'itinerarios']);
   const it = itinerario;
   const usuarioLogado = getUsuarioLogado();
 
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
-  const [comentarios, setComentarios] = useState(null); // null = ainda não buscou
+  const [comentarios, setComentarios] = useState(null);
   const [carregandoComentarios, setCarregandoComentarios] = useState(false);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
-  // Qual comentário está recebendo uma resposta agora: { raizId, usuarioId,
-  // username } | null. raizId é sempre o comentário DE PRIMEIRO NÍVEL (é
-  // o que vira o `parent` no POST — threading de 1 nível só, ver Comment
-  // model), mesmo quando o clique em "Responder" foi numa resposta; nesse
-  // caso usuarioId/username são os da resposta (quem está sendo
-  // mencionado), não os do comentário raiz.
   const [respondendoA, setRespondendoA] = useState(null);
   const [textoResposta, setTextoResposta] = useState('');
   const [enviandoResposta, setEnviandoResposta] = useState(false);
-  // Comentário/resposta pendente de confirmação de exclusão:
-  // { id, ehResposta } | null — guarda ehResposta só pra ajustar o texto
-  // do modal (a chamada de apagar é a mesma pros dois casos).
   const [confirmandoApagar, setConfirmandoApagar] = useState(null);
   const [apagandoComentario, setApagandoComentario] = useState(false);
+
+  // TIPO_LABEL antes era um dict module-level; agora resolve via t()
+  // cross-namespace, reaproveitando as MESMAS chaves já usadas em
+  // CardItinerarioResumo.jsx — evita manter "Day Trip"/"Multi-Day Trip"
+  // duplicado em três arquivos diferentes.
+  const tipoLabel = it.tipo === 'day_trip'
+    ? t('itinerarios:card_resumo.tipo_day_trip')
+    : t('itinerarios:card_resumo.tipo_multi_day_trip');
 
   async function alternarComentarios() {
     const abrindo = !mostrarComentarios;
@@ -92,7 +80,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
     try {
       await api.delete(`/social/itinerarios/${it.id}/comentarios/?comentario_id=${comentarioId}`);
       setComentarios((prev) => (prev || [])
-        .filter((c) => c.id !== comentarioId) // remove se o apagado for um comentário raiz
+        .filter((c) => c.id !== comentarioId)
         .map((c) => (c.respostas?.some((r) => r.id === comentarioId)
           ? { ...c, respostas: c.respostas.filter((r) => r.id !== comentarioId) }
           : c)));
@@ -111,8 +99,6 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
     setConfirmandoApagar(null);
   }
 
-  // Acha um comentário (raiz OU resposta) pelo id — usado por curtirComentario,
-  // que precisa funcionar igual nos dois níveis.
   function encontrarComentario(comentarioId) {
     for (const c of comentarios || []) {
       if (c.id === comentarioId) return c;
@@ -122,9 +108,6 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
     return null;
   }
 
-  // Aplica `atualizar` no comentário com esse id, seja ele raiz ou resposta
-  // aninhada — centraliza a navegação em 2 níveis pra curtirComentario não
-  // precisar duplicar essa lógica pros dois casos.
   function atualizarComentario(comentarioId, atualizar) {
     setComentarios((prev) => (prev || []).map((c) => {
       if (c.id === comentarioId) return atualizar(c);
@@ -186,10 +169,6 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
     }
   }
 
-  // Contagem exibida no rodapé: usa o que já foi carregado (raiz + respostas
-  // de cada uma); se ainda não abriu o dropdown, cai pro campo opcional
-  // `total_comentarios` do feed (se o backend mandar) — senão fica só "Ver
-  // comentários", sem número.
   const contagemComentarios = comentarios !== null
     ? comentarios.reduce((soma, c) => soma + 1 + (c.respostas?.length || 0), 0)
     : it.total_comentarios;
@@ -200,7 +179,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
         <Link to={`/itinerario/${it.id}`} className="feedcard__titulo-link">
           <h2 className="feedcard__titulo">{it.titulo}</h2>
         </Link>
-        <span className="feedcard__tipo">{TIPO_LABEL[it.tipo]}</span>
+        <span className="feedcard__tipo">{tipoLabel}</span>
       </div>
 
       <p className="feedcard__autor">
@@ -218,38 +197,36 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
 
       <CarrosselItinerario pontos={it.pontos} />
 
-      {/* ─── Ícones de ação (estilo Instagram: logo abaixo da mídia) ─── */}
       <div className="feedcard__acoes">
         <button
           onClick={() => onCurtir(it.id)}
           className={`feedcard__acao${it.curtido ? ' feedcard__acao--curtido' : ''}`}
-          title="Curtir"
+          title={t('feed_card.curtir')}
         >
           <IconeLike size={22} fill={it.curtido ? 'currentColor' : 'none'} />
         </button>
-        <button onClick={alternarComentarios} className="feedcard__acao" title="Comentar">
+        <button onClick={alternarComentarios} className="feedcard__acao" title={t('feed_card.comentar')}>
           <IconeComentario size={22} />
         </button>
-        <button onClick={() => onCompartilhar(it)} className="feedcard__acao" title="Compartilhar">
+        <button onClick={() => onCompartilhar(it)} className="feedcard__acao" title={t('feed_card.compartilhar')}>
           <IconeCompartilhar size={22} />
         </button>
       </div>
 
       {it.total_curtidas > 0 && (
         <p className="feedcard__contagem-curtidas">
-          {it.total_curtidas} curtida{it.total_curtidas !== 1 ? 's' : ''}
+          {t('feed_card.contagem_curtidas', { count: it.total_curtidas })}
         </p>
       )}
 
       <button onClick={alternarComentarios} className="feedcard__link-comentarios">
         {contagemComentarios > 0
-          ? `Ver ${contagemComentarios} comentário${contagemComentarios !== 1 ? 's' : ''}`
+          ? t('social:comentarios.ver_n_comentarios', { count: contagemComentarios })
           : contagemComentarios === 0
-            ? 'Seja o primeiro a comentar'
-            : 'Ver comentários'}
+            ? t('social:comentarios.seja_primeiro')
+            : t('social:comentarios.ver_comentarios')}
       </button>
 
-      {/* ─── Dropdown de comentários ─── */}
       <AnimatePresence initial={false}>
         {mostrarComentarios && (
           <motion.div
@@ -262,10 +239,10 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
           >
             <div className="feedcard__comentarios-lista">
               {carregandoComentarios && (
-                <p className="feedcard__comentarios-estado">Carregando...</p>
+                <p className="feedcard__comentarios-estado">{t('social:comentarios.carregando')}</p>
               )}
               {!carregandoComentarios && comentarios?.length === 0 && (
-                <p className="feedcard__comentarios-estado">Nenhum comentário ainda. Seja o primeiro!</p>
+                <p className="feedcard__comentarios-estado">{t('social:comentarios.nenhum_ainda')}</p>
               )}
               {comentarios?.map((c) => (
                 <div key={c.id} className="feedcard__comentario-thread">
@@ -302,7 +279,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                             onClick={() => iniciarResposta(c.id, c.autor, c.autor_nome)}
                             className="feedcard__comentario-responder"
                           >
-                            Responder
+                            {t('social:comentarios.responder')}
                           </button>
                         )}
                       </div>
@@ -352,7 +329,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                                   onClick={() => iniciarResposta(c.id, r.autor, r.autor_nome)}
                                   className="feedcard__comentario-responder"
                                 >
-                                  Responder
+                                  {t('social:comentarios.responder')}
                                 </button>
                               )}
                             </div>
@@ -369,18 +346,18 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                         value={textoResposta}
                         onChange={(e) => setTextoResposta(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta())}
-                        placeholder={`Responder a @${respondendoA.username}...`}
+                        placeholder={t('social:comentarios.placeholder_resposta', { username: respondendoA.username })}
                         className="feedcard__novo-comentario-input"
                       />
                       <button
                         onClick={postarResposta}
                         disabled={!textoResposta.trim() || enviandoResposta}
                         className="feedcard__novo-comentario-btn"
-                        title="Publicar resposta"
+                        title={t('social:comentarios.publicar')}
                       >
                         <IconeEnviar size={18} />
                       </button>
-                      <button onClick={cancelarResposta} className="feedcard__resposta-cancelar" title="Cancelar">
+                      <button onClick={cancelarResposta} className="feedcard__resposta-cancelar" title={t('common:avisos.cancelar')}>
                         <IconeFechar size={16} />
                       </button>
                     </div>
@@ -395,7 +372,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                   value={textoComentario}
                   onChange={(e) => setTextoComentario(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarComentario())}
-                  placeholder="Adicione um comentário..."
+                  placeholder={t('social:comentarios.placeholder_novo')}
                   className="feedcard__novo-comentario-input"
                 />
                 <button
@@ -403,7 +380,7 @@ const FeedCard = memo(function FeedCard({ itinerario, onCurtir, onCompartilhar }
                   disabled={!textoComentario.trim() || enviandoComentario}
                   className="feedcard__novo-comentario-btn"
                 >
-                  Publicar
+                  {t('social:comentarios.publicar')}
                 </button>
               </div>
             )}

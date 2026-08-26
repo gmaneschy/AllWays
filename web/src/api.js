@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from './i18n';
 import { limparCacheFeed } from './feedCache';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
@@ -10,6 +11,13 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Sem isso, o LocaleMiddleware do Django resolve o idioma pelo
+  // Accept-Language padrão do navegador — que pode divergir do idioma que
+  // o usuário escolheu manualmente dentro do app via i18next (preferência
+  // persistida em localStorage, não necessariamente igual à do SO/browser).
+  // Mensagens de erro traduzidas no backend (ValidationError com
+  // gettext_lazy) só saem no idioma certo com este header explícito.
+  config.headers['Accept-Language'] = i18n.language;
   return config;
 });
 
@@ -115,6 +123,12 @@ export function estaLogado() {
 // ─── Ativação de conta ──────────────────────────────────────────────────
 // Sem token de sessão ainda (usuário nem logou), por isso usam axios puro,
 // igual login/cadastrar acima, em vez da instância 'api' com interceptor.
+// OBS: por não passarem pela instância 'api', essas duas chamadas também
+// NÃO enviam o Accept-Language sincronizado com o i18next — o backend
+// resolve pelo Accept-Language padrão do navegador nesses dois casos
+// específicos. Aceitável hoje (o usuário ainda não escolheu idioma dentro
+// do app nesse momento do fluxo), mas vale revisitar se o seletor de
+// idioma passar a ficar disponível já na tela de login/cadastro.
 
 export async function ativarConta(uidb64, token) {
   const { data } = await axios.get(`${API_BASE}/users/ativar/${uidb64}/${token}/`);
@@ -226,10 +240,17 @@ export async function getBadgesItinerarioDisponiveis() {
 export const VIDEO_DURACAO_MAXIMA_SEGUNDOS = 120;
 export const VIDEO_TAMANHO_MAXIMO_MB = 500;
 
+// NOTA: chaves em common.json → video_validacao.*
+// Usa i18n.t() (instância global) em vez do hook useTranslation, já que
+// api.js não é um componente React — mesmo padrão que seria usado em
+// extrairMensagensErro/tempoRelativo.
 export function validarVideoLocal(file) {
   return new Promise((resolve) => {
     if (file.size > VIDEO_TAMANHO_MAXIMO_MB * 1024 * 1024) {
-      resolve({ valido: false, erro: `O vídeo excede ${VIDEO_TAMANHO_MAXIMO_MB}MB.` });
+      resolve({
+        valido: false,
+        erro: i18n.t('common:video_validacao.excede_tamanho', { mb: VIDEO_TAMANHO_MAXIMO_MB }),
+      });
       return;
     }
     const videoEl = document.createElement('video');
@@ -237,12 +258,16 @@ export function validarVideoLocal(file) {
     videoEl.onloadedmetadata = () => {
       URL.revokeObjectURL(videoEl.src);
       if (videoEl.duration > VIDEO_DURACAO_MAXIMA_SEGUNDOS) {
-        resolve({ valido: false, erro: `O vídeo excede ${VIDEO_DURACAO_MAXIMA_SEGUNDOS} segundos de duração.` });
+        resolve({
+          valido: false,
+          erro: i18n.t('common:video_validacao.excede_duracao', { segundos: VIDEO_DURACAO_MAXIMA_SEGUNDOS }),
+        });
       } else {
         resolve({ valido: true, duracao: videoEl.duration });
       }
     };
-    videoEl.onerror = () => resolve({ valido: false, erro: 'Não foi possível ler o vídeo selecionado.' });
+    videoEl.onerror = () =>
+      resolve({ valido: false, erro: i18n.t('common:video_validacao.erro_leitura') });
     videoEl.src = URL.createObjectURL(file);
   });
 }

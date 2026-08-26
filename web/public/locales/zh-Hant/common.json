@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "動態",
+    "explorar": "探索",
+    "criar_itinerario": "建立行程",
+    "mensagens": "訊息",
+    "notificacoes": "通知",
+    "configuracoes": "設定",
+    "sair": "登出",
+    "entrar": "登入"
+  },
+  "offline": {
+    "reconectado": "網路已恢復",
+    "sem_conexao": "您目前離線 — 部分操作可能無法完成"
+  },
+  "avisos": {
+    "confirmar": "確認",
+    "cancelar": "取消",
+    "aguarde": "請稍候...",
+    "excluir_rascunho": {
+      "titulo": "刪除草稿",
+      "mensagem": "確定要刪除此草稿嗎？此操作無法復原。",
+      "confirmar": "刪除"
+    },
+    "excluir_itinerario": {
+      "titulo": "刪除行程",
+      "mensagem": "確定要刪除此行程嗎？按讚和留言也會一併遺失，且此操作無法復原。",
+      "confirmar": "刪除"
+    },
+    "remover_ponto": {
+      "titulo": "移除地點",
+      "mensagem": "確定要從行程中移除此地點嗎？已填寫的資料及為此地點新增的媒體內容將會遺失。",
+      "confirmar": "移除"
+    },
+    "excluir_comentario": {
+      "titulo": "刪除留言",
+      "titulo_resposta": "刪除回覆",
+      "mensagem_comentario": "確定要刪除此留言嗎？此操作無法復原。",
+      "mensagem_resposta": "確定要刪除此回覆嗎？此操作無法復原。",
+      "confirmar": "刪除"
+    },
+    "sair": {
+      "titulo": "登出帳號",
+      "mensagem": "確定要登出嗎？",
+      "confirmar": "登出"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "發生錯誤",
+    "mensagem_padrao": "發生了非預期的錯誤。",
+    "tentar_novamente": "重試",
+    "voltar_inicio": "返回首頁"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "找不到頁面",
+    "mensagem": "您嘗試存取的網址不存在。"
+  },
+  "erros": {
+    "offline_titulo": "無網路連線",
+    "offline_mensagem": "請檢查您的網路連線後再試一次。",
+    "timeout_titulo": "請求逾時",
+    "timeout_mensagem": "伺服器未及時回應，請再試一次。",
+    "servidor_indisponivel_titulo": "無法連線",
+    "servidor_indisponivel_mensagem": "伺服器可能暫時無法使用，請稍後再試。",
+    "nao_encontrado_titulo": "找不到內容",
+    "nao_encontrado_mensagem": "您尋找的內容不存在或已被移除。",
+    "nao_autenticado_titulo": "工作階段已逾期",
+    "nao_autenticado_mensagem": "請重新登入以繼續。",
+    "sem_permissao_titulo": "存取遭拒",
+    "sem_permissao_mensagem": "您沒有權限檢視此內容。",
+    "muitas_requisicoes_titulo": "請稍候",
+    "muitas_requisicoes_mensagem": "短時間內請求次數過多，請稍候片刻後再試。",
+    "servidor_titulo": "伺服器錯誤",
+    "servidor_mensagem": "我們這邊發生了問題，已經知悉此狀況 — 請稍後再試。",
+    "requisicao_invalida_titulo": "無法完成",
+    "requisicao_invalida_mensagem": "無法處理該請求。",
+    "desconhecido_titulo": "發生錯誤",
+    "desconhecido_mensagem": "發生了非預期的錯誤，請再試一次。"
+  },
+  "video_validacao": {
+    "excede_tamanho": "影片超過 {{mb}}MB。",
+    "excede_duracao": "影片長度超過 {{segundos}} 秒。",
+    "erro_leitura": "無法讀取所選的影片。"
+  }
+}

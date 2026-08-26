@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from './i18n';
 import { getNotificacoes, marcarNotificacaoLida, marcarTodasNotificacoesLidas, responderSolicitacaoSeguir } from './api';
 import {
   IconeNotificacao,
@@ -18,19 +20,25 @@ const ICONE_TIPO = {
   curtida: IconeLike,
 };
 
+// Module-level, sem acesso ao hook useTranslation — usa a instância
+// global do i18next diretamente (mesmo padrão já usado em
+// extrairMensagensErro, CriarItinerario.jsx). Antes: locale 'pt-BR' fixo
+// no toLocaleDateString, mesmo bug corrigido em PaginaItinerario/
+// PaginaMensagens.
 function tempoRelativo(dataIso) {
   const diffMs = Date.now() - new Date(dataIso).getTime();
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return 'agora';
-  if (min < 60) return `${min}min`;
+  if (min < 1) return i18n.t('social:notificacoes.tempo_agora');
+  if (min < 60) return i18n.t('social:notificacoes.tempo_min', { min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
+  if (h < 24) return i18n.t('social:notificacoes.tempo_h', { h });
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(dataIso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  if (d < 7) return i18n.t('social:notificacoes.tempo_d', { d });
+  return new Date(dataIso).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
 }
 
 function PaginaNotificacoes() {
+  const { t } = useTranslation('social');
   const navigate = useNavigate();
   const [notificacoes, setNotificacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -42,8 +50,6 @@ function PaginaNotificacoes() {
       setCarregando(true);
       try {
         const data = await getNotificacoes();
-        // 'mensagem' não é mais gerada pelo backend, mas filtra aqui também
-        // por segurança (linhas antigas de antes dessa mudança, por exemplo).
         setNotificacoes(data.filter((n) => n.tipo !== 'mensagem'));
       } catch (_) {} finally { setCarregando(false); }
     }
@@ -84,17 +90,17 @@ function PaginaNotificacoes() {
   return (
     <div className="pagina-notificacoes">
       <div className="pagina-notificacoes__header">
-        <h1 className="pagina-notificacoes__titulo">Notificações</h1>
+        <h1 className="pagina-notificacoes__titulo">{t('notificacoes.titulo')}</h1>
         {temNaoLidas && (
           <button onClick={handleMarcarTodas} className="pagina-notificacoes__marcar-todas-btn">
-            Marcar todas como lidas
+            {t('notificacoes.marcar_todas')}
           </button>
         )}
       </div>
 
-      {carregando && <p className="pagina-notificacoes__estado-vazio">Carregando...</p>}
+      {carregando && <p className="pagina-notificacoes__estado-vazio">{t('notificacoes.carregando')}</p>}
       {!carregando && notificacoes.length === 0 && (
-        <p className="pagina-notificacoes__estado-vazio">Nenhuma notificação ainda.</p>
+        <p className="pagina-notificacoes__estado-vazio">{t('notificacoes.nenhuma')}</p>
       )}
 
       {notificacoes.map((n) => {
@@ -111,6 +117,7 @@ function PaginaNotificacoes() {
                 </div>
             }
             <div className="pagina-notificacoes__conteudo">
+              {/* n.mensagem vem pronto do backend — stand-by */}
               <div className="pagina-notificacoes__mensagem">{n.mensagem}</div>
               <div className="pagina-notificacoes__tempo">{tempoRelativo(n.criado_em)}</div>
 
@@ -121,20 +128,20 @@ function PaginaNotificacoes() {
                     disabled={respondendo === n.id}
                     className="btn-primario"
                   >
-                    Aceitar
+                    {t('notificacoes.aceitar')}
                   </button>
                   <button
                     onClick={() => handleResponderSolicitacao(n, false)}
                     disabled={respondendo === n.id}
                     className="btn-outline"
                   >
-                    Recusar
+                    {t('notificacoes.recusar')}
                   </button>
                 </div>
               )}
               {ehSolicitacao && resposta && (
                 <div style={{ marginTop: 4, fontSize: 13, color: 'var(--texto-secundario)' }}>
-                  {resposta === 'aceito' ? 'Solicitação aceita' : 'Solicitação recusada'}
+                  {resposta === 'aceito' ? t('notificacoes.solicitacao_aceita') : t('notificacoes.solicitacao_recusada')}
                 </div>
               )}
             </div>

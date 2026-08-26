@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgeos-dev \
     libproj-dev \
     ffmpeg \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

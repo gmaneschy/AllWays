@@ -1,47 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { login, cadastrar, reenviarAtivacao } from './api';
 import { IconeUsuario, IconeEmail, IconeSenha, IconeAlerta } from './icons';
 import './Login.css';
 
-// Traduz erros de validação do DRF ({"campo": ["msg1", "msg2"]}) pra uma
-// lista de linhas legíveis, uma por mensagem, com o rótulo do campo em
-// português na frente. Sem isso, cada erro (username duplicado + e-mail
-// duplicado, por exemplo) virava um JSON.stringify cru na tela.
-const ROTULOS_CAMPO = {
-  username: 'Usuário',
-  email: 'E-mail',
-  password: 'Senha',
-  nome_exibicao: 'Nome de exibição',
-  genero: 'Gênero',
-  data_nascimento: 'Data de nascimento',
-};
-
-function formatarErroApi(dados) {
-  if (!dados || typeof dados !== 'object') {
-    return ['Erro ao autenticar. Tente novamente.'];
-  }
-
-  // SimpleJWT (login) e erros genéricos do DRF vêm como {"detail": "..."}
-  if (typeof dados.detail === 'string') {
-    return [dados.detail];
-  }
-
-  const linhas = [];
-  for (const [campo, mensagens] of Object.entries(dados)) {
-    const lista = Array.isArray(mensagens) ? mensagens : [mensagens];
-    const rotulo = ROTULOS_CAMPO[campo];
-    for (const msg of lista) {
-      linhas.push(rotulo ? `${rotulo}: ${msg}` : String(msg));
-    }
-  }
-  return linhas.length > 0 ? linhas : ['Erro ao autenticar. Tente novamente.'];
-}
-
 function Login() {
+  const { t } = useTranslation('users');
   const navigate = useNavigate();
-  const [modo, setModo] = useState('login'); // 'login' ou 'cadastro'
+  const [modo, setModo] = useState('login');
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -54,12 +22,46 @@ function Login() {
   const [erro, setErro] = useState(null);
   const [mensagemSucesso, setMensagemSucesso] = useState(null);
 
-  // Reenvio de e-mail de ativação — fica escondido atrás de um link no
-  // rodapé da tela de login, pra não poluir o formulário principal.
   const [mostrarReenvio, setMostrarReenvio] = useState(false);
   const [emailReenvio, setEmailReenvio] = useState('');
   const [enviandoReenvio, setEnviandoReenvio] = useState(false);
   const [mensagemReenvio, setMensagemReenvio] = useState(null);
+
+  // Rótulos por campo, agora resolvidos via t() em vez de dict module-level
+  // — precisa estar dentro do componente pra ter acesso ao hook.
+  const ROTULOS_CAMPO = {
+    username: t('login.rotulos_campo.username'),
+    email: t('login.rotulos_campo.email'),
+    password: t('login.rotulos_campo.password'),
+    nome_exibicao: t('login.rotulos_campo.nome_exibicao'),
+    genero: t('login.rotulos_campo.genero'),
+    data_nascimento: t('login.rotulos_campo.data_nascimento'),
+  };
+
+  function formatarErroApi(dados) {
+    if (!dados || typeof dados !== 'object') {
+      return [t('login.erro_generico')];
+    }
+
+    // SimpleJWT (login) e erros genéricos do DRF vêm como {"detail": "..."}
+    // — esse texto vem do BACKEND (stand-by até você enviar a config de
+    // i18n do DRF/SimpleJWT).
+    if (typeof dados.detail === 'string') {
+      return [dados.detail];
+    }
+
+    const linhas = [];
+    for (const [campo, mensagens] of Object.entries(dados)) {
+      const lista = Array.isArray(mensagens) ? mensagens : [mensagens];
+      const rotulo = ROTULOS_CAMPO[campo];
+      for (const msg of lista) {
+        // `msg` também vem do backend (mensagem de validação do DRF) —
+        // stand-by. Só o rótulo do campo na frente já sai traduzido.
+        linhas.push(rotulo ? `${rotulo}: ${msg}` : String(msg));
+      }
+    }
+    return linhas.length > 0 ? linhas : [t('login.erro_generico')];
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -67,7 +69,7 @@ function Login() {
     setMensagemSucesso(null);
 
     if (modo === 'cadastro' && password !== confirmarSenha) {
-      setErro(['As senhas não coincidem.']);
+      setErro([t('login.senhas_nao_coincidem')]);
       return;
     }
 
@@ -81,13 +83,8 @@ function Login() {
           genero,
           data_nascimento: dataNascimento,
         });
-        // A conta nasce inativa (precisa confirmar o e-mail), então NÃO dá
-        // mais pra chamar login() aqui — a tentativa falharia sempre.
-        // Volta pro modo login e avisa o usuário pra checar o e-mail.
         setModo('login');
-        setMensagemSucesso(
-          'Conta criada! Enviamos um link de ativação para o seu e-mail — confirme para poder entrar.'
-        );
+        setMensagemSucesso(t('login.mensagem_sucesso_cadastro'));
         setUsername('');
         setPassword('');
         setConfirmarSenha('');
@@ -96,10 +93,6 @@ function Login() {
         navigate('/');
       }
     } catch (err) {
-      // SimpleJWT devolve {"detail": "..."} tanto pra senha errada quanto
-      // pra conta inativa (mensagem genérica de propósito, pra não revelar
-      // qual dos dois casos é) — por isso o link de reenvio abaixo fica
-      // sempre visível no modo login, em vez de tentar detectar o caso.
       setErro(formatarErroApi(err.response?.data));
     } finally {
       setEnviando(false);
@@ -111,10 +104,11 @@ function Login() {
     setEnviandoReenvio(true);
     setMensagemReenvio(null);
     try {
+      // `detail` vem do backend (stand-by) — mensagem de sucesso do reenvio.
       const { detail } = await reenviarAtivacao(emailReenvio);
       setMensagemReenvio(detail);
     } catch {
-      setMensagemReenvio('Não foi possível reenviar agora. Tente novamente em instantes.');
+      setMensagemReenvio(t('login.erro_reenvio'));
     } finally {
       setEnviandoReenvio(false);
     }
@@ -122,10 +116,6 @@ function Login() {
 
   return (
     <div className="login-pagina">
-      {/* layout: o card se redimensiona sozinho (anima altura/posição) toda
-          vez que campos entram ou saem — sem isso, alternar entre login e
-          cadastro dava um salto seco no tamanho do card. initial/animate
-          cuidam só da entrada na primeira renderização (fade + leve subida). */}
       <motion.div
         layout
         initial={{ opacity: 0, y: 12 }}
@@ -133,9 +123,6 @@ function Login() {
         transition={{ duration: 0.35, ease: 'easeOut' }}
         className="login-card"
       >
-        {/* mode="wait": espera o título antigo sumir antes do novo aparecer,
-            em vez de sobrepor os dois — mesmo efeito de crossfade usado no
-            painel de info do CarrosselItinerario ao trocar de ponto. */}
         <AnimatePresence mode="wait">
           <motion.h1
             key={modo}
@@ -145,13 +132,13 @@ function Login() {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="login-titulo"
           >
-            {modo === 'login' ? 'Entrar' : 'Criar conta'}
+            {modo === 'login' ? t('login.titulo_entrar') : t('login.titulo_criar_conta')}
           </motion.h1>
         </AnimatePresence>
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="login-campo">
-            <label htmlFor="username">Usuário</label>
+            <label htmlFor="username">{t('login.usuario_label')}</label>
             <div className="login-input-wrapper">
               <IconeUsuario size={16} />
               <input
@@ -165,11 +152,6 @@ function Login() {
             </div>
           </div>
 
-          {/* Bloco de campos extras do cadastro — mesmo padrão de acordeão
-              (height: 0 → 'auto' + opacity) já usado no dropdown de
-              comentários do FeedCard. initial={false} na AnimatePresence
-              evita que isso anime na primeira renderização (só anima ao
-              trocar de modo, não ao carregar a página). */}
           <AnimatePresence initial={false}>
             {modo === 'cadastro' && (
               <motion.div
@@ -182,7 +164,7 @@ function Login() {
               >
                 <div className="login-campos-extra">
                   <div className="login-campo">
-                    <label htmlFor="nomeExibicao">Nome de exibição</label>
+                    <label htmlFor="nomeExibicao">{t('login.nome_exibicao_label')}</label>
                     <div className="login-input-wrapper">
                       <IconeUsuario size={16} />
                       <input
@@ -197,7 +179,7 @@ function Login() {
                   </div>
 
                   <div className="login-campo">
-                    <label htmlFor="email">E-mail</label>
+                    <label htmlFor="email">{t('login.email_label')}</label>
                     <div className="login-input-wrapper">
                       <IconeEmail size={16} />
                       <input
@@ -212,7 +194,7 @@ function Login() {
                   </div>
 
                   <div className="login-campo">
-                    <label htmlFor="genero">Gênero</label>
+                    <label htmlFor="genero">{t('login.genero_label')}</label>
                     <select
                       id="genero"
                       className="login-select"
@@ -221,16 +203,16 @@ function Login() {
                       required
                       style={{ paddingLeft: 12 }}
                     >
-                      <option value="" disabled>Selecione...</option>
-                      <option value="M">Masculino</option>
-                      <option value="F">Feminino</option>
-                      <option value="O">Outro</option>
-                      <option value="N">Prefiro não informar</option>
+                      <option value="" disabled>{t('login.genero_selecione')}</option>
+                      <option value="M">{t('login.genero_masculino')}</option>
+                      <option value="F">{t('login.genero_feminino')}</option>
+                      <option value="O">{t('login.genero_outro')}</option>
+                      <option value="N">{t('login.genero_nao_informar')}</option>
                     </select>
                   </div>
 
                   <div className="login-campo">
-                    <label htmlFor="dataNascimento">Data de nascimento</label>
+                    <label htmlFor="dataNascimento">{t('login.data_nascimento_label')}</label>
                     <input
                       id="dataNascimento"
                       className="login-input"
@@ -247,7 +229,7 @@ function Login() {
           </AnimatePresence>
 
           <div className="login-campo">
-            <label htmlFor="password">Senha</label>
+            <label htmlFor="password">{t('login.senha_label')}</label>
             <div className="login-input-wrapper">
               <IconeSenha size={16} />
               <input
@@ -272,7 +254,7 @@ function Login() {
                 className="login-bloco-animado"
               >
                 <div className="login-campo">
-                  <label htmlFor="confirmarSenha">Confirmar senha</label>
+                  <label htmlFor="confirmarSenha">{t('login.confirmar_senha_label')}</label>
                   <div className="login-input-wrapper">
                     <IconeSenha size={16} />
                     <input
@@ -289,10 +271,6 @@ function Login() {
             )}
           </AnimatePresence>
 
-          {/* whileHover/whileTap dão feedback tátil ao botão — a mola
-              (spring) responde mais rápido que uma curva de easing normal,
-              fica com "peso" mesmo numa animação tão curta. O texto interno
-              troca com um crossfade rápido (Entrar/Criar conta/Aguarde...). */}
           <motion.button
             whileHover={!enviando ? { scale: 1.015 } : undefined}
             whileTap={!enviando ? { scale: 0.97 } : undefined}
@@ -310,16 +288,12 @@ function Login() {
                 transition={{ duration: 0.15 }}
                 className="login-botao__texto"
               >
-                {enviando ? 'Aguarde...' : modo === 'login' ? 'Entrar' : 'Criar conta'}
+                {enviando ? t('login.aguarde') : modo === 'login' ? t('login.titulo_entrar') : t('login.titulo_criar_conta')}
               </motion.span>
             </AnimatePresence>
           </motion.button>
         </form>
 
-        {/* Shake sutil em x (não é layout, então não empurra o resto do
-            card) — chama atenção pro erro sem ser agressivo. erro é
-            sempre um array (ver formatarErroApi): uma linha por mensagem,
-            já que o DRF pode devolver mais de um campo inválido de vez. */}
         <AnimatePresence>
           {erro && (
             <motion.div
@@ -365,25 +339,21 @@ function Login() {
             className="login-rodape"
           >
             {modo === 'login' ? (
-              <>Não tem conta?{' '}
+              <>{t('login.nao_tem_conta')}{' '}
                 <button type="button" className="login-link" onClick={() => setModo('cadastro')}>
-                  Cadastre-se
+                  {t('login.cadastre_se')}
                 </button>
               </>
             ) : (
-              <>Já tem conta?{' '}
+              <>{t('login.ja_tem_conta')}{' '}
                 <button type="button" className="login-link" onClick={() => setModo('login')}>
-                  Entrar
+                  {t('login.titulo_entrar')}
                 </button>
               </>
             )}
           </motion.p>
         </AnimatePresence>
 
-        {/* Link de reenvio de ativação — só faz sentido no modo login.
-            Fica sempre visível (não só quando dá erro), já que a mensagem
-            de erro do SimpleJWT não diferencia "senha errada" de "conta
-            inativa" de propósito (evita vazar qual dos dois casos é). */}
         {modo === 'login' && (
           <>
             <p className="login-rodape login-rodape--secundario">
@@ -392,7 +362,7 @@ function Login() {
                 className="login-link login-link--secundario"
                 onClick={() => setMostrarReenvio((v) => !v)}
               >
-                Não recebeu o e-mail de ativação?
+                {t('login.nao_recebeu_ativacao')}
               </button>
             </p>
 
@@ -413,7 +383,7 @@ function Login() {
                         <input
                           className="login-input"
                           type="email"
-                          placeholder="Seu e-mail de cadastro"
+                          placeholder={t('login.placeholder_email_reenvio')}
                           value={emailReenvio}
                           onChange={(e) => setEmailReenvio(e.target.value)}
                           required
@@ -425,7 +395,7 @@ function Login() {
                       className="login-link login-link--secundario"
                       disabled={enviandoReenvio}
                     >
-                      {enviandoReenvio ? 'Enviando...' : 'Reenviar link de ativação'}
+                      {enviandoReenvio ? t('login.enviando') : t('login.reenviar_link')}
                     </button>
                     {mensagemReenvio && (
                       <p className="login-reenvio__mensagem">{mensagemReenvio}</p>

@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "Feed",
+    "explorar": "Explore",
+    "criar_itinerario": "Create Itinerary",
+    "mensagens": "Messages",
+    "notificacoes": "Notifications",
+    "configuracoes": "Settings",
+    "sair": "Log out",
+    "entrar": "Log in"
+  },
+  "offline": {
+    "reconectado": "Connection restored",
+    "sem_conexao": "You're offline — some actions may fail"
+  },
+  "avisos": {
+    "confirmar": "Confirm",
+    "cancelar": "Cancel",
+    "aguarde": "Please wait...",
+    "excluir_rascunho": {
+      "titulo": "Delete draft",
+      "mensagem": "Are you sure you want to delete this draft? This action cannot be undone.",
+      "confirmar": "Delete"
+    },
+    "excluir_itinerario": {
+      "titulo": "Delete itinerary",
+      "mensagem": "Are you sure you want to delete this itinerary? Likes and comments will also be lost, and this action cannot be undone.",
+      "confirmar": "Delete"
+    },
+    "remover_ponto": {
+      "titulo": "Remove point",
+      "mensagem": "Are you sure you want to remove this point from the itinerary? The data entered and media added for it will be lost.",
+      "confirmar": "Remove"
+    },
+    "excluir_comentario": {
+      "titulo": "Delete comment",
+      "titulo_resposta": "Delete reply",
+      "mensagem_comentario": "Are you sure you want to delete this comment? This action cannot be undone.",
+      "mensagem_resposta": "Are you sure you want to delete this reply? This action cannot be undone.",
+      "confirmar": "Delete"
+    },
+    "sair": {
+      "titulo": "Log out",
+      "mensagem": "Are you sure you want to log out?",
+      "confirmar": "Log out"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "Something went wrong",
+    "mensagem_padrao": "An unexpected error occurred.",
+    "tentar_novamente": "Try again",
+    "voltar_inicio": "Back to home"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "Page not found",
+    "mensagem": "The address you tried to access doesn't exist."
+  },
+  "erros": {
+    "offline_titulo": "No connection",
+    "offline_mensagem": "Check your internet connection and try again.",
+    "timeout_titulo": "The request took too long",
+    "timeout_mensagem": "The server didn't respond in time. Please try again.",
+    "servidor_indisponivel_titulo": "Couldn't connect",
+    "servidor_indisponivel_mensagem": "The server may be down. Please try again shortly.",
+    "nao_encontrado_titulo": "Not found",
+    "nao_encontrado_mensagem": "The content you're looking for doesn't exist or has been removed.",
+    "nao_autenticado_titulo": "Session expired",
+    "nao_autenticado_mensagem": "Please log in again to continue.",
+    "sem_permissao_titulo": "Access denied",
+    "sem_permissao_mensagem": "You don't have permission to view this content.",
+    "muitas_requisicoes_titulo": "Slow down",
+    "muitas_requisicoes_mensagem": "Too many requests in a short time. Please wait a moment and try again.",
+    "servidor_titulo": "Server error",
+    "servidor_mensagem": "Something went wrong on our end. We're already aware — please try again shortly.",
+    "requisicao_invalida_titulo": "Couldn't complete",
+    "requisicao_invalida_mensagem": "The request couldn't be processed.",
+    "desconhecido_titulo": "Something went wrong",
+    "desconhecido_mensagem": "An unexpected error occurred. Please try again."
+  },
+  "video_validacao": {
+    "excede_tamanho": "The video exceeds {{mb}}MB.",
+    "excede_duracao": "The video exceeds {{segundos}} seconds in length.",
+    "erro_leitura": "Couldn't read the selected video."
+  }
+}

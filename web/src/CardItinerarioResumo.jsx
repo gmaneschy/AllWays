@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from './api';
 import { IconePin, IconeFechar, IconeCarregando } from './icons';
 import { AvisoExcluirRascunho } from './Avisos';
@@ -16,6 +17,7 @@ import './CardItinerarioResumo.css';
  * thumbnail_url, status } (ou null se o itinerário não tem nenhuma mídia
  * ainda) — ver observação sobre o backend. */
 function CardItinerarioResumo({ it, onExcluido }) {
+  const { t } = useTranslation('itinerarios');
   const midia = it.primeira_midia;
   const ehVideo = midia?.tipo === 'video' && midia.status !== 'erro';
   const videoRef = useRef(null);
@@ -45,7 +47,13 @@ function CardItinerarioResumo({ it, onExcluido }) {
     else el.pause();
   }, [emVista]);
 
-  const tipoLabel = it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip';
+  // Antes: valores em inglês hardcoded ('Day Trip' / 'Multi-Day Trip'),
+  // mesmo na UI em português — ver observação no chat. Agora resolve via
+  // chave traduzível, com o mesmo texto em pt-BR só pra manter comparável
+  // até você decidir o wording final.
+  const tipoLabel = it.tipo === 'day_trip'
+    ? t('card_resumo.tipo_day_trip')
+    : t('card_resumo.tipo_multi_day_trip');
 
   // Rascunho não tem página própria (ver PaginaItinerario) — clicar nele
   // deve levar direto pro editor CONTINUANDO o mesmo registro (?editar=),
@@ -87,7 +95,7 @@ function CardItinerarioResumo({ it, onExcluido }) {
           <button
             onClick={handlePedirExclusao}
             disabled={excluindo}
-            title="Excluir rascunho"
+            title={t('card_resumo.excluir_rascunho_titulo')}
             className="card-itinerario-resumo__excluir"
           >
             {excluindo
@@ -120,7 +128,7 @@ function CardItinerarioResumo({ it, onExcluido }) {
         <div className="card-itinerario-resumo__corpo">
           <h3 className="card-itinerario-resumo__titulo">{it.titulo}</h3>
           <p className="card-itinerario-resumo__meta">
-            {it.total_pontos} lugar{it.total_pontos !== 1 ? 'es' : ''} · {tipoLabel}
+            {t('card_resumo.total_lugares', { count: it.total_pontos })} · {tipoLabel}
           </p>
         </div>
       </Link>

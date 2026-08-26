@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import api, { compartilharItinerario } from './api';
 import { IconeFechar, IconeSucesso } from './icons';
 import './ModalCompartilharItinerario.css';
@@ -26,10 +27,11 @@ function Avatar({ usuario, tamanho = 32 }) {
 }
 
 function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar }) {
+  const { t } = useTranslation('social');
   const [query, setQuery] = useState('');
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [enviandoPara, setEnviandoPara] = useState(null); // username em envio
+  const [enviandoPara, setEnviandoPara] = useState(null);
   const [enviadoPara, setEnviadoPara] = useState(new Set());
   const [erro, setErro] = useState(null);
 
@@ -53,7 +55,7 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
       await compartilharItinerario(usuario.username, itinerarioId);
       setEnviadoPara((prev) => new Set(prev).add(usuario.username));
     } catch (_) {
-      setErro('Não foi possível enviar. Tente novamente.');
+      setErro(t('compartilhar_itinerario.erro_enviar'));
     } finally {
       setEnviandoPara(null);
     }
@@ -77,7 +79,7 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
         transition={{ duration: 0.2, ease: 'easeInOut' }}
       >
         <div className="modal-compartilhar__header">
-          <strong className="modal-compartilhar__titulo">Compartilhar itinerário</strong>
+          <strong className="modal-compartilhar__titulo">{t('compartilhar_itinerario.titulo')}</strong>
           <button onClick={onFechar} className="modal-compartilhar__fechar">
             <IconeFechar size={20} />
           </button>
@@ -91,16 +93,16 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar usuário..."
+          placeholder={t('compartilhar_itinerario.buscar_usuario')}
           className="modal-compartilhar__busca"
         />
 
         {erro && <p className="modal-compartilhar__erro">{erro}</p>}
 
         <div className="modal-compartilhar__lista">
-          {carregando && <p className="modal-compartilhar__estado-vazio">Carregando...</p>}
+          {carregando && <p className="modal-compartilhar__estado-vazio">{t('compartilhar_itinerario.carregando')}</p>}
           {!carregando && usuarios.length === 0 && (
-            <p className="modal-compartilhar__estado-vazio">Nenhum usuário encontrado.</p>
+            <p className="modal-compartilhar__estado-vazio">{t('compartilhar_itinerario.nenhum_usuario')}</p>
           )}
           {usuarios.map((u) => {
             const jaEnviado = enviadoPara.has(u.username);
@@ -117,8 +119,8 @@ function ModalCompartilharItinerario({ itinerarioId, itinerarioTitulo, onFechar 
                   className={`modal-compartilhar__btn-enviar${jaEnviado ? ' modal-compartilhar__btn-enviar--enviado' : ''}`}
                 >
                   {jaEnviado
-                    ? <><IconeSucesso size={14} /> Enviado</>
-                    : enviandoPara === u.username ? 'Enviando...' : 'Enviar'}
+                    ? <><IconeSucesso size={14} /> {t('compartilhar_itinerario.enviado')}</>
+                    : enviandoPara === u.username ? t('compartilhar_itinerario.enviando') : t('compartilhar_itinerario.enviar')}
                 </button>
               </div>
             );

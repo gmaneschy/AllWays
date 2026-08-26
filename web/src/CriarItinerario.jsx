@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import i18n from './i18n';
 import api from './api';
 import { getBadgesItinerarioDisponiveis, validarVideoLocal, enviarVideoPonto } from './api';
 import BuscaLocal from './BuscaLocal';
@@ -9,20 +11,25 @@ import { IconeCarregar, IconeSalvar, IconeVideo, IconeSucesso, IconeFechar, Icon
 import { AvisoRemoverPonto } from './Avisos';
 import './CriarItinerario.css';
 
+// Chave em vez do texto direto — os dois arrays são module-level, sem
+// acesso ao t() do hook (hooks só funcionam dentro do corpo do
+// componente). O valor '' (opção "não informado") fica com o traço
+// literal — é um símbolo, não uma palavra que muda por idioma, mesmo
+// tratamento dado ao contador "9+" da Navbar.
 const MEIO_DESLOCAMENTO_OPCOES = [
-  { value: '', label: '—' },
-  { value: 'a_pe', label: 'A pé' },
-  { value: 'carro', label: 'Carro' },
-  { value: 'taxi_app', label: 'Táxi/App de transporte' },
-  { value: 'transporte_publico', label: 'Transporte público' },
-  { value: 'bicicleta', label: 'Bicicleta' },
+  { value: '' },
+  { value: 'a_pe', labelKey: 'carrossel.deslocamento.a_pe' },
+  { value: 'carro', labelKey: 'carrossel.deslocamento.carro' },
+  { value: 'taxi_app', labelKey: 'carrossel.deslocamento.taxi_app' },
+  { value: 'transporte_publico', labelKey: 'carrossel.deslocamento.transporte_publico' },
+  { value: 'bicicleta', labelKey: 'carrossel.deslocamento.bicicleta' },
 ];
 
 const MOVIMENTACAO_OPCOES = [
-  { value: '', label: '—' },
-  { value: 'vazio', label: 'Vazio' },
-  { value: 'populado', label: 'Populado' },
-  { value: 'cheio', label: 'Cheio' },
+  { value: '' },
+  { value: 'vazio', labelKey: 'carrossel.movimentacao.vazio' },
+  { value: 'populado', labelKey: 'carrossel.movimentacao.populado' },
+  { value: 'cheio', labelKey: 'carrossel.movimentacao.cheio' },
 ];
 
 /** Miniatura de uma mídia (foto ou vídeo) do ponto. Cria o blob URL UMA VEZ
@@ -31,6 +38,7 @@ const MOVIMENTACAO_OPCOES = [
  * em qualquer campo do card), recriando a miniatura sem necessidade e
  * gerando um blob novo (vazado) a cada vez. */
 function MidiaThumb({ midia, aoClicarParaRecortar }) {
+  const { t } = useTranslation('itinerarios');
   const [urlLocal, setUrlLocal] = useState(null);
 
   useEffect(() => {
@@ -71,7 +79,7 @@ function MidiaThumb({ midia, aoClicarParaRecortar }) {
         alt=""
         draggable={false}
         onClick={(e) => { e.stopPropagation(); aoClicarParaRecortar?.(); }}
-        title="Clique para recortar"
+        title={t('criar_itinerario.clique_recortar')}
         className="midia-item__thumb"
       />
     );
@@ -115,7 +123,14 @@ function pontoVazio() {
  * aninhados à vontade — ex: {"pontos": [{}, {"seguranca": ["..."]}]}) numa
  * lista plana de mensagens legíveis, prefixadas pelo campo quando isso
  * ajuda a localizar o problema. Usada em vez de JSON.stringify(err.response.data),
- * que mostra a estrutura crua do erro pro usuário. */
+ * que mostra a estrutura crua do erro pro usuário.
+ *
+ * Função module-level, sem acesso ao hook useTranslation — usa a instância
+ * global do i18next diretamente (mesmo padrão já usado em
+ * PaginaNotificacoes.jsx/tempoRelativo). Só o texto "Item #N" (fallback
+ * quando não há prefixo de campo do backend) sai traduzido daqui; o
+ * conteúdo de `dados` em si (mensagens de validação do DRF) continua em
+ * stand-by até os serializers do backend serem internacionalizados. */
 function extrairMensagensErro(dados, prefixo = '') {
   if (dados === null || dados === undefined || dados === '') return [];
 
@@ -129,7 +144,7 @@ function extrairMensagensErro(dados, prefixo = '') {
       // 'pontos' enviado) — numera pra deixar claro qual ponto tem
       // problema. Item de lista de strings simples não ganha número.
       const rotulo = (typeof item === 'object' && item !== null && !Array.isArray(item))
-        ? (prefixo ? `${prefixo} #${i + 1}` : `Item #${i + 1}`)
+        ? (prefixo ? `${prefixo} #${i + 1}` : i18n.t('itinerarios:criar_itinerario.erro_item_generico', { numero: i + 1 }))
         : prefixo;
       return extrairMensagensErro(item, rotulo);
     });
@@ -156,6 +171,7 @@ function paraListaDeErros(itensOuTexto) {
 }
 
 function CriarItinerario() {
+  const { t } = useTranslation('itinerarios');
   const [searchParams] = useSearchParams();
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState('day_trip');
@@ -211,6 +227,7 @@ function CriarItinerario() {
       carregarItinerario(baseId);
     }
     getBadgesItinerarioDisponiveis().then(setBadgesDisponiveis).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function payloadAtual(statusEnvio) {
@@ -273,7 +290,7 @@ function CriarItinerario() {
   }
 
   async function salvarRascunho() {
-    if (!titulo) { mostrarErro('Adicione um título antes de salvar o rascunho.'); return; }
+    if (!titulo) { mostrarErro(t('criar_itinerario.erro_titulo_obrigatorio')); return; }
     setErro(null);
     setSalvandoRascunho(true);
     try {
@@ -290,13 +307,13 @@ function CriarItinerario() {
       if (uploadsComFalha.length > 0 || videosComFalha.length > 0) {
         const avisos = [];
         if (uploadsComFalha.length > 0) {
-          avisos.push(`Fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas.`);
+          avisos.push(t('criar_itinerario.erro_fotos_nao_enviadas', { pontos: uploadsComFalha.join(', ') }));
         }
         if (videosComFalha.length > 0) {
-          avisos.push(`Vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados.`);
+          avisos.push(t('criar_itinerario.erro_videos_nao_enviados', { pontos: videosComFalha.join(', ') }));
         }
-        avisos.push('O restante do rascunho foi salvo — tente reenviar a mídia faltante.');
-        mostrarErro(avisos, 'Rascunho salvo, mas:');
+        avisos.push(t('criar_itinerario.aviso_resto_rascunho_salvo'));
+        mostrarErro(avisos, t('criar_itinerario.rascunho_salvo_mas_titulo'));
         return;
       }
 
@@ -335,6 +352,10 @@ function CriarItinerario() {
     try {
       const res = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
       const it = res.data;
+      // "Cópia de" continua fixo em português mesmo com o app traduzido —
+      // é um prefixo aplicado sobre o TÍTULO do usuário (dado, não string
+      // de UI). Vale revisitar como chave própria quando o Tier 1 for ao
+      // ar, mas por ora mantive o comportamento original sem alterar.
       setTitulo(`Cópia de ${it.titulo}`);
       setTipo(it.tipo);
       setDataInicio(''); // data não é copiada conforme especificado
@@ -363,7 +384,7 @@ function CriarItinerario() {
       setPontoAtivo(0);
       setFormVersion((v) => v + 1);
     } catch (_) {
-      mostrarErro('Não foi possível carregar o itinerário.');
+      mostrarErro(t('criar_itinerario.erro_carregar_itinerario'));
     }
   }
 
@@ -425,7 +446,7 @@ function CriarItinerario() {
       setPontoAtivo(0);
       setFormVersion((v) => v + 1);
     } catch (_) {
-      mostrarErro('Não foi possível carregar o itinerário.');
+      mostrarErro(t('criar_itinerario.erro_carregar_itinerario'));
     }
   }
 
@@ -451,12 +472,16 @@ function CriarItinerario() {
         if (resultado.valido) {
           novasMidias.push({ id: crypto.randomUUID(), tipo: 'video', arquivo: file, enviada: false });
         } else {
+          // resultado.erro vem de validarVideoLocal (api.js) — strings
+          // hardcoded em português DENTRO do próprio frontend (não é
+          // backend). Pendente de extração à parte quando formos tratar
+          // api.js.
           erros.push(`${file.name}: ${resultado.erro}`);
         }
       } else if (file.type.startsWith('image/')) {
         novasMidias.push({ id: crypto.randomUUID(), tipo: 'foto', arquivo: file, enviada: false });
       } else {
-        erros.push(`${file.name}: formato não suportado. Envie uma imagem ou um vídeo.`);
+        erros.push(t('criar_itinerario.erro_formato_nao_suportado', { nome: file.name }));
       }
     }
 
@@ -694,7 +719,7 @@ function CriarItinerario() {
     setResultado(null);
 
     if (!titulo || pontos.some((p) => !p.local)) {
-      mostrarErro('Preencha o título e selecione um local para cada ponto.');
+      mostrarErro(t('criar_itinerario.erro_titulo_e_local'));
       return;
     }
 
@@ -722,13 +747,13 @@ function CriarItinerario() {
       if (uploadsComFalha.length > 0 || videosComFalha.length > 0) {
         const avisos = [];
         if (uploadsComFalha.length > 0) {
-          avisos.push(`Fotos do(s) ponto(s) ${uploadsComFalha.join(', ')} não foram enviadas.`);
+          avisos.push(t('criar_itinerario.erro_fotos_nao_enviadas', { pontos: uploadsComFalha.join(', ') }));
         }
         if (videosComFalha.length > 0) {
-          avisos.push(`Vídeo(s) do(s) ponto(s) ${videosComFalha.join(', ')} não foram enviados.`);
+          avisos.push(t('criar_itinerario.erro_videos_nao_enviados', { pontos: videosComFalha.join(', ') }));
         }
-        avisos.push('Reenvie a mídia faltante e publique novamente pela lista de rascunhos.');
-        mostrarErro(avisos, 'O itinerário foi salvo como rascunho, mas:');
+        avisos.push(t('criar_itinerario.erro_reenviar_publicar'));
+        mostrarErro(avisos, t('criar_itinerario.itinerario_salvo_rascunho_mas_titulo'));
         return;
       }
 
@@ -750,11 +775,13 @@ function CriarItinerario() {
       const dados = err.response?.data;
       if (dados?.erros) {
         // Erros de validação da publicação (services.validar_itinerario_para_publicacao):
-        // lista de strings, uma por problema encontrado. O itinerário já existe
-        // como rascunho nesse ponto — não é perdido, só não virou 'publicado'.
+        // lista de strings, uma por problema encontrado — VÊM DO BACKEND,
+        // stand-by até os serializers/services usarem gettext_lazy. O
+        // itinerário já existe como rascunho nesse ponto — não é perdido,
+        // só não virou 'publicado'.
         mostrarErro(
-          [...dados.erros, 'O itinerário continua salvo como rascunho — corrija e tente publicar de novo.'],
-          'Não foi possível publicar:'
+          [...dados.erros, t('criar_itinerario.erro_continua_rascunho')],
+          t('criar_itinerario.erro_nao_publicar_titulo')
         );
       } else {
         mostrarErro(extrairMensagensErro(dados || err.message));
@@ -770,9 +797,9 @@ function CriarItinerario() {
         {/* ─── Painel esquerdo: dados gerais + ações ─── */}
         <div className="painel-esquerdo">
           <div className="criar-itinerario__header">
-            <h1 className="criar-itinerario__titulo">Criar Itinerário</h1>
+            <h1 className="criar-itinerario__titulo">{t('criar_itinerario.titulo_pagina')}</h1>
             <button type="button" onClick={abrirCarregar} className="btn-secundario btn-secundario--compacto">
-              <IconeCarregar size={16} /> Carregar existente
+              <IconeCarregar size={16} /> {t('criar_itinerario.carregar_existente')}
             </button>
 
             {/* Overlay: fade in/out por cima do painel, sem empurrar o resto do conteúdo */}
@@ -786,18 +813,18 @@ function CriarItinerario() {
                   className="modal-carregar modal-carregar--overlay"
                 >
                   <div className="modal-carregar__header">
-                    <strong>Selecionar itinerário para copiar</strong>
+                    <strong>{t('criar_itinerario.selecionar_para_copiar')}</strong>
                     <button onClick={() => setMostraCarregar(false)} className="modal-carregar__fechar">
                       <IconeFechar size={18} />
                     </button>
                   </div>
                   <p className="modal-carregar__aviso">
-                    Data e comentários dos pontos não serão copiados.
+                    {t('criar_itinerario.aviso_copia_sem_data_comentario')}
                   </p>
                   <div className="modal-carregar__lista">
-                    {carregandoSalvos && <p className="modal-carregar__vazio">Carregando...</p>}
+                    {carregandoSalvos && <p className="modal-carregar__vazio">{t('criar_itinerario.carregando')}</p>}
                     {!carregandoSalvos && itinerariosSalvos.length === 0 && (
-                      <p className="modal-carregar__vazio">Nenhum itinerário encontrado.</p>
+                      <p className="modal-carregar__vazio">{t('criar_itinerario.nenhum_itinerario_encontrado')}</p>
                     )}
                     {itinerariosSalvos.map((it) => (
                       <div
@@ -807,7 +834,7 @@ function CriarItinerario() {
                       >
                         <strong>{it.titulo}</strong>
                         <span className="modal-item__status">
-                          {it.status === 'rascunho' ? '· Rascunho' : '· Publicado'}
+                          {it.status === 'rascunho' ? t('criar_itinerario.status_rascunho') : t('criar_itinerario.status_publicado')}
                         </span>
                       </div>
                     ))}
@@ -817,7 +844,7 @@ function CriarItinerario() {
             </AnimatePresence>
           </div>
 
-          <label className="form-label">Título</label>
+          <label className="form-label">{t('criar_itinerario.titulo_campo')}</label>
           <input
             type="text"
             value={titulo}
@@ -825,17 +852,19 @@ function CriarItinerario() {
             className="form-input"
           />
 
-          <label className="form-label">Tipo</label>
+          <label className="form-label">{t('criar_itinerario.tipo_campo')}</label>
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
             className="form-select"
           >
-            <option value="day_trip">Day Trip</option>
-            <option value="multi_day">Multi-Day Trip</option>
+            <option value="day_trip">{t('criar_itinerario.tipo_day_trip')}</option>
+            <option value="multi_day">{t('criar_itinerario.tipo_multi_day_trip')}</option>
           </select>
 
-          <label className="form-label">Data do itinerário {tipo === 'multi_day' ? '(início)' : ''}</label>
+          <label className="form-label">
+            {tipo === 'multi_day' ? t('criar_itinerario.data_itinerario_inicio') : t('criar_itinerario.data_itinerario')}
+          </label>
           <input
             type="date"
             value={dataInicio}
@@ -845,7 +874,7 @@ function CriarItinerario() {
 
           {tipo === 'multi_day' && (
             <>
-              <label className="form-label">Data de término</label>
+              <label className="form-label">{t('criar_itinerario.data_termino')}</label>
               <input
                 type="date"
                 value={dataFim}
@@ -855,7 +884,7 @@ function CriarItinerario() {
             </>
           )}
 
-          <label className="form-label">Categorias do itinerário</label>
+          <label className="form-label">{t('criar_itinerario.categorias_itinerario')}</label>
           <div className="badges-lista">
             {badgesDisponiveis.map((b) => {
               const selecionada = badgesSelecionadas.includes(b.id);
@@ -872,7 +901,7 @@ function CriarItinerario() {
               );
             })}
             {badgesDisponiveis.length === 0 && (
-              <span className="badges-lista__vazio">Nenhuma categoria cadastrada ainda.</span>
+              <span className="badges-lista__vazio">{t('criar_itinerario.nenhuma_categoria_cadastrada')}</span>
             )}
           </div>
 
@@ -883,7 +912,7 @@ function CriarItinerario() {
               disabled={enviando}
               className="btn-primario"
             >
-              {enviando ? 'Publicando...' : 'Publicar Itinerário'}
+              {enviando ? t('criar_itinerario.publicando') : t('criar_itinerario.publicar_itinerario')}
             </button>
             <button
               type="button"
@@ -891,14 +920,14 @@ function CriarItinerario() {
               disabled={salvandoRascunho}
               className="btn-secundario"
             >
-              {salvandoRascunho ? 'Salvando...' : <><IconeSalvar size={16} /> Salvar rascunho</>}
+              {salvandoRascunho ? t('criar_itinerario.salvando') : <><IconeSalvar size={16} /> {t('criar_itinerario.salvar_rascunho')}</>}
             </button>
             <button type="button" onClick={adicionarPonto} className="btn-secundario">
-              <IconeAdicionar size={16} /> Adicionar ponto
+              <IconeAdicionar size={16} /> {t('criar_itinerario.adicionar_ponto')}
             </button>
           </div>
 
-          {rascunhoSalvo && <p className="msg-sucesso"><IconeSucesso size={14} /> Rascunho salvo!</p>}
+          {rascunhoSalvo && <p className="msg-sucesso"><IconeSucesso size={14} /> {t('criar_itinerario.rascunho_salvo')}</p>}
           {erro && (
             <div className="msg-erro" role="alert">
               {erro.titulo && <p className="msg-erro__titulo">{erro.titulo}</p>}
@@ -913,7 +942,7 @@ function CriarItinerario() {
           )}
           {resultado && (
             <p className="msg-sucesso msg-sucesso--publicado">
-              <IconeSucesso size={16} /> Itinerário "{resultado.titulo}" publicado com sucesso!
+              <IconeSucesso size={16} /> {t('criar_itinerario.publicado_com_sucesso', { titulo: resultado.titulo })}
             </p>
           )}
         </div>
@@ -929,7 +958,7 @@ function CriarItinerario() {
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className="ponto-card ponto-card--ativo"
             >
-              <strong className="ponto-card__titulo">Ponto #{pontoAtivo + 1}</strong>
+              <strong className="ponto-card__titulo">{t('criar_itinerario.ponto_numero', { numero: pontoAtivo + 1 })}</strong>
 
               <div className="ponto-card__busca-local">
                 <BuscaLocal
@@ -938,18 +967,18 @@ function CriarItinerario() {
                 />
               </div>
 
-              <label className="form-label">Movimentação</label>
+              <label className="form-label">{t('criar_itinerario.movimentacao_label')}</label>
               <select
                 value={pontos[pontoAtivo].movimentacao}
                 onChange={(e) => atualizarPonto(pontoAtivo, 'movimentacao', e.target.value)}
                 className="form-select"
               >
                 {MOVIMENTACAO_OPCOES.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>{o.value === '' ? '—' : t(o.labelKey)}</option>
                 ))}
               </select>
 
-              <label className="form-label">Segurança (1-5)</label>
+              <label className="form-label">{t('criar_itinerario.seguranca_label')}</label>
               <input
                 type="number"
                 min="1"
@@ -965,12 +994,12 @@ function CriarItinerario() {
                   checked={pontos[pontoAtivo].entrada_gratuita}
                   onChange={(e) => atualizarPonto(pontoAtivo, 'entrada_gratuita', e.target.checked)}
                 />
-                Entrada gratuita
+                {t('criar_itinerario.entrada_gratuita')}
               </label>
 
               {!pontos[pontoAtivo].entrada_gratuita && (
                 <>
-                  <label className="form-label">Avaliação de preço (1-5)</label>
+                  <label className="form-label">{t('criar_itinerario.avaliacao_preco')}</label>
                   <input
                     type="number"
                     min="1"
@@ -982,18 +1011,18 @@ function CriarItinerario() {
                 </>
               )}
 
-              <label className="form-label">Meio de deslocamento até aqui</label>
+              <label className="form-label">{t('criar_itinerario.meio_deslocamento_label')}</label>
               <select
                 value={pontos[pontoAtivo].meio_deslocamento}
                 onChange={(e) => atualizarPonto(pontoAtivo, 'meio_deslocamento', e.target.value)}
                 className="form-select"
               >
                 {MEIO_DESLOCAMENTO_OPCOES.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>{o.value === '' ? '—' : t(o.labelKey)}</option>
                 ))}
               </select>
 
-              <label className="form-label">Horário estimado</label>
+              <label className="form-label">{t('criar_itinerario.horario_estimado_label')}</label>
               <input
                 type="time"
                 value={pontos[pontoAtivo].horario_estimado}
@@ -1001,7 +1030,7 @@ function CriarItinerario() {
                 className="form-input"
               />
 
-              <label className="form-label">Comentário</label>
+              <label className="form-label">{t('criar_itinerario.comentario_label')}</label>
               <textarea
                 value={pontos[pontoAtivo].comentario}
                 onChange={(e) => atualizarPonto(pontoAtivo, 'comentario', e.target.value.slice(0, 500))}
@@ -1012,11 +1041,11 @@ function CriarItinerario() {
               <p className="contador-caracteres">{pontos[pontoAtivo].comentario.length}/500</p>
 
               <label className="form-label">
-                Fotos e vídeos deste local (vídeo: até 2 min, 4K aceito — comprimido automaticamente)
+                {t('criar_itinerario.midia_instrucoes')}
               </label>
               <div className="linha-midia">
                 <label htmlFor={`midia-input-${pontoAtivo}`} className="btn-upload-midia">
-                  <IconeUpload size={16} /> Adicionar mídia
+                  <IconeUpload size={16} /> {t('criar_itinerario.adicionar_midia')}
                   <input
                     id={`midia-input-${pontoAtivo}`}
                     type="file"
@@ -1032,7 +1061,7 @@ function CriarItinerario() {
                     type="button"
                     onClick={abrirConfirmarRemoverPonto}
                     className="btn-icone-remover-ponto"
-                    title="Remover este ponto"
+                    title={t('criar_itinerario.remover_ponto_titulo')}
                   >
                     <IconeRemover size={16} />
                   </button>
@@ -1052,7 +1081,7 @@ function CriarItinerario() {
                       value={midia}
                       as="div"
                       className="midia-item"
-                      title="Arraste para reordenar"
+                      title={t('criar_itinerario.arraste_reordenar')}
                     >
                       <MidiaThumb
                         midia={midia}
@@ -1062,7 +1091,7 @@ function CriarItinerario() {
                         <span className="midia-item__badge-video"><IconeVideo size={14} /></span>
                       )}
                       {midia.tipo === 'foto' && (
-                        <span className="midia-item__badge-recorte" title="Recortar imagem">
+                        <span className="midia-item__badge-recorte" title={t('criar_itinerario.recortar_imagem')}>
                           <IconeExpandir size={12} />
                         </span>
                       )}
@@ -1094,7 +1123,9 @@ function CriarItinerario() {
                     type="button"
                     onClick={() => setPontoAtivo(index)}
                     className={`ponto-aba${ativo ? ' ponto-aba--ativa' : ''}`}
-                    title={ponto.local?.nome ? `Ponto #${index + 1} — ${ponto.local.nome}` : `Ponto #${index + 1}`}
+                    title={ponto.local?.nome
+                      ? t('criar_itinerario.ponto_numero_com_local', { numero: index + 1, local: ponto.local.nome })
+                      : t('criar_itinerario.ponto_numero', { numero: index + 1 })}
                   >
                     <span className="ponto-aba__numero">#{index + 1}</span>
                     {ponto.local?.nome && <span className="ponto-aba__nome">{ponto.local.nome}</span>}

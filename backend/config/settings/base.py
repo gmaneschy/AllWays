@@ -31,8 +31,23 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
+LANGUAGE_CODE = 'pt-br'
+
+LANGUAGES = [
+    ('pt-br', 'Português (Brasil)'),
+    ('en', 'English'),
+    ('es', 'Español'),
+    ('fr', 'Français'),
+    ('de', 'Deutsch'),
+    ('it', 'Italiano'),
+    ('zh-hans', '简体中文'),
+    ('zh-hant', '繁體中文'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 INSTALLED_APPS = [
+    'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,10 +69,16 @@ INSTALLED_APPS = [
     'apps.gamification',
 ]
 
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'pt-br'
+MODELTRANSLATION_LANGUAGES = ('pt-br', 'en', 'es', 'fr', 'de', 'it', 'zh-hans', 'zh-hant')
+# fallback: badge sem tradução ainda cai no pt-br em vez de aparecer vazio
+MODELTRANSLATION_FALLBACK_LANGUAGES = ('pt-br',)
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -149,8 +170,6 @@ SIMPLE_JWT = {
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 

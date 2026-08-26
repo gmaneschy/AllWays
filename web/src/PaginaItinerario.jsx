@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MoreVertical } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api, { getUsuarioLogado, curtir } from './api';
 import BadgeDestaque from './BadgeDestaque';
 import BadgesItinerarioTags from './BadgesItinerarioTags';
@@ -24,6 +25,7 @@ import {
 import './PaginaItinerario.css';
 
 function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApagar, onResponder }) {
+  const { t, i18n } = useTranslation(['itinerarios', 'social']);
   return (
     <div className={`comentario-linha${isResposta ? ' comentario-linha--resposta' : ''}`}>
       {c.autor_foto
@@ -39,7 +41,11 @@ function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApa
           </Link>
           <BadgeDestaque badge={c.autor_badge_destaque} size={14} />
           <span className="comentario-linha__data">
-            {new Date(c.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            {/* Antes: locale 'pt-BR' fixo no toLocaleDateString, então a
+                data do comentário sempre saía em português mesmo com o
+                app inteiro traduzido. Agora usa i18n.language — reflete
+                o idioma ativo de verdade. */}
+            {new Date(c.criado_em).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' })}
           </span>
           {usuarioLogado?.username === c.autor_nome && (
             <button onClick={() => onApagar(c.id, isResposta)} className="comentario-linha__apagar">
@@ -68,7 +74,7 @@ function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApa
               onClick={() => onResponder(raizId, { id: c.autor, username: c.autor_nome })}
               className="comentario-linha__responder"
             >
-              Responder
+              {t('social:comentarios.responder')}
             </button>
           )}
         </div>
@@ -78,37 +84,31 @@ function LinhaComentario({ c, raizId, isResposta, usuarioLogado, onCurtir, onApa
 }
 
 function PaginaItinerario() {
+  const { t, i18n } = useTranslation(['itinerarios', 'social', 'feed', 'common']);
   const { id } = useParams();
   const navigate = useNavigate();
   const usuarioLogado = getUsuarioLogado();
   const [it, setIt] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
-  // Incrementado por retentarBusca() só pra forçar o useEffect de busca a
-  // rodar de novo — o valor em si não é usado em lugar nenhum.
   const [tentativa, setTentativa] = useState(0);
   const [salvando, setSalvando] = useState(false);
   const [salvoMsg, setSalvoMsg] = useState(null);
   const [comentarios, setComentarios] = useState([]);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
-  const [textoResposta, setTextoResposta] = useState({}); // { [raizId]: rascunho }
-  const [respondendoA, setRespondendoA] = useState(null); // { raizId, usuario: { id, username } } | null
+  const [textoResposta, setTextoResposta] = useState({});
+  const [respondendoA, setRespondendoA] = useState(null);
   const [compartilhando, setCompartilhando] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const [maisOpcoesAberto, setMaisOpcoesAberto] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
-  // Comentário/resposta pendente de confirmação de exclusão:
-  // { id, ehResposta } | null — mesma ideia do confirmandoExclusao acima,
-  // mas pro comentário em vez do itinerário inteiro.
   const [confirmandoApagarComentario, setConfirmandoApagarComentario] = useState(null);
   const [apagandoComentario, setApagandoComentario] = useState(false);
   const painelComentariosRef = useRef(null);
   const maisOpcoesRef = useRef(null);
 
-  // Fecha o dropdown "Mais opções" ao clicar fora dele — mesmo padrão do
-  // painelAberto na Navbar.
   useEffect(() => {
     function handleClickFora(e) {
       if (maisOpcoesRef.current && !maisOpcoesRef.current.contains(e.target)) {
@@ -129,14 +129,6 @@ function PaginaItinerario() {
         const itRes = await api.get(`/itineraries/itinerarios/${id}/detalhe/`);
         if (cancelado) return;
 
-        // Rascunho não tem página própria — ele deve se comportar como
-        // "Usar como base" (ver usarComoBase logo abaixo), nunca como um
-        // post navegável: não tem comentários (o endpoint nem responde
-        // pra rascunho, daí o 404 que essa checagem evita), curtir não faz
-        // sentido, e "usar como base" no próprio rascunho não faria
-        // sentido também. Busca o detalhe só pra descobrir o status, sem
-        // nunca chegar a preencher `it` nem buscar comentários — a página
-        // nunca renderiza o post em si, só redireciona.
         if (itRes.data.status === 'rascunho') {
           navigate(`/criar?base=${id}`, { replace: true });
           return;
@@ -161,8 +153,6 @@ function PaginaItinerario() {
     setTentativa((t) => t + 1);
   }
 
-  // Enquanto algum vídeo ainda estiver 'processando' (compressão async no
-  // backend), repolla o detalhe do itinerário até todos saírem desse estado.
   const temVideoProcessando = it?.pontos?.some((p) => p.videos?.some((v) => v.status === 'processando'));
 
   useEffect(() => {
@@ -182,7 +172,7 @@ function PaginaItinerario() {
     try {
       const res = await api.post(`/itineraries/itinerarios/${id}/salvar/`);
       setIt((prev) => ({ ...prev, salvo_por_mim: res.data.salvo }));
-      setSalvoMsg(res.data.salvo ? 'Itinerário salvo!' : 'Removido dos salvos.');
+      setSalvoMsg(res.data.salvo ? t('pagina_itinerario.itinerario_salvo') : t('pagina_itinerario.removido_salvos'));
       setTimeout(() => setSalvoMsg(null), 2500);
     } catch (_) {} finally { setSalvando(false); }
   }
@@ -203,7 +193,6 @@ function PaginaItinerario() {
   }
 
   function usarComoBase() {
-    // Redireciona para criar itinerário passando o ID para carregar como base
     navigate(`/criar?base=${id}`);
   }
 
@@ -212,9 +201,6 @@ function PaginaItinerario() {
     setExcluindo(true);
     try {
       await api.delete(`/itineraries/itinerarios/${id}/`);
-      // O post deixou de existir — não tem pra onde "voltar" nele mesmo,
-      // então manda pro perfil do autor (replace: true pra não deixar a
-      // URL morta no histórico do botão "voltar").
       navigate(`/perfil/${it.autor_username}`, { replace: true });
     } catch (_) {
       setExcluindo(false);
@@ -223,13 +209,8 @@ function PaginaItinerario() {
   }
 
   function focarComentarios() {
-    // Em telas largas os comentários já estão visíveis ao lado; em telas
-    // estreitas (coluna empilhada) isso rola até o painel — mesmo clique,
-    // dois comportamentos conforme o layout.
     painelComentariosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-
-  // ─── Helpers pra navegar a árvore de comentários (raiz + respostas, 1 nível) ───
 
   function atualizarComentarioNaArvore(lista, comentarioId, updateFn) {
     return lista.map((c) => {
@@ -332,7 +313,7 @@ function PaginaItinerario() {
     }
   }
 
-  if (carregando) return <p className="pagina-itinerario__carregando">Carregando...</p>;
+  if (carregando) return <p className="pagina-itinerario__carregando">{t('pagina_itinerario.carregando')}</p>;
   if (erro) {
     return (
       <div className="pagina-itinerario pagina-itinerario--erro">
@@ -343,18 +324,20 @@ function PaginaItinerario() {
   if (!it) return null;
 
   const ehAutor = usuarioLogado?.username === it.autor_username;
+  const tipoLabel = it.tipo === 'day_trip'
+    ? t('card_resumo.tipo_day_trip')
+    : t('card_resumo.tipo_multi_day_trip');
 
   return (
     <div className="pagina-itinerario">
       <div className="pagina-itinerario__corpo">
 
-        {/* ─── Post — mesma forma do FeedCard ─── */}
         <div className="pagina-itinerario__post">
           <div className="pagina-itinerario__post-header">
             <h1 className="pagina-itinerario__post-titulo">{it.titulo}</h1>
             <div className="pagina-itinerario__post-header-direita">
               <span className="pagina-itinerario__post-tipo">
-                {it.tipo === 'day_trip' ? 'Day Trip' : 'Multi-Day Trip'}
+                {tipoLabel}
               </span>
 
               {usuarioLogado && (
@@ -362,7 +345,7 @@ function PaginaItinerario() {
                   <button
                     onClick={() => setMaisOpcoesAberto((prev) => !prev)}
                     className={`pagina-itinerario__mais-opcoes-botao${maisOpcoesAberto ? ' pagina-itinerario__mais-opcoes-botao--ativo' : ''}`}
-                    title="Mais opções"
+                    title={t('pagina_itinerario.mais_opcoes')}
                   >
                     <MoreVertical size={20} />
                   </button>
@@ -376,7 +359,7 @@ function PaginaItinerario() {
                           className={`pagina-itinerario__mais-opcoes-item${it.salvo_por_mim ? ' pagina-itinerario__mais-opcoes-item--ativo' : ''}`}
                         >
                           {it.salvo_por_mim ? <IconeSucesso size={16} /> : <IconeAdicionar size={16} />}
-                          {it.salvo_por_mim ? 'Salvo' : 'Salvar itinerário'}
+                          {it.salvo_por_mim ? t('pagina_itinerario.salvo') : t('pagina_itinerario.salvar_itinerario')}
                         </button>
                       )}
                       <button
@@ -384,7 +367,7 @@ function PaginaItinerario() {
                         className="pagina-itinerario__mais-opcoes-item"
                       >
                         <IconeReplicar size={16}/>
-                        Replicar
+                        {t('pagina_itinerario.replicar')}
                       </button>
 
                       {!ehAutor && (
@@ -393,7 +376,7 @@ function PaginaItinerario() {
                           className="pagina-itinerario__mais-opcoes-item pagina-itinerario__mais-opcoes-item--perigo"
                         >
                           <IconeDenunciar size={16} />
-                          Denunciar
+                          {t('pagina_itinerario.denunciar')}
                         </button>
                       )}
 
@@ -403,7 +386,7 @@ function PaginaItinerario() {
                           className="pagina-itinerario__mais-opcoes-item pagina-itinerario__mais-opcoes-item--perigo"
                         >
                           <IconeFechar size={16} />
-                          Excluir itinerário
+                          {t('pagina_itinerario.excluir_itinerario')}
                         </button>
                       )}
                     </div>
@@ -430,7 +413,7 @@ function PaginaItinerario() {
               </span>
             )}
             {it.status === 'rascunho' && (
-              <span className="pagina-itinerario__badge-rascunho">Rascunho</span>
+              <span className="pagina-itinerario__badge-rascunho">{t('pagina_itinerario.badge_rascunho')}</span>
             )}
           </div>
 
@@ -446,15 +429,15 @@ function PaginaItinerario() {
             <button
               onClick={handleCurtir}
               className={`pagina-itinerario__post-acao${it.curtido ? ' pagina-itinerario__post-acao--curtido' : ''}`}
-              title="Curtir"
+              title={t('feed:feed_card.curtir')}
             >
               <IconeLike size={22} fill={it.curtido ? 'currentColor' : 'none'} />
             </button>
-            <button onClick={focarComentarios} className="pagina-itinerario__post-acao" title="Comentar">
+            <button onClick={focarComentarios} className="pagina-itinerario__post-acao" title={t('feed:feed_card.comentar')}>
               <IconeComentario size={22} />
             </button>
             {it.status === 'publicado' && (
-              <button onClick={() => setCompartilhando(true)} className="pagina-itinerario__post-acao" title="Compartilhar">
+              <button onClick={() => setCompartilhando(true)} className="pagina-itinerario__post-acao" title={t('feed:feed_card.compartilhar')}>
                 <IconeCompartilhar size={22} />
               </button>
             )}
@@ -462,7 +445,7 @@ function PaginaItinerario() {
 
           {it.total_curtidas > 0 && (
             <p className="pagina-itinerario__post-contagem-curtidas">
-              {it.total_curtidas} curtida{it.total_curtidas !== 1 ? 's' : ''}
+              {t('feed:feed_card.contagem_curtidas', { count: it.total_curtidas })}
             </p>
           )}
 
@@ -473,11 +456,10 @@ function PaginaItinerario() {
           )}
         </div>
 
-        {/* ─── Comentários — coluna da direita, como o modal de post do Instagram ─── */}
         {it.status === 'publicado' && (
           <div ref={painelComentariosRef} className="pagina-itinerario__comentarios-painel">
             <h2 className="comentarios-secao__titulo">
-              Comentários {comentarios.length > 0 && <span className="comentarios-secao__contagem">({comentarios.length})</span>}
+              {t('pagina_itinerario.comentarios_titulo')} {comentarios.length > 0 && <span className="comentarios-secao__contagem">({comentarios.length})</span>}
             </h2>
 
             {usuarioLogado && (
@@ -493,7 +475,7 @@ function PaginaItinerario() {
                     value={textoComentario}
                     onChange={(e) => setTextoComentario(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), postarComentario())}
-                    placeholder="Adicione um comentário..."
+                    placeholder={t('social:comentarios.placeholder_novo')}
                     rows={2}
                     className="novo-comentario__textarea"
                   />
@@ -503,7 +485,7 @@ function PaginaItinerario() {
                     className="btn-primario"
                     style={{ marginTop: 6 }}
                   >
-                    {enviandoComentario ? 'Postando...' : 'Comentar'}
+                    {enviandoComentario ? t('pagina_itinerario.postando') : t('pagina_itinerario.comentar_botao')}
                   </button>
                 </div>
               </div>
@@ -511,7 +493,7 @@ function PaginaItinerario() {
 
             <div className="pagina-itinerario__comentarios-lista">
               {comentarios.length === 0 && (
-                <p className="comentarios-vazio">Nenhum comentário ainda. Seja o primeiro!</p>
+                <p className="comentarios-vazio">{t('social:comentarios.nenhum_ainda')}</p>
               )}
               {comentarios.map((c) => (
                 <div key={c.id}>
@@ -545,18 +527,18 @@ function PaginaItinerario() {
                         value={textoResposta[c.id] || ''}
                         onChange={(e) => setTextoResposta((prev) => ({ ...prev, [c.id]: e.target.value }))}
                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), postarResposta(c.id))}
-                        placeholder={`Respondendo a @${respondendoA.usuario?.username}...`}
+                        placeholder={t('social:comentarios.respondendo_a', { username: respondendoA.usuario?.username })}
                         className="resposta-form__input"
                       />
                       <button
                         onClick={() => postarResposta(c.id)}
                         disabled={!textoResposta[c.id]?.trim()}
                         className="btn-primario"
-                        title="Enviar resposta"
+                        title={t('pagina_itinerario.enviar_resposta')}
                       >
                         <IconeEnviar size={16} />
                       </button>
-                      <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar" title="Cancelar">
+                      <button onClick={() => setRespondendoA(null)} className="resposta-form__cancelar" title={t('common:avisos.cancelar')}>
                         <IconeFechar size={16} />
                       </button>
                     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from './api';
 import CardItinerarioResumo from './CardItinerarioResumo';
 import { IconeHashtag } from './icons';
@@ -8,6 +9,7 @@ import EstadoErro from './EstadoErro';
 import './PaginaHashtag.css';
 
 function PaginaHashtag() {
+  const { t } = useTranslation('feed');
   const { nome } = useParams();
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -21,12 +23,10 @@ function PaginaHashtag() {
         const res = await api.get(`/social/hashtag/${nome}/`);
         setDados(res.data);
       } catch (err) {
-        // Substituindo o texto simples pelo objeto estruturado
         const erroClassificado = classificarErro(err);
 
-        // Personaliza a mensagem se for um erro 404
         if (erroClassificado.tipo === 'nao_encontrado') {
-           erroClassificado.mensagem = `Hashtag #${nome} não encontrada.`;
+          erroClassificado.mensagem = t('hashtag.nao_encontrada', { nome });
         }
 
         setErro(erroClassificado);
@@ -35,22 +35,26 @@ function PaginaHashtag() {
       }
     }
     if (nome) buscar();
-  }, [nome]);
+  }, [nome, t]);
 
-  if (carregando) return <p className="pagina-hashtag__carregando">Carregando...</p>;
+  if (carregando) return <p className="pagina-hashtag__carregando">{t('hashtag.carregando')}</p>;
 
-  // Renderizar o novo componente, passando a função "buscar" caso o erro seja retentável
   if (erro) return (
       <EstadoErro
         erro={erro}
         tamanho="pagina"
         onRetentar={() => {
-            // Recriar a função de busca ou re-disparar o fetch
             setCarregando(true);
             setErro(null);
             api.get(`/social/hashtag/${nome}/`)
                .then(res => setDados(res.data))
-               .catch(err => setErro(classificarErro(err)))
+               .catch(err => {
+                 const erroClassificado = classificarErro(err);
+                 if (erroClassificado.tipo === 'nao_encontrado') {
+                   erroClassificado.mensagem = t('hashtag.nao_encontrada', { nome });
+                 }
+                 setErro(erroClassificado);
+               })
                .finally(() => setCarregando(false));
         }}
       />
@@ -67,13 +71,13 @@ function PaginaHashtag() {
         <div>
           <h1 className="pagina-hashtag__titulo">#{dados.hashtag}</h1>
           <p className="pagina-hashtag__contagem">
-            {dados.total} itinerário{dados.total !== 1 ? 's' : ''}
+            {t('hashtag.contagem', { count: dados.total })}
           </p>
         </div>
       </div>
 
       {dados.itinerarios.length === 0 && (
-        <p className="pagina-hashtag__vazio">Nenhum itinerário publicado com esta hashtag ainda.</p>
+        <p className="pagina-hashtag__vazio">{t('hashtag.vazio')}</p>
       )}
       <div className="grid-itinerarios">
         {dados.itinerarios.map((it) => (

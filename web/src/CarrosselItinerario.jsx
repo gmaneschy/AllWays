@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import LightboxMidia from './LightboxMidia';
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
 import { usePlayVideoControlado } from './usePlayVideoControlado';
@@ -24,18 +25,21 @@ import {
 } from './icons';
 import './CarrosselItinerario.css';
 
-const MOVIMENTACAO_LABEL = {
-  vazio: 'Vazio',
-  populado: 'Populado',
-  cheio: 'Cheio',
+// Chave em vez do texto direto: os dois mapas são módulo-level e não têm
+// acesso ao t() do react-i18next (hooks só funcionam dentro do corpo do
+// componente) — a tradução é resolvida no render, junto com o pontoAtivo.
+const MOVIMENTACAO_LABEL_KEY = {
+  vazio: 'carrossel.movimentacao.vazio',
+  populado: 'carrossel.movimentacao.populado',
+  cheio: 'carrossel.movimentacao.cheio',
 };
 
-const DESLOCAMENTO_LABEL = {
-  a_pe: 'A pé',
-  carro: 'Carro',
-  taxi_app: 'Táxi/App',
-  transporte_publico: 'Transporte público',
-  bicicleta: 'Bicicleta',
+const DESLOCAMENTO_LABEL_KEY = {
+  a_pe: 'carrossel.deslocamento.a_pe',
+  carro: 'carrossel.deslocamento.carro',
+  taxi_app: 'carrossel.deslocamento.taxi_app',
+  transporte_publico: 'carrossel.deslocamento.transporte_publico',
+  bicicleta: 'carrossel.deslocamento.bicicleta',
 };
 
 /** Achata os pontos do itinerário numa sequência linear de "slides" — um
@@ -62,6 +66,7 @@ function montarSlides(pontos) {
  * o slide cruza pra um ponto diferente. Usado pelo FeedCard e pela
  * PaginaItinerario — mesmo componente, mesmo comportamento nas duas telas. */
 function CarrosselItinerario({ pontos }) {
+  const { t } = useTranslation('itinerarios');
   const mudo = useMudoGlobal();
   const slides = useMemo(() => montarSlides(pontos), [pontos]);
   const totalSlides = slides.length;
@@ -164,7 +169,7 @@ function CarrosselItinerario({ pontos }) {
                   // (centro), idêntico ao comportamento anterior.
                   style={{ objectPosition: `${slideAtualObj.posicao_x ?? 50}% ${slideAtualObj.posicao_y ?? 50}%` }}
                   onClick={() => setLightboxAberto(slideAtualObj)}
-                  title="Clique para abrir em tela cheia"
+                  title={t('carrossel.clique_tela_cheia')}
                 />
               )}
 
@@ -173,7 +178,7 @@ function CarrosselItinerario({ pontos }) {
                   {slideAtualObj.status && slideAtualObj.status !== 'pronto' ? (
                     <div className="carrossel-itin__slide-vazio">
                       <IconePlay size={22} />
-                      <span>{slideAtualObj.status === 'erro' ? 'Falha ao processar vídeo' : 'Processando vídeo...'}</span>
+                      <span>{slideAtualObj.status === 'erro' ? t('carrossel.video_falha') : t('carrossel.video_processando')}</span>
                     </div>
                   ) : (
                     <>
@@ -206,7 +211,7 @@ function CarrosselItinerario({ pontos }) {
                         <button
                           onClick={(e) => { e.stopPropagation(); alternarMudoGlobal(); }}
                           className="carrossel-itin__video-btn"
-                          title={mudo ? 'Ativar som' : 'Mutar'}
+                          title={mudo ? t('carrossel.ativar_som') : t('carrossel.mutar')}
                         >
                           {mudo ? <IconeSomMudo size={16} /> : <IconeSom size={16} />}
                         </button>
@@ -217,7 +222,7 @@ function CarrosselItinerario({ pontos }) {
                             setLightboxAberto({ ...slideAtualObj, tempoInicial: tempoAtual });
                           }}
                           className="carrossel-itin__video-btn"
-                          title="Tela cheia"
+                          title={t('carrossel.tela_cheia')}
                         >
                           <IconeExpandir size={16} />
                         </button>
@@ -230,7 +235,7 @@ function CarrosselItinerario({ pontos }) {
               {slideAtualObj.tipo === 'vazio' && (
                 <div className="carrossel-itin__slide-vazio">
                   <IconeProximaParada size={22} />
-                  <span>Sem fotos deste local</span>
+                  <span>{t('carrossel.sem_fotos_local')}</span>
                 </div>
               )}
             </motion.div>
@@ -238,12 +243,12 @@ function CarrosselItinerario({ pontos }) {
         </AnimatePresence>
 
         {totalSlides > 1 && slideAtual > 0 && (
-          <button onClick={irAnterior} className="carrossel-itin__nav carrossel-itin__nav--esquerda" title="Voltar">
+          <button onClick={irAnterior} className="carrossel-itin__nav carrossel-itin__nav--esquerda" title={t('carrossel.voltar')}>
             <IconeSetaEsquerda size={20} />
           </button>
         )}
         {totalSlides > 1 && slideAtual < totalSlides - 1 && (
-          <button onClick={irProximo} className="carrossel-itin__nav carrossel-itin__nav--direita" title="Ir">
+          <button onClick={irProximo} className="carrossel-itin__nav carrossel-itin__nav--direita" title={t('carrossel.ir')}>
             <IconeSetaDireita size={20} />
           </button>
         )}
@@ -315,31 +320,35 @@ function CarrosselItinerario({ pontos }) {
             {pontoAtivo.movimentacao && (
               <span className="carrossel-itin__ponto-meta-item">
                 <IconeMovimentacao size={13} />
-                {MOVIMENTACAO_LABEL[pontoAtivo.movimentacao]}
+                {t(MOVIMENTACAO_LABEL_KEY[pontoAtivo.movimentacao])}
               </span>
             )}
             {pontoAtivo.entrada_gratuita ? (
               <span className="carrossel-itin__ponto-meta-item">
                 <IconeSucesso size={13} />
-                Entrada gratuita
+                {t('carrossel.entrada_gratuita')}
               </span>
             ) : pontoAtivo.preco_medio && (
               <span className="carrossel-itin__ponto-meta-item">
                 <IconePreco size={13} />
-                Custo-benefício {pontoAtivo.preco_medio}/5
+                {t('carrossel.custo_beneficio', { valor: pontoAtivo.preco_medio })}
               </span>
             )}
             {pontoAtivo.seguranca && (
               <span className="carrossel-itin__ponto-meta-item">
                 <IconeSeguranca size={13} />
-                Segurança {pontoAtivo.seguranca}/5
+                {t('carrossel.seguranca', { valor: pontoAtivo.seguranca })}
               </span>
             )}
             {pontoAtivo.distancia_ate_proximo != null && (
               <span className="carrossel-itin__ponto-meta-item">
                 <IconeProximaParada size={13} />
-                {Math.round(pontoAtivo.distancia_ate_proximo)}m até o próximo
-                {pontoAtivo.meio_deslocamento && ` · ${DESLOCAMENTO_LABEL[pontoAtivo.meio_deslocamento] || pontoAtivo.meio_deslocamento}`}
+                {t('carrossel.distancia_proximo', { distancia: Math.round(pontoAtivo.distancia_ate_proximo) })}
+                {pontoAtivo.meio_deslocamento && ` · ${
+                  DESLOCAMENTO_LABEL_KEY[pontoAtivo.meio_deslocamento]
+                    ? t(DESLOCAMENTO_LABEL_KEY[pontoAtivo.meio_deslocamento])
+                    : pontoAtivo.meio_deslocamento
+                }`}
               </span>
             )}
           </div>

@@ -1,24 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { IconeFechar, IconeSom, IconeSomMudo, IconePlay } from './icons';
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
 import { usePlayVideoControlado } from './usePlayVideoControlado';
 import './LightboxMidia.css';
 
-/** Visualizador fullscreen de uma única foto ou vídeo — usado pelo FeedCard
- * (clique na foto, ou botão de expandir do vídeo) e pensado pra ser
- * reaproveitado depois pela PaginaItinerario, já que o mecanismo é o mesmo. */
 function LightboxMidia({ midia, onFechar }) {
+  const { t } = useTranslation('itinerarios');
   const mudo = useMudoGlobal();
   const [pausado, setPausado] = useState(false);
   const videoRef = useRef(null);
 
   usePlayVideoControlado(videoRef, midia?.tipo === 'video', midia?.id);
 
-  // Centraliza os três jeitos de fechar (botão X, clique no overlay, Esc)
-  // nesta única função — é ela que lê o currentTime do vídeo no momento
-  // do fechamento e devolve pro CarrosselItinerario, pra ele continuar o
-  // vídeo de trás exatamente de onde o usuário parou de ver em tela cheia.
   function fechar() {
     const tempoFinal = midia?.tipo === 'video' && videoRef.current
       ? videoRef.current.currentTime
@@ -31,7 +26,6 @@ function LightboxMidia({ midia, onFechar }) {
       if (e.key === 'Escape') fechar();
     }
     document.addEventListener('keydown', aoTeclar);
-    // Trava o scroll da página por trás enquanto o lightbox está aberto
     const overflowOriginal = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
@@ -52,7 +46,7 @@ function LightboxMidia({ midia, onFechar }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
     >
-      <button onClick={fechar} className="lightbox-fechar" title="Fechar">
+      <button onClick={fechar} className="lightbox-fechar" title={t('lightbox.fechar')}>
         <IconeFechar size={24} />
       </button>
 
@@ -76,10 +70,6 @@ function LightboxMidia({ midia, onFechar }) {
               loop
               playsInline
               controls={false}
-              // tempoInicial vem do CarrosselItinerario — o ponto exato em
-              // que o vídeo estava quando o usuário abriu o fullscreen.
-              // Precisa ser em onLoadedMetadata: setar currentTime antes
-              // dos metadados carregarem é ignorado pelo navegador.
               onLoadedMetadata={(e) => {
                 if (typeof midia.tempoInicial === 'number') {
                   e.currentTarget.currentTime = midia.tempoInicial;
@@ -106,7 +96,7 @@ function LightboxMidia({ midia, onFechar }) {
             <button
               onClick={(e) => { e.stopPropagation(); alternarMudoGlobal(); }}
               className="lightbox-video-btn lightbox-video-btn--mudo"
-              title={mudo ? 'Ativar som' : 'Mutar'}
+              title={mudo ? t('carrossel.ativar_som') : t('carrossel.mutar')}
             >
               {mudo ? <IconeSomMudo size={18} /> : <IconeSom size={18} />}
             </button>

@@ -1,0 +1,166 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: apps/itineraries/serializers.py:73
+msgid "O itinerário precisa de pelo menos 1 local."
+msgstr "行程至少需要1个地点。"
+
+#: apps/itineraries/serializers.py:78
+msgid "A data do itinerário não pode ser no futuro."
+msgstr "行程日期不能是未来的日期。"
+
+#: apps/itineraries/serializers.py:92
+#, python-brace-format
+msgid ""
+"Não é possível publicar diretamente por aqui. Salve como rascunho, envie as "
+"fotos/vídeos de cada ponto e então chame POST /itinerarios/{id}/publicar/."
+msgstr ""
+"无法直接从这里发布。请先保存为草稿，上传每个地点的照片/视频，然后调用 POST "
+"/itinerarios/{id}/publicar/。"
+
+#: apps/itineraries/services.py:27
+msgid "Título é obrigatório."
+msgstr "标题为必填项。"
+
+#: apps/itineraries/services.py:34
+msgid "Data de início é obrigatória para publicar."
+msgstr "发布时必须填写开始日期。"
+
+#: apps/itineraries/services.py:38
+msgid ""
+"Data de término é obrigatória para publicar um itinerário de múltiplos dias."
+msgstr "发布多日行程时必须填写结束日期。"
+
+#: apps/itineraries/services.py:40
+msgid "Data de término não pode ser anterior à data de início."
+msgstr "结束日期不能早于开始日期。"
+
+#: apps/itineraries/services.py:44
+msgid "O itinerário precisa de pelo menos um ponto."
+msgstr "行程至少需要一个地点。"
+
+#: apps/itineraries/services.py:55
+#, python-format
+msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
+msgstr "地点 #%(numero)s：发布时必须填写字段“%(campo)s”。"
+
+#: apps/itineraries/services.py:61
+#, python-format
+msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
+msgstr "地点 #%(numero)s：免费地点不应设置价格评级。"
+
+#: apps/itineraries/services.py:66
+#, python-format
+msgid ""
+"Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
+"gratuita."
+msgstr "地点 #%(numero)s：请填写价格评级，或标记为免费入场。"
+
+#: apps/itineraries/services.py:78
+#, python-format
+msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
+msgstr "地点 #%(numero)s：请至少添加一张照片或一段视频。"
+
+#: apps/social/serializers.py:45
+msgid "Você não pode seguir a si mesmo."
+msgstr "您不能关注自己。"
+
+#: apps/social/serializers.py:79
+msgid "Descreva o motivo da denúncia."
+msgstr "请描述举报原因。"
+
+#: apps/social/serializers.py:126
+msgid ""
+"Respostas devem apontar `parent` para o comentário raiz da thread, não para "
+"outra resposta."
+msgstr "回复的 `parent` 必须指向该讨论的根评论，而不能指向另一条回复。"
+
+#: apps/social/serializers.py:226
+msgid "Mensagem de texto não pode ser vazia."
+msgstr "文本消息不能为空。"
+
+#: apps/social/serializers.py:228
+msgid "Mensagem de imagem requer um arquivo."
+msgstr "图片消息需要提供文件。"
+
+#: apps/social/serializers.py:230
+msgid "Mensagem de áudio requer um arquivo."
+msgstr "语音消息需要提供文件。"
+
+#: apps/social/serializers.py:232
+msgid "Mensagem de vídeo requer um arquivo."
+msgstr "视频消息需要提供文件。"
+
+#: apps/social/serializers.py:234
+msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
+msgstr "行程消息需要提供一个有效且已发布的 itinerario_id。"
+
+#: apps/users/serializers.py:53
+msgid ""
+"Use de 3 a 20 caracteres: comece com uma letra e use apenas letras "
+"minúsculas, números, \".\" ou \"_\"."
+msgstr "请使用3到20个字符：以字母开头，只能使用小写字母、数字、“.”或“_”。"
+
+#: apps/users/serializers.py:57
+msgid "Este nome de usuário já está em uso."
+msgstr "该用户名已被使用。"
+
+#: apps/users/serializers.py:68
+msgid "Este e-mail já está associado a uma conta."
+msgstr "该邮箱已关联到一个账户。"
+
+#: apps/users/serializers.py:74 apps/users/serializers.py:134
+msgid "Informe um nome de exibição."
+msgstr "请填写显示名称。"
+
+#: apps/users/serializers.py:79
+msgid "Data de nascimento não pode estar no futuro."
+msgstr "出生日期不能是未来的日期。"
+
+#: apps/users/serializers.py:83
+#, python-format
+msgid "É necessário ter ao menos %(idade)d anos para se cadastrar."
+msgstr "注册需年满%(idade)d岁。"
+
+#: apps/users/serializers.py:142
+#, python-format
+msgid "Você poderá trocar o nome de exibição novamente em %(dias)d dia."
+msgid_plural ""
+"Você poderá trocar o nome de exibição novamente em %(dias)d dias."
+msgstr[0] "您将在%(dias)d天后才能再次更改显示名称。"
+
+#: apps/users/serializers.py:180
+msgid "Senha atual incorreta."
+msgstr "当前密码不正确。"
+
+#: apps/users/serializers.py:209 apps/users/serializers.py:241
+msgid "Senha incorreta."
+msgstr "密码不正确。"
+
+#: apps/users/serializers.py:215
+msgid "Duração inválida. Use 7, 15, 30 ou não informe (indefinida)."
+msgstr "时长无效。请使用7、15、30，或不填写（表示无限期）。"
+
+#: apps/users/serializers.py:246
+msgid "É necessário confirmar a exclusão da conta."
+msgstr "必须确认删除账户。"
+
+#: apps/users/serializers.py:462
+msgid "Você ainda não conquistou este distintivo."
+msgstr "您尚未获得此徽章。"

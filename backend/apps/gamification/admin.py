@@ -1,9 +1,10 @@
 from django.contrib import admin
-from .models import BadgeItinerario, TipoBadgeUsuario, BadgeUsuario, ItinerarioBadge, UsuarioBadge
+from modeltranslation.admin import TranslationAdmin
+from .models import BadgeItinerario, TipoBadgeUsuario, BadgeUsuario, UsuarioBadge
 
 
 @admin.register(BadgeItinerario)
-class BadgeItinerarioAdmin(admin.ModelAdmin):
+class BadgeItinerarioAdmin(TranslationAdmin):
     list_display = ['nome']
 
 
@@ -13,13 +14,13 @@ class BadgeUsuarioInline(admin.TabularInline):
 
 
 @admin.register(TipoBadgeUsuario)
-class TipoBadgeUsuarioAdmin(admin.ModelAdmin):
+class TipoBadgeUsuarioAdmin(TranslationAdmin):
     list_display = ['nome', 'descricao']
     inlines = [BadgeUsuarioInline]
 
 
 @admin.register(BadgeUsuario)
-class BadgeUsuarioAdmin(admin.ModelAdmin):
+class BadgeUsuarioAdmin(TranslationAdmin):
     list_display = ['nome', 'tipo', 'nivel', 'criterio_campo', 'criterio_valor']
     list_filter = ['tipo', 'nivel', 'criterio_campo']
 

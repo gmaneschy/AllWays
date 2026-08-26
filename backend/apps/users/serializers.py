@@ -1,10 +1,10 @@
 import math
 import re
 from datetime import date, timedelta
-
+from django.utils.translation import gettext_lazy as _, ngettext_lazy
 from django.utils import timezone
 from rest_framework import serializers
-from apps.itineraries.models import Itinerario, ItinerarioSalvo, ItinerarioBaixado
+from apps.itineraries.models import Itinerario
 from apps.gamification.models import UsuarioBadge
 from apps.gamification.serializers import (
     BadgeItinerarioSerializer, BadgeUsuarioSerializer, serializar_badge_destaque,
@@ -50,11 +50,11 @@ class CadastroSerializer(serializers.ModelSerializer):
         value = value.strip().lower()
         if not USERNAME_REGEX.match(value):
             raise serializers.ValidationError(
-                'Use de 3 a 20 caracteres: comece com uma letra e use apenas '
-                'letras minúsculas, números, "." ou "_".'
+                _('Use de 3 a 20 caracteres: comece com uma letra e use apenas '
+                'letras minúsculas, números, "." ou "_".')
             )
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('Este nome de usuário já está em uso.')
+            raise serializers.ValidationError(_('Este nome de usuário já está em uso.'))
         return value
 
     def validate_email(self, value):
@@ -65,22 +65,22 @@ class CadastroSerializer(serializers.ModelSerializer):
         # "nome@x.com" vs "Nome@X.com" contando como diferentes.
         value = value.strip().lower()
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError('Este e-mail já está associado a uma conta.')
+            raise serializers.ValidationError(_('Este e-mail já está associado a uma conta.'))
         return value
 
     def validate_nome_exibicao(self, value):
         value = value.strip()
         if not value:
-            raise serializers.ValidationError('Informe um nome de exibição.')
+            raise serializers.ValidationError(_('Informe um nome de exibição.'))
         return value
 
     def validate_data_nascimento(self, value):
         if value > date.today():
-            raise serializers.ValidationError('Data de nascimento não pode estar no futuro.')
+            raise serializers.ValidationError(_('Data de nascimento não pode estar no futuro.'))
         idade = (date.today() - value).days // 365
         if idade < IDADE_MINIMA:
             raise serializers.ValidationError(
-                f'É necessário ter ao menos {IDADE_MINIMA} anos para se cadastrar.'
+                _('É necessário ter ao menos %(idade)d anos para se cadastrar.') % {'idade': IDADE_MINIMA}
             )
         return value
 
@@ -131,15 +131,18 @@ class EditarPerfilSerializer(serializers.ModelSerializer):
     def validate_nome_exibicao(self, value):
         value = value.strip()
         if not value:
-            raise serializers.ValidationError('Informe um nome de exibição.')
+            raise serializers.ValidationError(_('Informe um nome de exibição.'))
 
         usuario = self.instance
         if usuario and value != usuario.nome_exibicao:
             dias_restantes = dias_restantes_cooldown_nome(usuario)
             if dias_restantes > 0:
                 raise serializers.ValidationError(
-                    f'Você poderá trocar o nome de exibição novamente em '
-                    f'{dias_restantes} dia{"s" if dias_restantes != 1 else ""}.'
+                    ngettext_lazy(
+                        'Você poderá trocar o nome de exibição novamente em %(dias)d dia.',
+                        'Você poderá trocar o nome de exibição novamente em %(dias)d dias.',
+                        dias_restantes,
+                    ) % {'dias': dias_restantes}
                 )
         return value
 
@@ -174,7 +177,7 @@ class AlterarSenhaSerializer(serializers.Serializer):
     def validate_senha_atual(self, value):
         usuario = self.context['request'].user
         if not usuario.check_password(value):
-            raise serializers.ValidationError('Senha atual incorreta.')
+            raise serializers.ValidationError(_('Senha atual incorreta.'))
         return value
 
     def validate_nova_senha(self, value):
@@ -203,13 +206,13 @@ class DesativarContaSerializer(serializers.Serializer):
     def validate_senha(self, value):
         usuario = self.context['request'].user
         if not usuario.check_password(value):
-            raise serializers.ValidationError('Senha incorreta.')
+            raise serializers.ValidationError(_('Senha incorreta.'))
         return value
 
     def validate_duracao_dias(self, value):
         if value is not None and value not in self.DURACOES_VALIDAS:
             raise serializers.ValidationError(
-                'Duração inválida. Use 7, 15, 30 ou não informe (indefinida).'
+                _('Duração inválida. Use 7, 15, 30 ou não informe (indefinida).')
             )
         return value
 
@@ -235,12 +238,12 @@ class ExcluirContaSerializer(serializers.Serializer):
     def validate_senha(self, value):
         usuario = self.context['request'].user
         if not usuario.check_password(value):
-            raise serializers.ValidationError('Senha incorreta.')
+            raise serializers.ValidationError(_('Senha incorreta.'))
         return value
 
     def validate_confirmar(self, value):
         if not value:
-            raise serializers.ValidationError('É necessário confirmar a exclusão da conta.')
+            raise serializers.ValidationError(_('É necessário confirmar a exclusão da conta.'))
         return value
 
     def save(self):
@@ -456,5 +459,5 @@ class SelecionarBadgeDestaqueSerializer(serializers.Serializer):
         usuario = self.context['request'].user
         possui = UsuarioBadge.objects.filter(usuario=usuario, badge_id=value).exists()
         if not possui:
-            raise serializers.ValidationError("Você ainda não conquistou este distintivo.")
+            raise serializers.ValidationError(_("Você ainda não conquistou este distintivo."))
         return value

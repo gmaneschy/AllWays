@@ -1,0 +1,22 @@
+{
+  "busca_local": {
+    "placeholder": "搜索地点...",
+    "trocar": "更换"
+  },
+  "pagina_place": {
+    "carregando": "正在加载...",
+    "seguindo": "已关注",
+    "seguir_lugar": "关注该地点",
+    "seguranca_media": "平均安全性",
+    "sem_avaliacoes": "— 暂无评价",
+    "media_de_5": "{{valor}} / 5",
+    "custo_beneficio_medio": "平均性价比",
+    "fotos_titulo": "照片",
+    "foto_alt": "{{nome}} 的第 {{numero}} 张照片",
+    "comentarios_titulo": "游客评论",
+    "sem_comentarios": "此地点暂无评论。",
+    "origem_prefixo": "来自行程“",
+    "origem_sufixo": "”",
+    "foto_comentario_alt": "{{nome}} 的评论照片"
+  }
+}

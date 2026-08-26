@@ -1,0 +1,22 @@
+{
+  "busca_local": {
+    "placeholder": "Buscar local...",
+    "trocar": "trocar"
+  },
+  "pagina_place": {
+    "carregando": "Carregando...",
+    "seguindo": "Seguindo",
+    "seguir_lugar": "Seguir lugar",
+    "seguranca_media": "Segurança média",
+    "sem_avaliacoes": "— sem avaliações",
+    "media_de_5": "{{valor}} / 5",
+    "custo_beneficio_medio": "Custo-benefício médio",
+    "fotos_titulo": "Fotos",
+    "foto_alt": "Foto {{numero}} de {{nome}}",
+    "comentarios_titulo": "Comentários de quem visitou",
+    "sem_comentarios": "Ainda não há comentários para este local.",
+    "origem_prefixo": "do itinerário \"",
+    "origem_sufixo": "\"",
+    "foto_comentario_alt": "Foto do comentário de {{nome}}"
+  }
+}

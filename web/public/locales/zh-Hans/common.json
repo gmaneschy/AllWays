@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "动态",
+    "explorar": "探索",
+    "criar_itinerario": "创建行程",
+    "mensagens": "消息",
+    "notificacoes": "通知",
+    "configuracoes": "设置",
+    "sair": "退出登录",
+    "entrar": "登录"
+  },
+  "offline": {
+    "reconectado": "网络已恢复",
+    "sem_conexao": "您已离线 — 部分操作可能无法完成"
+  },
+  "avisos": {
+    "confirmar": "确认",
+    "cancelar": "取消",
+    "aguarde": "请稍候...",
+    "excluir_rascunho": {
+      "titulo": "删除草稿",
+      "mensagem": "确定要删除此草稿吗？此操作无法撤销。",
+      "confirmar": "删除"
+    },
+    "excluir_itinerario": {
+      "titulo": "删除行程",
+      "mensagem": "确定要删除此行程吗？点赞和评论也会一并丢失，且此操作无法撤销。",
+      "confirmar": "删除"
+    },
+    "remover_ponto": {
+      "titulo": "移除地点",
+      "mensagem": "确定要从行程中移除此地点吗？已填写的数据和为此地点添加的媒体内容将会丢失。",
+      "confirmar": "移除"
+    },
+    "excluir_comentario": {
+      "titulo": "删除评论",
+      "titulo_resposta": "删除回复",
+      "mensagem_comentario": "确定要删除此评论吗？此操作无法撤销。",
+      "mensagem_resposta": "确定要删除此回复吗？此操作无法撤销。",
+      "confirmar": "删除"
+    },
+    "sair": {
+      "titulo": "退出账号",
+      "mensagem": "确定要退出登录吗？",
+      "confirmar": "退出"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "出错了",
+    "mensagem_padrao": "发生了意外错误。",
+    "tentar_novamente": "重试",
+    "voltar_inicio": "返回首页"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "页面未找到",
+    "mensagem": "您访问的地址不存在。"
+  },
+  "erros": {
+    "offline_titulo": "无网络连接",
+    "offline_mensagem": "请检查您的网络连接后重试。",
+    "timeout_titulo": "请求超时",
+    "timeout_mensagem": "服务器未及时响应，请重试。",
+    "servidor_indisponivel_titulo": "无法连接",
+    "servidor_indisponivel_mensagem": "服务器可能暂时不可用，请稍后重试。",
+    "nao_encontrado_titulo": "未找到",
+    "nao_encontrado_mensagem": "您查找的内容不存在或已被删除。",
+    "nao_autenticado_titulo": "会话已过期",
+    "nao_autenticado_mensagem": "请重新登录以继续。",
+    "sem_permissao_titulo": "访问被拒绝",
+    "sem_permissao_mensagem": "您没有权限查看此内容。",
+    "muitas_requisicoes_titulo": "请稍安勿躁",
+    "muitas_requisicoes_mensagem": "短时间内请求过多，请稍等片刻后再试。",
+    "servidor_titulo": "服务器错误",
+    "servidor_mensagem": "我们这边出了点问题，已经知晓此情况 — 请稍后重试。",
+    "requisicao_invalida_titulo": "无法完成",
+    "requisicao_invalida_mensagem": "无法处理该请求。",
+    "desconhecido_titulo": "出错了",
+    "desconhecido_mensagem": "发生了意外错误，请重试。"
+  },
+  "video_validacao": {
+    "excede_tamanho": "视频超过 {{mb}}MB。",
+    "excede_duracao": "视频时长超过 {{segundos}} 秒。",
+    "erro_leitura": "无法读取所选视频。"
+  }
+}

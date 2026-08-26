@@ -1,0 +1,22 @@
+{
+  "busca_local": {
+    "placeholder": "Search location...",
+    "trocar": "change"
+  },
+  "pagina_place": {
+    "carregando": "Loading...",
+    "seguindo": "Following",
+    "seguir_lugar": "Follow place",
+    "seguranca_media": "Average safety",
+    "sem_avaliacoes": "— no ratings",
+    "media_de_5": "{{valor}} / 5",
+    "custo_beneficio_medio": "Average value for money",
+    "fotos_titulo": "Photos",
+    "foto_alt": "Photo {{numero}} of {{nome}}",
+    "comentarios_titulo": "Comments from visitors",
+    "sem_comentarios": "No comments for this place yet.",
+    "origem_prefixo": "from the itinerary \"",
+    "origem_sufixo": "\"",
+    "foto_comentario_alt": "Photo from {{nome}}'s comment"
+  }
+}

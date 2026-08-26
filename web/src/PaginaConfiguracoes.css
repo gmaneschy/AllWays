@@ -88,6 +88,22 @@
   margin: 2px 0 0;
 }
 
+.config-select-idioma {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--borda-padrao);
+  font: var(--fonte-corpo);
+  color: var(--texto-principal);
+  background: var(--fundo-card);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.config-select-idioma:focus-visible {
+  outline: none;
+  border-color: var(--cor-primaria);
+}
+
 .config-chip-em-breve {
   font: var(--fonte-micro);
   color: var(--texto-secundario);

@@ -1,0 +1,34 @@
+{
+  "feed": {
+    "carregando": "Cargando feed...",
+    "vazio": "Todavía no se ha publicado ningún itinerario.",
+    "carregando_mais": "Cargando más..."
+  },
+  "feed_card": {
+    "curtir": "Me gusta",
+    "comentar": "Comentar",
+    "compartilhar": "Compartir",
+    "contagem_curtidas_one": "{{count}} me gusta",
+    "contagem_curtidas_other": "{{count}} me gusta"
+  },
+  "explorar": {
+    "placeholder_busca": "Buscar usuarios, lugares o hashtags...",
+    "buscando": "Buscando...",
+    "nenhum_resultado": "Sin resultados para \"{{query}}\"",
+    "secao_usuarios": "Usuarios",
+    "secao_lugares": "Lugares",
+    "secao_hashtags": "Hashtags",
+    "hashtag_contagem_one": "{{count}} itinerario",
+    "hashtag_contagem_other": "{{count}} itinerarios",
+    "carregando": "Cargando...",
+    "nenhum_itinerario": "Todavía no se ha publicado ningún itinerario.",
+    "carregando_mais": "Cargando más..."
+  },
+  "hashtag": {
+    "carregando": "Cargando...",
+    "nao_encontrada": "No se encontró el hashtag #{{nome}}.",
+    "contagem_one": "{{count}} itinerario",
+    "contagem_other": "{{count}} itinerarios",
+    "vazio": "Todavía no se ha publicado ningún itinerario con este hashtag."
+  }
+}
