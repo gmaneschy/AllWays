@@ -1,0 +1,38 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@react-native-community/netinfo": "12.0.1",
+    "@react-native-picker/picker": "2.11.4",
+    "@react-navigation/bottom-tabs": "^7.18.18",
+    "@react-navigation/native": "^7.3.18",
+    "@react-navigation/native-stack": "^7.18.10",
+    "axios": "^1.20.0",
+    "expo": "~57.0.18",
+    "expo-localization": "~57.0.1",
+    "expo-secure-store": "~57.0.2",
+    "expo-status-bar": "~57.0.1",
+    "i18next": "^26.4.0",
+    "lucide-react-native": "^1.37.0",
+    "react": "19.2.3",
+    "react-i18next": "^17.0.12",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
+  },
+  "scripts": {
+    "postinstall": "patch-package && node fix-codegen.js",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "private": true,
+  "devDependencies": {
+    "babel-preset-expo": "^57.0.9",
+    "patch-package": "^8.0.1"
+  }
+}

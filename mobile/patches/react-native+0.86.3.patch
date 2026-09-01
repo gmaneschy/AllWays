@@ -1,0 +1,156 @@
+diff --git a/node_modules/react-native/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js b/node_modules/react-native/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
+index c640b5a..3cc47cd 100644
+--- a/node_modules/react-native/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
++++ b/node_modules/react-native/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
+@@ -92,9 +92,9 @@ type VirtualViewExperimentalNativeProps = Readonly<{
+ }>;
+ 
+ // TODO: Rename to eliminate "Experimental" suffix in the name.
+-export default codegenNativeComponent<VirtualViewExperimentalNativeProps>(
++export default (codegenNativeComponent<VirtualViewExperimentalNativeProps>(
+   'VirtualViewExperimental',
+   {
+     interfaceOnly: true,
+   },
+-) as HostComponent<VirtualViewExperimentalNativeProps>;
++): HostComponent<VirtualViewExperimentalNativeProps>);
+diff --git a/node_modules/react-native/src/private/components/virtualview/VirtualViewNativeComponent.js b/node_modules/react-native/src/private/components/virtualview/VirtualViewNativeComponent.js
+index 4ba5b68..dafc3bd 100644
+--- a/node_modules/react-native/src/private/components/virtualview/VirtualViewNativeComponent.js
++++ b/node_modules/react-native/src/private/components/virtualview/VirtualViewNativeComponent.js
+@@ -91,6 +91,6 @@ type VirtualViewNativeProps = Readonly<{
+   onModeChange?: ?DirectEventHandler<NativeModeChangeEvent>,
+ }>;
+ 
+-export default codegenNativeComponent<VirtualViewNativeProps>('VirtualView', {
++export default (codegenNativeComponent<VirtualViewNativeProps>('VirtualView', {
+   interfaceOnly: true,
+-}) as HostComponent<VirtualViewNativeProps>;
++}): HostComponent<VirtualViewNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/ActivityIndicatorViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/ActivityIndicatorViewNativeComponent.js
+index 123a768..2259e92 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/ActivityIndicatorViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/ActivityIndicatorViewNativeComponent.js
+@@ -48,9 +48,9 @@ type RCTActivityIndicatorViewNativeProps = Readonly<{
+   size?: WithDefault<'small' | 'large', 'small'>,
+ }>;
+ 
+-export default codegenNativeComponent<RCTActivityIndicatorViewNativeProps>(
++export default (codegenNativeComponent<RCTActivityIndicatorViewNativeProps>(
+   'ActivityIndicatorView',
+   {
+     paperComponentName: 'RCTActivityIndicatorView',
+   },
+-) as HostComponent<RCTActivityIndicatorViewNativeProps>;
++): HostComponent<RCTActivityIndicatorViewNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
+index 9242670..178951b 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
+@@ -57,6 +57,6 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
+   ],
+ });
+ 
+-export default codegenNativeComponent<DebuggingOverlayNativeProps>(
++export default (codegenNativeComponent<DebuggingOverlayNativeProps>(
+   'DebuggingOverlay',
+-) as HostComponent<DebuggingOverlayNativeProps>;
++): HostComponent<DebuggingOverlayNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/ProgressBarAndroidNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/ProgressBarAndroidNativeComponent.js
+index 2e0b59c..1c2f055 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/ProgressBarAndroidNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/ProgressBarAndroidNativeComponent.js
+@@ -31,9 +31,9 @@ type AndroidProgressBarNativeProps = Readonly<{
+   testID?: WithDefault<string, ''>,
+ }>;
+ 
+-export default codegenNativeComponent<AndroidProgressBarNativeProps>(
++export default (codegenNativeComponent<AndroidProgressBarNativeProps>(
+   'AndroidProgressBar',
+   {
+     interfaceOnly: true,
+   },
+-) as HostComponent<AndroidProgressBarNativeProps>;
++): HostComponent<AndroidProgressBarNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
+index 061717b..e72d19b 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
+@@ -65,10 +65,10 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
+   supportedCommands: ['setNativeRefreshing'],
+ });
+ 
+-export default codegenNativeComponent<PullToRefreshNativeProps>(
++export default (codegenNativeComponent<PullToRefreshNativeProps>(
+   'PullToRefreshView',
+   {
+     paperComponentName: 'RCTRefreshControl',
+     excludedPlatforms: ['android'],
+   },
+-) as HostComponent<PullToRefreshNativeProps>;
++): HostComponent<PullToRefreshNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTInputAccessoryViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTInputAccessoryViewNativeComponent.js
+index 66e1e02..334ca0e 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTInputAccessoryViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTInputAccessoryViewNativeComponent.js
+@@ -19,11 +19,11 @@ type InputAccessoryNativeProps = Readonly<{
+   backgroundColor?: ?ColorValue,
+ }>;
+ 
+-export default codegenNativeComponent<InputAccessoryNativeProps>(
++export default (codegenNativeComponent<InputAccessoryNativeProps>(
+   'InputAccessory',
+   {
+     interfaceOnly: true,
+     paperComponentName: 'RCTInputAccessoryView',
+     excludedPlatforms: ['android'],
+   },
+-) as HostComponent<InputAccessoryNativeProps>;
++): HostComponent<InputAccessoryNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
+index eaf91f1..a27f5b3 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
+@@ -147,10 +147,10 @@ type RCTModalHostViewNativeProps = Readonly<{
+   identifier?: WithDefault<Int32, 0>,
+ }>;
+ 
+-export default codegenNativeComponent<RCTModalHostViewNativeProps>(
++export default (codegenNativeComponent<RCTModalHostViewNativeProps>(
+   'ModalHostView',
+   {
+     interfaceOnly: true,
+     paperComponentName: 'RCTModalHostView',
+   },
+-) as HostComponent<RCTModalHostViewNativeProps>;
++): HostComponent<RCTModalHostViewNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTSafeAreaViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTSafeAreaViewNativeComponent.js
+index 546f4fa..d697433 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTSafeAreaViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/RCTSafeAreaViewNativeComponent.js
+@@ -19,10 +19,10 @@ type RCTSafeAreaViewNativeProps = Readonly<{
+   // No props
+ }>;
+ 
+-export default codegenNativeComponent<RCTSafeAreaViewNativeProps>(
++export default (codegenNativeComponent<RCTSafeAreaViewNativeProps>(
+   'SafeAreaView',
+   {
+     paperComponentName: 'RCTSafeAreaView',
+     interfaceOnly: true,
+   },
+-) as HostComponent<RCTSafeAreaViewNativeProps>;
++): HostComponent<RCTSafeAreaViewNativeProps>);
+diff --git a/node_modules/react-native/src/private/specs_DEPRECATED/components/UnimplementedNativeViewNativeComponent.js b/node_modules/react-native/src/private/specs_DEPRECATED/components/UnimplementedNativeViewNativeComponent.js
+index b99df0a..f7c79c3 100644
+--- a/node_modules/react-native/src/private/specs_DEPRECATED/components/UnimplementedNativeViewNativeComponent.js
++++ b/node_modules/react-native/src/private/specs_DEPRECATED/components/UnimplementedNativeViewNativeComponent.js
+@@ -21,6 +21,6 @@ type UnimplementedNativeViewNativeProps = Readonly<{
+ 
+ // NOTE: This component is not implemented in paper
+ // Do not require this file in paper builds
+-export default codegenNativeComponent<UnimplementedNativeViewNativeProps>(
++export default (codegenNativeComponent<UnimplementedNativeViewNativeProps>(
+   'UnimplementedNativeView',
+-) as HostComponent<UnimplementedNativeViewNativeProps>;
++): HostComponent<UnimplementedNativeViewNativeProps>);

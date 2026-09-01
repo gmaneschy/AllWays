@@ -1,0 +1,22 @@
+{
+  "busca_local": {
+    "placeholder": "Ort suchen...",
+    "trocar": "ändern"
+  },
+  "pagina_place": {
+    "carregando": "Wird geladen...",
+    "seguindo": "Gefolgt",
+    "seguir_lugar": "Ort folgen",
+    "seguranca_media": "Durchschnittliche Sicherheit",
+    "sem_avaliacoes": "— keine Bewertungen",
+    "media_de_5": "{{valor}} / 5",
+    "custo_beneficio_medio": "Durchschnittliches Preis-Leistungs-Verhältnis",
+    "fotos_titulo": "Fotos",
+    "foto_alt": "Foto {{numero}} von {{nome}}",
+    "comentarios_titulo": "Kommentare von Besuchern",
+    "sem_comentarios": "Noch keine Kommentare zu diesem Ort.",
+    "origem_prefixo": "aus der Reiseroute \"",
+    "origem_sufixo": "\"",
+    "foto_comentario_alt": "Foto aus dem Kommentar von {{nome}}"
+  }
+}

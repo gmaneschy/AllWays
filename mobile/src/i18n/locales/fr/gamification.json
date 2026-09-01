@@ -1,0 +1,8 @@
+{
+  "modal_badge": {
+    "titulo": "Choisir un badge à mettre en avant",
+    "nenhuma_exibida": "Aucun badge affiché",
+    "carregando": "Chargement...",
+    "vazio": "Vous n'avez encore obtenu aucun badge."
+  }
+}

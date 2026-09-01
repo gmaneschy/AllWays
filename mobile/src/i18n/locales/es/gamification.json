@@ -1,0 +1,8 @@
+{
+  "modal_badge": {
+    "titulo": "Elegir insignia destacada",
+    "nenhuma_exibida": "Ninguna insignia mostrada",
+    "carregando": "Cargando...",
+    "vazio": "Todavía no has ganado ninguna insignia."
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "navbar": {
+    "feed": "Feed",
+    "explorar": "Explorar",
+    "criar_itinerario": "Crear itinerario",
+    "mensagens": "Mensajes",
+    "notificacoes": "Notificaciones",
+    "configuracoes": "Configuración",
+    "sair": "Cerrar sesión",
+    "entrar": "Iniciar sesión"
+  },
+  "offline": {
+    "reconectado": "Conexión restablecida",
+    "sem_conexao": "Estás sin conexión — algunas acciones pueden fallar"
+  },
+  "avisos": {
+    "confirmar": "Confirmar",
+    "cancelar": "Cancelar",
+    "aguarde": "Espera...",
+    "excluir_rascunho": {
+      "titulo": "Eliminar borrador",
+      "mensagem": "¿Seguro que deseas eliminar este borrador? Esta acción no se puede deshacer.",
+      "confirmar": "Eliminar"
+    },
+    "excluir_itinerario": {
+      "titulo": "Eliminar itinerario",
+      "mensagem": "¿Seguro que deseas eliminar este itinerario? También se perderán los likes y comentarios, y esta acción no se puede deshacer.",
+      "confirmar": "Eliminar"
+    },
+    "remover_ponto": {
+      "titulo": "Quitar punto",
+      "mensagem": "¿Seguro que deseas quitar este punto del itinerario? Se perderán los datos completados y los archivos multimedia agregados.",
+      "confirmar": "Quitar"
+    },
+    "excluir_comentario": {
+      "titulo": "Eliminar comentario",
+      "titulo_resposta": "Eliminar respuesta",
+      "mensagem_comentario": "¿Seguro que deseas eliminar este comentario? Esta acción no se puede deshacer.",
+      "mensagem_resposta": "¿Seguro que deseas eliminar esta respuesta? Esta acción no se puede deshacer.",
+      "confirmar": "Eliminar"
+    },
+    "sair": {
+      "titulo": "Cerrar sesión",
+      "mensagem": "¿Seguro que deseas cerrar sesión?",
+      "confirmar": "Cerrar sesión"
+    }
+  },
+  "estado_erro": {
+    "titulo_padrao": "Algo salió mal",
+    "mensagem_padrao": "Ocurrió un error inesperado.",
+    "tentar_novamente": "Intentar de nuevo",
+    "voltar_inicio": "Volver al inicio"
+  },
+  "pagina_nao_encontrada": {
+    "titulo": "Página no encontrada",
+    "mensagem": "La dirección a la que intentaste acceder no existe."
+  },
+  "erros": {
+    "offline_titulo": "Sin conexión",
+    "offline_mensagem": "Verifica tu conexión a internet e intenta de nuevo.",
+    "timeout_titulo": "La solicitud tardó demasiado",
+    "timeout_mensagem": "El servidor no respondió a tiempo. Inténtalo de nuevo.",
+    "servidor_indisponivel_titulo": "No se pudo conectar",
+    "servidor_indisponivel_mensagem": "Es posible que el servidor esté caído. Inténtalo de nuevo en unos momentos.",
+    "nao_encontrado_titulo": "No encontrado",
+    "nao_encontrado_mensagem": "El contenido que buscas no existe o fue eliminado.",
+    "nao_autenticado_titulo": "Sesión expirada",
+    "nao_autenticado_mensagem": "Inicia sesión de nuevo para continuar.",
+    "sem_permissao_titulo": "Acceso denegado",
+    "sem_permissao_mensagem": "No tienes permiso para ver este contenido.",
+    "muitas_requisicoes_titulo": "Espera un momento",
+    "muitas_requisicoes_mensagem": "Demasiadas solicitudes en poco tiempo. Espera un momento e inténtalo de nuevo.",
+    "servidor_titulo": "Error del servidor",
+    "servidor_mensagem": "Algo salió mal de nuestro lado. Ya lo sabemos — inténtalo de nuevo en unos momentos.",
+    "requisicao_invalida_titulo": "No se pudo completar",
+    "requisicao_invalida_mensagem": "La solicitud no pudo procesarse.",
+    "desconhecido_titulo": "Algo salió mal",
+    "desconhecido_mensagem": "Ocurrió un error inesperado. Inténtalo de nuevo."
+  },
+  "video_validacao": {
+    "excede_tamanho": "El video supera los {{mb}}MB.",
+    "excede_duracao": "El video supera los {{segundos}} segundos de duración.",
+    "erro_leitura": "No se pudo leer el video seleccionado."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "busca_local": {
+    "placeholder": "搜尋地點...",
+    "trocar": "更換"
+  },
+  "pagina_place": {
+    "carregando": "正在載入...",
+    "seguindo": "已追蹤",
+    "seguir_lugar": "追蹤此地點",
+    "seguranca_media": "平均安全性",
+    "sem_avaliacoes": "— 尚無評價",
+    "media_de_5": "{{valor}} / 5",
+    "custo_beneficio_medio": "平均性價比",
+    "fotos_titulo": "照片",
+    "foto_alt": "{{nome}} 的第 {{numero}} 張照片",
+    "comentarios_titulo": "旅客留言",
+    "sem_comentarios": "此地點尚無留言。",
+    "origem_prefixo": "來自行程「",
+    "origem_sufixo": "」",
+    "foto_comentario_alt": "{{nome}} 的留言照片"
+  }
+}
