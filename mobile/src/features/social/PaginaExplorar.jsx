@@ -173,10 +173,10 @@ function PaginaExplorar() {
     </View>
   );
 
-  if (query) {
-    return (
-      <View style={estilos.pagina}>
-        {barraBusca}
+  return (
+    <View style={estilos.pagina}>
+      {barraBusca}
+      {query ? (
         <View style={estilos.resultadosArea}>
           {buscando && <ActivityIndicator color={cores.primaria} style={{ marginTop: 24 }} />}
           {!buscando && erroBusca && (
@@ -223,23 +223,20 @@ function PaginaExplorar() {
             </>
           )}
         </View>
-      </View>
-    );
-  }
-
-  return (
-    <GradeItinerarios
-      dados={feed}
-      carregando={carregandoFeed}
-      carregandoMais={carregandoMais}
-      temMais={temMais}
-      onCarregarMais={carregarProximoLote}
-      onAbrirItinerario={(it) => navigation.navigate('Itinerario', { id: it.id, titulo: it.titulo, status: it.status })}
-      mensagemVazia={t('explorar.nenhum_itinerario')}
-      erro={erroFeed}
-      onRetentar={buscarFeedInicial}
-      ListHeaderComponent={barraBusca}
-    />
+      ) : (
+        <GradeItinerarios
+          dados={feed}
+          carregando={carregandoFeed}
+          carregandoMais={carregandoMais}
+          temMais={temMais}
+          onCarregarMais={carregarProximoLote}
+          onAbrirItinerario={(it) => navigation.navigate('Itinerario', { id: it.id, titulo: it.titulo, status: it.status })}
+          mensagemVazia={t('explorar.nenhum_itinerario')}
+          erro={erroFeed}
+          onRetentar={buscarFeedInicial}
+        />
+      )}
+    </View>
   );
 }
 
