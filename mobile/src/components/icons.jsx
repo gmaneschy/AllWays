@@ -67,6 +67,7 @@ import {
   Send,
   Upload,
   Copy,
+  Menu,
 } from 'lucide-react-native';
 
 export const TAMANHO_PADRAO_ICONE = 20;
@@ -134,3 +135,4 @@ export const IconeExplorarNav = criarIcone(Compass);
 export const IconeCriarItinerario = criarIcone(SquarePlus);
 export const IconeSair = criarIcone(LogOut);
 export const IconeEntrar = criarIcone(LogIn);
+export const IconeMenu = criarIcone(Menu);

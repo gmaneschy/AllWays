@@ -18,21 +18,9 @@ frontend:
                 O Tier 2 é implementado orientado por dados reais e demanda dos usuários.
 
 mobile:
-Atualmente, estamos para iniciar fase 4 da transposição. Antes, é preciso um último teste.
-A página de login não leva a lugar algum. É preciso que ela leve a PaginaConfiguracoes, para que testemos o login e a troca de idiomas.
-
-Fase 4 — Componente de mídia:
-    Transpor CarrosselItinerario + LightboxMidia
-    Façamos isso antes de Feed/PaginaItinerario porque os dois dependem dele, e é onde mais coisa não tem equivalente direto:
-    IntersectionObserver (autoplay por viewport) → onViewableItemsChanged de FlatList/FlashList
-    framer-motion → react-native-reanimated + react-native-gesture-handler
-    <video>/<img> → expo-av (Video) e Image do RN (ou expo-image pra cache melhor)
-
-Fase 5 — Tabs de leitura (Perfil → Place → Explorar):
-    Perfil (PaginaPerfil + CardItinerarioResumo + modais de lista/badge/edição) — grid, follow, upload de avatar
-    PaginaPlace — reaproveita padrões, sem mídia complexa
-    PaginaExplorar (tab Buscar) — busca com debounce + scroll infinito, reaproveita CardItinerarioResumo
-    PaginaHashtag — trivial depois do Explorar, reaproveita tudo
+Para poder utilizar a navegação no mobile normalmente, integrei com o ngrok no EXPO_PUBLIC_API_URL=https://treading-drained-rift.ngrok-free.dev/api e no ALLOWED_HOSTS = ['127.0.0.1', '192.168.0.13', '192.168.x.x', '.ngrok-free.dev', '.ngrok-free.app'].
+Sem isso, precisaria instalar o Android SDK.
+Sigamos para a Fase 6.
 
 Fase 6 — Feed + Itinerário (agora que o carrossel existe):
     FeedCard + Feed (tab principal)
@@ -59,17 +47,20 @@ http://localhost:8000/admin/login/?next=/admin/
 Tela admin - navegador mobile
 http://192.168.0.13:8000/admin/
 
-# Terminal 1 — React
-cd web
-npm run dev
-
-# Terminal 2 — tudo do backend de uma vez só
+# Terminal 1 — tudo do backend de uma vez só
 cd backend
 docker compose up
 
+# Terminal 2 — React
+cd web
+npm run dev
+
 # Terminal 3 - Mobile
 cd mobile
-npm start
+npx expo start -c
+
+# Terminal 4 - ngrok
+ngrok http 8000
 
 Comandos django agora vem precedidos de:
 docker compose exec

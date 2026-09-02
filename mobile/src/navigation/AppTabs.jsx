@@ -50,10 +50,6 @@ function AppTabs({ aoDeslogar }) {
   return (
     <Tab.Navigator
       id="AppTabs"
-      // TEMPORÁRIO — só pra teste, enquanto Feed é placeholder (Fase 6) e
-      // não existe nada satisfatório pra confirmar visualmente que o
-      // login funcionou. Reverter pra 'Feed' assim que a Fase 6 entrar.
-      initialRouteName="Perfil"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: cores.primaria,
@@ -95,15 +91,14 @@ function AppTabs({ aoDeslogar }) {
         }}
       />
       <Tab.Screen
-        name="Perfil"
-        options={{
-          // Igual ao web: mostra o próprio username, não um rótulo genérico.
-          tabBarLabel: usuario?.username ?? '',
-          tabBarIcon: ({ color, size }) => <IconeUsuario color={color} size={size} />,
-        }}
-      >
-        {(props) => <PerfilStack {...props} aoDeslogar={aoDeslogar} />}
-      </Tab.Screen>
+          name="PerfilTab"
+          options={{
+            tabBarLabel: usuario?.username ?? '',
+            tabBarIcon: ({ color, size }) => <IconeUsuario color={color} size={size} />,
+          }}
+        >
+          {(props) => <PerfilStack {...props} aoDeslogar={aoDeslogar} />}
+        </Tab.Screen>
     </Tab.Navigator>
   );
 }
