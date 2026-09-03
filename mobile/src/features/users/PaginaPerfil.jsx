@@ -409,6 +409,13 @@ function PaginaPerfil() {
   }
 
   function abrirItinerario(it) {
+    if (it.status === 'rascunho') {
+      // Sem página própria — mesma regra do web (CardItinerarioResumo).
+      // Fase 8 ainda não existe: por ora isso só cai no placeholder da tab
+      // Criar, mas a rota já fica correta para quando o editor existir.
+      navigation.navigate('Criar', { screen: 'CriarPrincipal', params: { editarId: it.id } });
+      return;
+    }
     navigation.navigate('Itinerario', { id: it.id, titulo: it.titulo, status: it.status });
   }
 

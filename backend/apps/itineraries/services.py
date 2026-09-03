@@ -51,10 +51,11 @@ def validar_itinerario_para_publicacao(itinerario):
         numero_ponto = ponto.ordem
 
         for campo in CAMPOS_OBRIGATORIOS_PONTO:
-            erros.append(
-                _("Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar.")
-                % {'numero': numero_ponto, 'campo': campo}
-            )
+            if not getattr(ponto, campo):
+                erros.append(
+                    _("Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar.")
+                    % {'numero': numero_ponto, 'campo': campo}
+                )
 
         if ponto.entrada_gratuita and ponto.preco_medio is not None:
             erros.append(

@@ -18,6 +18,11 @@ frontend:
                 O Tier 2 é implementado orientado por dados reais e demanda dos usuários.
 
 mobile:
+Remover headers das páginas.
+Substituir botão de troca de imagem e swap atual por swap igual ao do instagram.
+Em fullscreen, deve ser possível dar zoom na imagem.
+Além disso, fullscreen deve ser desativado ao clicar fora da imagem.
+
 Para poder utilizar a navegação no mobile normalmente, integrei com o ngrok no EXPO_PUBLIC_API_URL=https://treading-drained-rift.ngrok-free.dev/api e no ALLOWED_HOSTS = ['127.0.0.1', '192.168.0.13', '192.168.x.x', '.ngrok-free.dev', '.ngrok-free.app'].
 Sem isso, precisaria instalar o Android SDK.
 Sigamos para a Fase 6.
