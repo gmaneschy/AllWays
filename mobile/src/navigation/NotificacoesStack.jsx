@@ -1,17 +1,16 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import EmConstrucao from '../components/EmConstrucao';
+import PaginaNotificacoes from '../features/notifications/PaginaNotificacoes';
+import { telasComuns } from './TelasComuns';
 
 const Stack = createNativeStackNavigator();
 
-// Tela real (PaginaNotificacoes.jsx) chega na Fase 7. O PainelNotificacoes
-// (dropdown do sino no web) não é portado — ver decisão já registrada na
-// conversa: é redundante com a própria tab em mobile.
+// PainelNotificacoes (dropdown do sino no web) não é portado — decisão já
+// registrada: é redundante com a própria tab em mobile. Só a página cheia.
 function NotificacoesStack() {
   return (
     <Stack.Navigator id="NotificacoesStack">
-      <Stack.Screen name="NotificacoesPrincipal" options={{ title: 'Notificações' }}>
-        {() => <EmConstrucao nome="Notificações" />}
-      </Stack.Screen>
+      <Stack.Screen name="NotificacoesPrincipal" options={{ title: 'Notificações' }} component={PaginaNotificacoes} />
+      {telasComuns(Stack)}
     </Stack.Navigator>
   );
 }
