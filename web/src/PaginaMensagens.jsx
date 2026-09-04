@@ -17,6 +17,9 @@ import {
   IconeEnviado,
   IconeLidoDuplo,
   IconeEnviar,
+  IconePlay,
+  IconePausar,
+  IconeImagem,
 } from './icons';
 import './PaginaMensagens.css';
 
@@ -89,6 +92,16 @@ function SeletorDestinatario({ onSelecionar }) {
   );
 }
 
+// Mesmo mapeamento tipo → ícone/rótulo usado no mobile, pra manter a
+// lista de conversas padronizada nas duas plataformas.
+function previewDaConversa(ultimaMensagem, t) {
+  const tipo = ultimaMensagem?.tipo;
+  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio', 'Áudio') };
+  if (tipo === 'imagem') return { Icone: IconeImagem, texto: t('mensagens.preview_imagem', 'Imagem') };
+  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video', 'Vídeo') };
+  return { Icone: null, texto: ultimaMensagem?.texto || '' };
+}
+
 function StatusLeitura({ minha, lida }) {
   if (!minha) return null;
   return lida
@@ -119,6 +132,69 @@ function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
       }, atraso);
     }
   };
+}
+
+// Player de áudio próprio — antes era um <audio controls> "cru" do
+// navegador. Agora espelha o layout padronizado do mobile: botão redondo
+// de play/pause + barra de progresso + hora, com o mesmo <audio> nativo
+// escondido só pra tocar/controlar o som.
+function BolhaAudio({ m, minha, hora, lida }) {
+  const audioRef = useRef(null);
+  const [tocando, setTocando] = useState(false);
+  const [duracao, setDuracao] = useState(0);
+  const [tempoAtual, setTempoAtual] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    function aoCarregarMetadados() { setDuracao(audio.duration || 0); }
+    function aoAtualizarTempo() { setTempoAtual(audio.currentTime); }
+    function aoTerminar() { setTocando(false); setTempoAtual(0); }
+    audio.addEventListener('loadedmetadata', aoCarregarMetadados);
+    audio.addEventListener('timeupdate', aoAtualizarTempo);
+    audio.addEventListener('ended', aoTerminar);
+    return () => {
+      audio.removeEventListener('loadedmetadata', aoCarregarMetadados);
+      audio.removeEventListener('timeupdate', aoAtualizarTempo);
+      audio.removeEventListener('ended', aoTerminar);
+    };
+  }, []);
+
+  function alternar() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (tocando) {
+      audio.pause();
+      setTocando(false);
+    } else {
+      audio.play();
+      setTocando(true);
+    }
+  }
+
+  const progresso = duracao > 0 ? Math.min(100, (tempoAtual / duracao) * 100) : 0;
+
+  return (
+    <div className={`bolha-audio${minha ? ' bolha-audio--minha' : ''}`}>
+      <audio ref={audioRef} src={m.audio} preload="metadata" style={{ display: 'none' }} />
+      <button
+        type="button"
+        onClick={alternar}
+        className="bolha-audio__botao"
+        aria-label={tocando ? 'Pausar' : 'Reproduzir'}
+      >
+        {tocando ? <IconePausar size={16} fill="currentColor" /> : <IconePlay size={16} fill="currentColor" />}
+      </button>
+      <div className="bolha-audio__corpo">
+        <div className="bolha-audio__barra">
+          <div className="bolha-audio__barra-preenchida" style={{ width: `${progresso}%` }} />
+        </div>
+        <div className={`bolha-audio__hora${minha ? ' bolha-audio__hora--minha' : ''}`}>
+          {hora} <StatusLeitura minha={minha} lida={lida} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function BolhaMensagem({ m, minha, onCurtir }) {
@@ -211,16 +287,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   if (m.tipo === 'audio') {
     return (
-      <div className={wrapperClasse}>
-        <div
-          onDoubleClick={handleDuploClique}
-          className={`bolha-audio${minha ? ' bolha-audio--minha' : ''}`}
-        >
-          <audio controls src={m.audio} className="bolha-audio__player" />
-          <div className={`bolha-audio__hora${minha ? ' bolha-audio__hora--minha' : ''}`}>
-            {hora} <StatusLeitura minha={minha} lida={m.lida} />
-          </div>
-        </div>
+      <div className={wrapperClasse} onDoubleClick={handleDuploClique}>
+        <BolhaAudio m={m} minha={minha} hora={hora} lida={m.lida} />
         <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
     );
@@ -408,7 +476,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas('📷 Imagem', 'imagem');
+      atualizarPreviewConversas(t('mensagens.preview_imagem', 'Imagem'), 'imagem');
       buscarConversas();
     } catch (_) {}
     finally { setEnviando(false); setPreviewImagem(null); }
@@ -423,7 +491,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas('🎤 Áudio', 'audio');
+      atualizarPreviewConversas(t('mensagens.preview_audio', 'Áudio'), 'audio');
       buscarConversas();
     } catch (_) {}
     finally { setEnviando(false); }
@@ -438,7 +506,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas('🎬 Vídeo', 'video');
+      atualizarPreviewConversas(t('mensagens.preview_video', 'Vídeo'), 'video');
       buscarConversas();
     } catch (err) {
       alert(err.response?.data?.erro || t('mensagens.erro_enviar_video'));
@@ -498,6 +566,7 @@ function PaginaMensagens() {
                 const enviadaPorEle = !!(
                   c.ultima_mensagem?.texto && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
                 );
+                const { Icone: IconePreview, texto: textoPreview } = previewDaConversa(c.ultima_mensagem, t);
                 return (
                   <div
                     key={c.usuario.username}
@@ -513,7 +582,10 @@ function PaginaMensagens() {
                         </span>
                       </div>
                       <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
-                        {c.ultima_mensagem?.minha ? t('mensagens.prefixo_voce') : ''}{c.ultima_mensagem?.texto || ''}
+                        {IconePreview && <IconePreview size={13} className="conversa-item__preview-icone" />}
+                        <span className="conversa-item__preview-texto">
+                          {c.ultima_mensagem?.minha ? t('mensagens.prefixo_voce') : ''}{textoPreview}
+                        </span>
                       </div>
                     </div>
                   </div>

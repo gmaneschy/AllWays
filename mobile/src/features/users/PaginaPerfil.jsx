@@ -144,7 +144,7 @@ function ModalEditarPerfil({ me, salvando, erro, onSalvar, onFechar }) {
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissao.granted) return;
     const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // antes: ImagePicker.MediaTypeOptions.Images (deprecated)
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.85,
@@ -411,9 +411,9 @@ function PaginaPerfil() {
   function abrirItinerario(it) {
     if (it.status === 'rascunho') {
       // Sem página própria — mesma regra do web (CardItinerarioResumo).
-      // Fase 8 ainda não existe: por ora isso só cai no placeholder da tab
-      // Criar, mas a rota já fica correta para quando o editor existir.
-      navigation.navigate('Criar', { screen: 'CriarPrincipal', params: { editarId: it.id } });
+      // CriarItinerario é modal na raiz (RootNavigator), não mais uma tab
+      // própria — ver comentário em PaginaItinerario.jsx/usarComoBase.
+      navigation.navigate('CriarItinerario', { editarId: it.id });
       return;
     }
     navigation.navigate('Itinerario', { id: it.id, titulo: it.titulo, status: it.status });

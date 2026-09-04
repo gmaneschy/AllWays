@@ -1,32 +1,30 @@
 import { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { getNotificacoesNaoLidas, getUsuarioLogado, estaLogado } from '../api/api';
+import { getNotificacoesNaoLidas, getMensagensNaoLidas, getUsuarioLogado, estaLogado } from '../api/api';
 import { cores } from '../theme';
 import {
   IconeInicio,
   IconeExplorarNav,
-  IconeCriarItinerario,
+  IconeMensagem,
   IconeNotificacao,
   IconeUsuario,
 } from '../components/icons';
 import FeedStack from './FeedStack';
 import BuscaStack from './BuscaStack';
-import CriarStack from './CriarStack';
+import MensagensStack from './MensagensStack';
 import NotificacoesStack from './NotificacoesStack';
 import PerfilStack from './PerfilStack';
 import { useNaoLidas, setNaoLidas } from '../features/notifications/estadoNotificacoes';
+import { useMensagensNaoLidas, setMensagensNaoLidas } from '../features/social/estadoMensagens';
 
 const Tab = createBottomTabNavigator();
 const INTERVALO_POLLING_MS = 20000;
 
 function AppTabs({ aoDeslogar }) {
   const { t } = useTranslation('common');
-  // Antes: useState local só deste componente. Agora: store compartilhado
-  // (ver estadoNotificacoes.js) — PaginaNotificacoes escreve nele ao
-  // marcar como lida, e o badge da tab reflete na hora, sem esperar o
-  // próximo ciclo de poll.
   const naoLidas = useNaoLidas();
+  const mensagensNaoLidas = useMensagensNaoLidas();
   const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
@@ -35,15 +33,19 @@ function AppTabs({ aoDeslogar }) {
 
   useEffect(() => {
     let cancelado = false;
-    async function buscarContador() {
+    async function buscarContadores() {
       if (!(await estaLogado())) return;
       try {
         const { total } = await getNotificacoesNaoLidas();
         if (!cancelado) setNaoLidas(total);
       } catch (_) {}
+      try {
+        const { total } = await getMensagensNaoLidas();
+        if (!cancelado) setMensagensNaoLidas(total);
+      } catch (_) {}
     }
-    buscarContador();
-    const intervalo = setInterval(buscarContador, INTERVALO_POLLING_MS);
+    buscarContadores();
+    const intervalo = setInterval(buscarContadores, INTERVALO_POLLING_MS);
     return () => { cancelado = true; clearInterval(intervalo); };
   }, []);
 
@@ -73,12 +75,16 @@ function AppTabs({ aoDeslogar }) {
           tabBarIcon: ({ color, size }) => <IconeExplorarNav color={color} size={size} />,
         }}
       />
+      {/* "Criar" saiu daqui — virou o FAB flutuante no Feed (ver
+          BotaoFabCriar.jsx), abrindo CriarItinerario como modal registrado
+          no RootNavigator. Mensagens ocupa o espaço que sobrou na tab bar. */}
       <Tab.Screen
-        name="Criar"
-        component={CriarStack}
+        name="Mensagens"
+        component={MensagensStack}
         options={{
-          tabBarLabel: t('navbar.criar_itinerario'),
-          tabBarIcon: ({ color, size }) => <IconeCriarItinerario color={color} size={size} />,
+          tabBarLabel: t('navbar.mensagens'),
+          tabBarBadge: mensagensNaoLidas > 0 ? (mensagensNaoLidas > 9 ? '9+' : mensagensNaoLidas) : undefined,
+          tabBarIcon: ({ color, size }) => <IconeMensagem color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -91,7 +97,7 @@ function AppTabs({ aoDeslogar }) {
         }}
       />
       <Tab.Screen
-        name="Perfil"
+        name="PerfilTab"
         options={{
           tabBarLabel: usuario?.username ?? '',
           tabBarIcon: ({ color, size }) => <IconeUsuario color={color} size={size} />,

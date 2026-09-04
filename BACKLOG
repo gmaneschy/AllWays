@@ -1,5 +1,6 @@
 Checklist:
 ! - Criar badges restantes e suas traduções.
+! - Melhorar visual da mensagem de áudio.
 frontend:
     Por algum motivo a página do site, em qualquer página que seja, atualiza sozinha de tempos em tempos.
     No console, aparece:
@@ -18,32 +19,17 @@ frontend:
                 O Tier 2 é implementado orientado por dados reais e demanda dos usuários.
 
 mobile:
-Remover headers das páginas.
-Substituir botão de troca de imagem e swap atual por swap igual ao do instagram.
-Em fullscreen, deve ser possível dar zoom na imagem.
-Além disso, fullscreen deve ser desativado ao clicar fora da imagem.
+! - Remover headers das páginas.
+! - Substituir botão de troca de imagem e swap atual por swap igual ao do instagram.
+! - Em fullscreen, deve ser possível dar zoom na imagem. Além disso, fullscreen deve ser desativado ao clicar fora da imagem.
+! - Corrigir exibição de modal no excluir rascunho.
+! - Na PaginaItinerario, resolver prioridades: É possível clicar na imagem e abri-la em fullscreen enquanto o "Mais opções" está ativo.
+! - Adicionar logout na página de configuração.
+! - Aplicar LightboxMidia nas imagens na PaginaChat(mobile) e PaginaMensagens(web).
+! - Corrigir reprodução de áudio.
 
-Para poder utilizar a navegação no mobile normalmente, integrei com o ngrok no EXPO_PUBLIC_API_URL=https://treading-drained-rift.ngrok-free.dev/api e no ALLOWED_HOSTS = ['127.0.0.1', '192.168.0.13', '192.168.x.x', '.ngrok-free.dev', '.ngrok-free.app'].
-Sem isso, precisaria instalar o Android SDK.
-Sigamos para a Fase 6.
-
-Fase 6 — Feed + Itinerário (agora que o carrossel existe):
-    FeedCard + Feed (tab principal)
-    PaginaItinerario + ModalCompartilharItinerario + ModalDenunciarItinerario
-    O menu "mais opções" (dropdown por hover no web) vira ActionSheet nativo ou um modal de opções — não existe hover em touch
-
-Fase 7 — Notificações:
-    PaginaNotificacoes só, como tela cheia da tab. O PainelNotificacoes (dropdown do sino) não faz sentido em mobile — é redundante com a própria tab, então não porto ele, só a página.
-
-Fase 8 — Criar Itinerário (a mais custosa, de propósito por último):
-    CriarItinerario + BuscaLocal + ModalRecortarMidia. Deixo por último porque:
-    ModalRecortarMidia usa <canvas> — precisa virar expo-image-manipulator + gestos de pan/zoom, é praticamente reescrever, não portar
-    Upload de mídia usa expo-image-picker/expo-av em vez de <input type="file">
-    Reorder de mídia (Reorder.Group do framer-motion) → react-native-draggable-flatlist ou similar
-
-Fase 9 — Mensagens (por último, isolada)
-    PaginaMensagens não é uma tab (fica pendurada em algum ícone, como no web) e é a tela mais pesada: MediaRecorder (áudio) → expo-av Audio.Recording, polling, bolhas com preview de imagem/vídeo.
-    Fica por último porque não bloqueia nenhuma outra tela e reaproveita quase todos os padrões já validados nas fases anteriores.
+Console do expo diz:
+WARN  setLayoutAnimationEnabledExperimental is currently a no-op in the New Architecture.
 
 Tela admin
 http://localhost:8000/admin/
@@ -55,6 +41,7 @@ http://192.168.0.13:8000/admin/
 # Terminal 1 — tudo do backend de uma vez só
 cd backend
 docker compose up
+
 
 # Terminal 2 — React
 cd web
@@ -97,3 +84,5 @@ Quando o aplicativo estiver em produção, é necessário:
 
 Ao incluir novo idioma, é necessário não só ter os arquivos presentes no web/public/locales e mobile/src/i18n/locales, como registrar no mobile/src/i18n/index.js os arquivos do idioma novo.
 No web/src/i18n/index.js também é necessário registrar a pasta do idioma novo.
+
+Alinhar exibição de data em todos os componentes com data ao idioma do site.

@@ -1,16 +1,44 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { estaLogado, registrarCallbackSessaoExpirada } from '../api/api';
 import AuthStack from './AuthStack';
 import AppTabs from './AppTabs';
+import CriarItinerario from '../features/itineraries/CriarItinerario';
 import AvisoOffline from '../components/AvisoOffline';
 import { cores } from '../theme';
 
+const RootStack = createNativeStackNavigator();
+
+// Envolve as Tabs com um Stack só pra hospedar CriarItinerario como modal
+// alcançável de qualquer aba (FAB no Feed, "usar como base"/"editar" na
+// PaginaItinerario e no Perfil) — sem isso, CriarItinerario só seria
+// alcançável de dentro da stack onde estivesse registrado, quebrando o
+// padrão de "cada stack registra suas próprias telas de destino" pra esse
+// caso específico, que agora é compartilhado por várias abas.
+function AppRoot({ aoDeslogar }) {
+  const { t } = useTranslation('common');
+  return (
+    <RootStack.Navigator id="AppRoot" screenOptions={{ headerShown: false }}>
+      <RootStack.Screen name="AppTabsRaiz">
+        {() => <AppTabs aoDeslogar={aoDeslogar} />}
+      </RootStack.Screen>
+      <RootStack.Screen
+        name="CriarItinerario"
+        component={CriarItinerario}
+        options={{
+          headerShown: true,
+          presentation: 'modal',
+          title: t('navbar.criar_itinerario'),
+        }}
+      />
+    </RootStack.Navigator>
+  );
+}
+
 function RootNavigator() {
-  // null = ainda checando o SecureStore no boot. Sem esse terceiro estado,
-  // a UI "pisca" pro AuthStack por uma fração de segundo mesmo quando o
-  // usuário já está logado, porque estaLogado() é assíncrono.
   const [autenticado, setAutenticado] = useState(null);
 
   const verificarSessao = useCallback(async () => {
@@ -21,9 +49,6 @@ function RootNavigator() {
     verificarSessao();
   }, [verificarSessao]);
 
-  // api.js chama isso quando o refresh token falha de vez (ver
-  // limparSessaoEForcarLogin em api.js) — derruba o usuário de volta pro
-  // AuthStack sem precisar de um evento global/Redux/etc.
   useEffect(() => {
     registrarCallbackSessaoExpirada(() => setAutenticado(false));
   }, []);
@@ -38,11 +63,9 @@ function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {/* Mesma posição do AvisoOffline no App.jsx do web: acima de tudo,
-          renderizado independente de qual árvore (Auth ou App) está ativa. */}
       <AvisoOffline />
       {autenticado ? (
-        <AppTabs aoDeslogar={() => setAutenticado(false)} />
+        <AppRoot aoDeslogar={() => setAutenticado(false)} />
       ) : (
         <AuthStack aoLogar={() => setAutenticado(true)} />
       )}

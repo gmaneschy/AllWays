@@ -54,6 +54,8 @@ import {
   Volume2,
   VolumeX,
   Play,
+  Pause,
+  Image,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -119,6 +121,8 @@ export const IconeExpandir = criarIcone(Maximize2);
 export const IconeSom = criarIcone(Volume2);
 export const IconeSomMudo = criarIcone(VolumeX);
 export const IconePlay = criarIcone(Play);
+export const IconePausar = criarIcone(Pause);
+export const IconeImagem = criarIcone(Image);
 export const IconeSetaEsquerda = criarIcone(ChevronLeft);
 export const IconeSetaDireita = criarIcone(ChevronRight);
 export const IconeDot = criarIcone(Circle);

@@ -109,9 +109,11 @@ function PaginaItinerario() {
           // Guard defensivo, mesmo do web — CardItinerarioResumo já não
           // deveria mandar rascunho pra cá, mas se acontecer redireciona
           // pro editor em vez de renderizar um itinerário incompleto.
-          navigation.replace('Criar', { screen: 'CriarPrincipal', params: { editarId: id } });
-          return;
-        }
+          // CriarItinerario agora vive na raiz (RootNavigator), fora das
+          // tabs — ver comentário em usarComoBase() abaixo.
+           navigation.replace('CriarItinerario', { editarId: id });
+           return;
+         }
 
         const comRes = await api.get(`/social/itinerarios/${id}/comentarios/`).catch(() => ({ data: [] }));
         if (cancelado) return;
@@ -169,8 +171,14 @@ function PaginaItinerario() {
   }
 
   function usarComoBase() {
-    navigation.navigate('Criar', { screen: 'CriarPrincipal', params: { baseId: id } });
-  }
+    // CriarItinerario deixou de ser uma tab própria — agora é uma tela
+    // modal registrada direto no RootNavigator (ver RootNavigator.jsx),
+    // acionada tanto pelo FAB do Feed quanto por "replicar" aqui e por
+    // "editar rascunho" no Perfil. navigate() com esse nome sobe
+    // automaticamente até achar a rota no navigator pai, então funciona
+    // de dentro de qualquer stack de tab (Feed/Buscar/Perfil/Mensagens).
+    navigation.navigate('CriarItinerario', { baseId: id });
+   }
 
   async function handleConfirmarExclusao() {
     if (excluindo) return;

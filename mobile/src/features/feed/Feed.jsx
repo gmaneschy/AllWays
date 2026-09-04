@@ -6,13 +6,12 @@ import { classificarErro } from '../../api/erros';
 import FeedCard from './FeedCard';
 import ModalCompartilharItinerario from '../social/ModalCompartilharItinerario';
 import EstadoErro from '../../components/EstadoErro';
+import BotaoFabCriar from '../../components/BotaoFabCriar';
 import { VisibilidadeProvider } from '../itineraries/VisibilidadeItem';
 import { lerCacheFeed, salvarCacheFeed } from './feedCache';
 import { cores, fontes } from '../../theme';
 
 const POR_PAGINA = 10;
-// Mesmo threshold (0.6) do useEmViewport do web — só entra na lista de
-// "visíveis" quando pelo menos 60% do card está na tela.
 const CONFIG_VISIBILIDADE = { itemVisiblePercentThreshold: 60 };
 
 function Feed() {
@@ -25,9 +24,6 @@ function Feed() {
   const [temMais, setTemMais] = useState(cacheInicial?.temMais ?? true);
   const [erro, setErro] = useState(null);
   const [compartilhando, setCompartilhando] = useState(null);
-  // ids dos cards visíveis agora — alimenta o VisibilidadeProvider de cada
-  // FeedCard (ver VisibilidadeItem.js, Fase 4), que decide se o vídeo do
-  // carrossel daquele card pode tocar.
   const [idsVisiveis, setIdsVisiveis] = useState(() => new Set());
 
   const listRef = useRef(null);
@@ -125,10 +121,6 @@ function Feed() {
     scrollYRef.current = e.nativeEvent.contentOffset.y;
   }
 
-  // Restaura o scroll salvo UMA vez, assim que o conteúdo cacheado já foi
-  // medido — equivalente ao useLayoutEffect + window.scrollTo do web, só
-  // que via scrollToOffset (precisa que o FlatList já tenha altura de
-  // conteúdo suficiente pra rolar até lá).
   function aoMedirConteudo() {
     if (restaurouScrollRef.current) return;
     restaurouScrollRef.current = true;
@@ -163,10 +155,13 @@ function Feed() {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={CONFIG_VISIBILIDADE}
         ListFooterComponent={carregandoMais ? <ActivityIndicator color={cores.primaria} style={estilos.espacoRodape} /> : null}
-        // Vídeos ficam instáveis se o RN reciclar/desmontar a view do
-        // player fora de hora — desliga a otimização de clipping aqui.
         removeClippedSubviews={false}
       />
+
+      {/* FAB flutuante — antes era a tab "Criar" na bottom nav; agora vive
+          aqui, mesma posição do Twitter/Substack, pra abrir espaço pra
+          Mensagens na tab bar (ver AppTabs.jsx e RootNavigator.jsx). */}
+      <BotaoFabCriar />
 
       {compartilhando && (
         <ModalCompartilharItinerario
