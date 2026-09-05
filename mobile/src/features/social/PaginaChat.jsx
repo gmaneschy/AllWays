@@ -16,6 +16,12 @@ import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from 'expo-audio';
+// SDK 54+ trocou a API padrão de expo-file-system pra classes (File/
+// Directory), que não funcionam no Expo Go (só em dev build) — por isso o
+// import explícito de /legacy, que mantém as funções clássicas
+// (getInfoAsync/downloadAsync/makeDirectoryAsync) e roda no Expo Go sem
+// exigir mudança de fluxo de desenvolvimento.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import api, { getUsuarioLogado, curtir, validarVideoLocal } from '../../api/api';
 import { classificarErro } from '../../api/erros';
@@ -28,6 +34,69 @@ import {
 import { cores, fontes } from '../../theme';
 
 const INTERVALO_POLLING_MS = 5000;
+
+// ─── Cache local de áudio ──────────────────────────────────────────────────
+// Primeira reprodução: baixa o arquivo pro cache do dispositivo. Reproduções
+// seguintes (mesmo depois de fechar e reabrir o app — cacheDirectory
+// sobrevive entre sessões, só é limpo pelo SO sob pressão de espaço) tocam
+// direto do disco: sem espera de rede, funciona offline, replay instantâneo.
+// Mesmo padrão do WhatsApp/Instagram.
+const DIR_CACHE_AUDIOS = `${FileSystem.cacheDirectory}mensagens-audios/`;
+
+async function garantirDiretorioAudios() {
+  const info = await FileSystem.getInfoAsync(DIR_CACHE_AUDIOS);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(DIR_CACHE_AUDIOS, { intermediates: true });
+  }
+}
+
+function extensaoDaUrl(url) {
+  const semQuery = url.split('?')[0];
+  const partes = semQuery.split('.');
+  return partes.length > 1 ? partes[partes.length - 1] : 'm4a';
+}
+
+async function obterAudioLocal(mensagemId, urlRemota) {
+  await garantirDiretorioAudios();
+  const caminhoLocal = `${DIR_CACHE_AUDIOS}${mensagemId}.${extensaoDaUrl(urlRemota)}`;
+
+  const info = await FileSystem.getInfoAsync(caminhoLocal);
+  if (info.exists) {
+    console.log(`[ÁUDIO] mensagem ${mensagemId} — cache local encontrado (${caminhoLocal}), pulando download`);
+    return caminhoLocal;
+  }
+
+  console.log(`[ÁUDIO] mensagem ${mensagemId} — sem cache, baixando de ${urlRemota}`);
+  const inicioMs = Date.now();
+  await FileSystem.downloadAsync(urlRemota, caminhoLocal);
+  console.log(`[ÁUDIO] mensagem ${mensagemId} — baixado e cacheado em ${Date.now() - inicioMs}ms`);
+  return caminhoLocal;
+}
+
+// ─── Um áudio tocando por vez ──────────────────────────────────────────────
+// Registro em escopo de módulo (não React state) de propósito: pausar o
+// player anterior é uma ação imperativa pontual, não precisa disparar
+// re-render de mais nada além do próprio player que perde o play. Guarda o
+// id da mensagem tocando + uma função pra pausá-la; quando outra mensagem
+// começa a tocar, pausa a anterior automaticamente (se ainda for outra).
+let idAudioTocando = null;
+let pausarAudioTocando = null;
+
+function tocarAudioExclusivo(mensagemId, pausar) {
+  if (idAudioTocando !== null && idAudioTocando !== mensagemId && pausarAudioTocando) {
+    console.log(`[ÁUDIO] mensagem ${mensagemId} — pausando mensagem ${idAudioTocando} que já estava tocando`);
+    pausarAudioTocando();
+  }
+  idAudioTocando = mensagemId;
+  pausarAudioTocando = pausar;
+}
+
+function liberarAudioExclusivo(mensagemId) {
+  if (idAudioTocando === mensagemId) {
+    idAudioTocando = null;
+    pausarAudioTocando = null;
+  }
+}
 
 function StatusLeitura({ minha, lida }) {
   if (!minha) return null;
@@ -74,58 +143,198 @@ function BolhaVideo({ m, minha }) {
   );
 }
 
-// Áudio gravado — expo-audio em vez de expo-av (removido no SDK 54+).
-// useAudioPlayer(uri) já cria o player pronto pra tocar; useAudioPlayerStatus
-// dá o estado reativo (playing) sem precisar de listener manual como o
-// onPlaybackStatusUpdate do expo-av.
-//
-// Bug conhecido do expo-audio com URIs remotas: às vezes o player nasce e
-// fica preso em "carregando" (isLoaded nunca vira true) sem erro nenhum —
-// só nunca destrava. O único jeito confiável de sair desse estado é criar
-// uma instância NOVA do player, o que só acontece quando o componente é
-// desmontado e remontado de verdade (foi o que aconteceu "sozinho" quando a
-// lista rolou/recarregou e recriou os itens). Em vez de depender disso por
-// sorte, o wrapper abaixo detecta o travamento e força um remonte via
-// `key`, chamando useAudioPlayer do zero.
+function formatarDuracao(segundos) {
+  if (segundos === null || segundos === undefined) return '';
+  const total = Math.round(segundos);
+  const min = Math.floor(total / 60);
+  const seg = total % 60;
+  return `${min}:${String(seg).padStart(2, '0')}`;
+}
+
+// Bolha de áudio — o player nativo (useAudioPlayer) só é criado quando o
+// usuário toca em play, não quando a mensagem aparece na FlatList. Antes,
+// TODAS as mensagens de áudio da conversa abriam uma sessão de streaming
+// simultaneamente assim que a tela montava (ou o polling trazia um array
+// novo), sobrecarregando a sessão de áudio nativa — daí a rajada de
+// requisições vista no log. Agora existe no máximo 1 player nativo vivo por
+// vez, e nunca mais de um tocando simultaneamente (ver tocarAudioExclusivo).
 function BolhaAudio({ m, minha, hora, lida }) {
+  const [iniciado, setIniciado] = useState(false);
+
+  if (!iniciado) {
+    return (
+      <View style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}>
+        <TouchableOpacity
+          onPress={() => {
+            console.log(`[ÁUDIO] mensagem ${m.id} — usuário tocou em play`);
+            setIniciado(true);
+          }}
+          style={estilos.botaoPlayAudio}
+        >
+          <IconePlay size={16} color={minha ? '#fff' : cores.textoPrincipal} fill={minha ? '#fff' : cores.textoPrincipal} />
+        </TouchableOpacity>
+        <View style={estilos.corpoAudio}>
+          <View style={[estilos.barraAudio, minha && estilos.barraAudioMinha]} />
+          <Text style={[estilos.horaAudio, minha && { color: 'rgba(255,255,255,0.8)' }]}>
+            {formatarDuracao(m.duracao_segundos) || hora} <StatusLeitura minha={minha} lida={lida} />
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return <BolhaAudioAtiva m={m} minha={minha} hora={hora} lida={lida} />;
+}
+
+const MAX_TENTATIVAS_AUDIO = 2; // tentativa inicial + 2 remontes automáticos
+
+// Resolve o cache local (baixando se preciso) ANTES de criar o player, e só
+// então monta BolhaAudioPlayer — mantém o player nativo recebendo sempre uma
+// URI já pronta pra tocar, igual antes, só que apontando pro arquivo local
+// em vez da URL remota depois da primeira vez.
+function BolhaAudioAtiva({ m, minha, hora, lida }) {
+  const { t } = useTranslation('social');
   const [tentativa, setTentativa] = useState(0);
+  const [falhou, setFalhou] = useState(false);
+  const [uriParaTocar, setUriParaTocar] = useState(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    obterAudioLocal(m.id, m.audio)
+      .then((caminho) => { if (!cancelado) setUriParaTocar(caminho); })
+      .catch((err) => {
+        // Falhou o cache (sem espaço, rede caiu no meio do download etc.) —
+        // não trava a reprodução por causa disso, cai pro streaming direto
+        // da URL remota como fallback.
+        console.error(`[ÁUDIO] mensagem ${m.id} — falha ao cachear localmente, streamando direto da URL remota`, err?.message || err);
+        if (!cancelado) setUriParaTocar(m.audio);
+      });
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [m.id, m.audio]);
+
+  function handleTravou() {
+    if (tentativa >= MAX_TENTATIVAS_AUDIO) {
+      console.error(`[ÁUDIO] mensagem ${m.id} — falhou definitivamente após ${MAX_TENTATIVAS_AUDIO} remonte(s) automático(s)`);
+      setFalhou(true);
+      return;
+    }
+    console.warn(`[ÁUDIO] mensagem ${m.id} — travou, forçando remonte #${tentativa + 1}`);
+    setTentativa((v) => v + 1);
+  }
+
+  if (falhou) {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          console.log(`[ÁUDIO] mensagem ${m.id} — usuário pediu nova tentativa manual após falha`);
+          setFalhou(false);
+          setTentativa(0);
+        }}
+        style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}
+      >
+        <Text style={[estilos.horaAudio, minha && { color: '#fff' }]}>
+          {t('mensagens.audio_falha', 'Não foi possível carregar. Toque para tentar de novo.')}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  if (!uriParaTocar) {
+    // Ainda resolvendo cache local (checando se existe / baixando pela 1ª
+    // vez) — mesmo visual do estado "antes do toque", só sem o onPress.
+    return (
+      <View style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}>
+        <View style={[estilos.botaoPlayAudio, { opacity: 0.5 }]}>
+          <IconePlay size={16} color={minha ? '#fff' : cores.textoPrincipal} fill={minha ? '#fff' : cores.textoPrincipal} />
+        </View>
+        <View style={estilos.corpoAudio}>
+          <View style={[estilos.barraAudio, minha && estilos.barraAudioMinha]} />
+          <Text style={[estilos.horaAudio, minha && { color: 'rgba(255,255,255,0.8)' }]}>{hora}</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <BolhaAudioPlayer
-      key={tentativa}
+      key={`${tentativa}-${uriParaTocar}`}
       m={m}
+      uri={uriParaTocar}
       minha={minha}
       hora={hora}
       lida={lida}
-      onTravou={() => setTentativa((v) => v + 1)}
+      onTravou={handleTravou}
     />
   );
 }
 
-function BolhaAudioPlayer({ m, minha, hora, lida, onTravou }) {
-  const player = useAudioPlayer(m.audio);
+function BolhaAudioPlayer({ m, uri, minha, hora, lida, onTravou }) {
+  const player = useAudioPlayer(uri);
   const status = useAudioPlayerStatus(player);
+  const jaAutoTocouRef = useRef(false);
+  const montadoEmRef = useRef(Date.now());
 
-  // Se depois de alguns segundos o player ainda não carregou, presume que
-  // travou e pede pro wrapper recriar a instância inteira.
+  useEffect(() => {
+    console.log(`[ÁUDIO] mensagem ${m.id} — player montado (uri: ${uri})`);
+    return () => {
+      console.log(`[ÁUDIO] mensagem ${m.id} — player desmontado (viveu ${Date.now() - montadoEmRef.current}ms)`);
+      liberarAudioExclusivo(m.id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    console.log(`[ÁUDIO] mensagem ${m.id} — status`, {
+      isLoaded: status.isLoaded,
+      playing: status.playing,
+      duration: status.duration,
+      currentTime: status.currentTime,
+      didJustFinish: status.didJustFinish,
+      msDesdeMontagem: Date.now() - montadoEmRef.current,
+    });
+    // Assim que este player para de tocar (pausado manualmente, terminou,
+    // ou foi pausado por outro áudio via tocarAudioExclusivo), libera o
+    // registro — só se ainda for o dono dele (liberarAudioExclusivo já
+    // checa isso, então é seguro chamar aqui sempre).
+    if (!status.playing) {
+      liberarAudioExclusivo(m.id);
+    }
+  }, [m.id, status.isLoaded, status.playing, status.didJustFinish, status.duration]);
+
   useEffect(() => {
     if (status.isLoaded) return;
-    const timeout = setTimeout(onTravou, 4000);
+    const timeout = setTimeout(() => {
+      console.warn(`[ÁUDIO] mensagem ${m.id} — 4000ms sem carregar, considerando travado (uri: ${uri})`);
+      onTravou();
+    }, 4000);
     return () => clearTimeout(timeout);
-  }, [status.isLoaded, onTravou]);
+  }, [status.isLoaded, onTravou, m.id, uri]);
+
+  // Como o player só é criado depois do toque do usuário em play (ver
+  // BolhaAudio), assim que ele terminar de carregar já toca sozinho.
+  useEffect(() => {
+    if (status.isLoaded && !jaAutoTocouRef.current) {
+      jaAutoTocouRef.current = true;
+      console.log(`[ÁUDIO] mensagem ${m.id} — carregou em ${Date.now() - montadoEmRef.current}ms, autoplay disparado`);
+      tocarAudioExclusivo(m.id, () => player.pause());
+      player.play();
+    }
+  }, [status.isLoaded, player, m.id]);
 
   function alternar() {
-    if (!status.isLoaded) return; // ainda carregando — o retry automático cuida disso
+    if (!status.isLoaded) return;
     if (status.playing) {
+      console.log(`[ÁUDIO] mensagem ${m.id} — pause manual`);
       player.pause();
     } else {
-      // Áudio já tocado até o fim — volta pro início antes de tocar de novo.
       if (status.didJustFinish) player.seekTo(0);
+      console.log(`[ÁUDIO] mensagem ${m.id} — play manual`);
+      tocarAudioExclusivo(m.id, () => player.pause());
       player.play();
     }
   }
 
-  // Espelha o player construído no web (botão redondo + barra de progresso
-  // + hora), pra manter o mesmo layout padronizado nas duas plataformas.
   const duracao = status.duration || 0;
   const progresso = duracao > 0 ? Math.min(100, (status.currentTime / duracao) * 100) : 0;
 
@@ -254,10 +463,6 @@ function PaginaChat() {
   const [previewImagem, setPreviewImagem] = useState(null);
   const [previewVideo, setPreviewVideo] = useState(null);
 
-  // expo-audio: o hook cria/gerencia a instância do gravador; o estado
-  // (isRecording etc.) vem via useAudioRecorderState, atualizado a cada
-  // 'interval' ms — não precisamos mais de um useState('gravando') manual
-  // nem de refs pra guardar a instância como no expo-av.
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const gravando = recorderState.isRecording;
@@ -267,26 +472,34 @@ function PaginaChat() {
   useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
 
   useEffect(() => {
-    getUsuarioLogado().then(setUsuarioLogado);
+    console.log(`[PÁGINA] PaginaChat montada — conversa com ${conversaAtiva}`);
+    getUsuarioLogado().then((u) => {
+      console.log(`[PÁGINA] usuário logado resolvido: ${u?.username}`);
+      setUsuarioLogado(u);
+    });
     navigation.setOptions({ title: route.params?.usuario?.username || conversaAtiva });
+    return () => console.log(`[PÁGINA] PaginaChat desmontada — conversa com ${conversaAtiva}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Garante que a sessão de áudio já esteja configurada pra playback assim
-  // que a tela abre — sem isso, se o usuário nunca gravou nada nesta sessão
-  // do app, o modo de áudio fica no padrão (que no iOS não toca som com o
-  // aparelho no silencioso, e às vezes nem fora dele) e os áudios recebidos
-  // simplesmente não tocam ao apertar o play.
   useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
+    console.log('[ÁUDIO] configurando modo de sessão (playback)...');
+    setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
+      .then(() => console.log('[ÁUDIO] modo de sessão configurado com sucesso'))
+      .catch((err) => console.error('[ÁUDIO] falha ao configurar modo de sessão', err));
   }, []);
 
   const buscarMensagens = useCallback(async ({ inicial = false } = {}) => {
+    const inicioMs = Date.now();
+    console.log(`[MENSAGENS] buscarMensagens iniciado (inicial=${inicial})`);
     if (inicial) setCarregando(true);
     try {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
+      console.log(`[MENSAGENS] ${res.data.length} mensagens recebidas em ${Date.now() - inicioMs}ms`);
       setMensagens(res.data);
       setErro(null);
     } catch (err) {
+      console.error(`[MENSAGENS] erro ao buscar após ${Date.now() - inicioMs}ms`, err?.message || err);
       const classificado = await classificarErro(err);
       if (!classificado.podeRetentar) {
         clearInterval(pollingRef.current);
@@ -301,8 +514,14 @@ function PaginaChat() {
 
   useEffect(() => {
     buscarMensagens({ inicial: true });
-    pollingRef.current = setInterval(() => buscarMensagens({ inicial: false }), INTERVALO_POLLING_MS);
-    return () => clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(() => {
+      console.log('[POLLING] tick de 5s disparado');
+      buscarMensagens({ inicial: false });
+    }, INTERVALO_POLLING_MS);
+    return () => {
+      console.log('[POLLING] intervalo limpo');
+      clearInterval(pollingRef.current);
+    };
   }, [buscarMensagens]);
 
   async function handleCurtir(mensagemId) {
@@ -370,15 +589,18 @@ function PaginaChat() {
 
   async function enviarAudio(uri) {
     if (!uri) return;
+    console.log(`[GRAVAÇÃO] enviando áudio local: ${uri}`);
+    const inicioMs = Date.now();
     setEnviando(true);
     const form = new FormData();
     form.append('tipo', 'audio');
-    // HIGH_QUALITY preset grava em .m4a/AAC nas duas plataformas.
     form.append('audio', { uri, name: 'audio.m4a', type: 'audio/m4a' });
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      console.log(`[GRAVAÇÃO] áudio enviado e persistido em ${Date.now() - inicioMs}ms — mensagem id ${res.data.id}, url: ${res.data.audio}`);
       setMensagens((prev) => [...prev, res.data]);
-    } catch (_) {
+    } catch (err) {
+      console.error(`[GRAVAÇÃO] falha ao enviar áudio após ${Date.now() - inicioMs}ms`, err?.message || err);
     } finally {
       setEnviando(false);
     }
@@ -411,31 +633,39 @@ function PaginaChat() {
   }
 
   async function iniciarGravacao() {
+    console.log('[GRAVAÇÃO] solicitando permissão de microfone...');
     try {
       const permissao = await AudioModule.requestRecordingPermissionsAsync();
       if (!permissao.granted) {
+        console.warn('[GRAVAÇÃO] permissão de microfone negada');
         Alert.alert('', t('mensagens.permissao_microfone_negada'));
         return;
       }
+      console.log('[GRAVAÇÃO] permissão concedida, configurando modo de sessão para gravação...');
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
-      // Sem setState manual — recorderState.isRecording (useAudioRecorderState)
-      // já reflete isso automaticamente.
-    } catch (_) {
+      console.log('[GRAVAÇÃO] gravação iniciada');
+    } catch (err) {
+      console.error('[GRAVAÇÃO] erro ao iniciar gravação', err?.message || err);
       Alert.alert('', t('mensagens.permissao_microfone_negada'));
     }
   }
 
   async function pararGravacao() {
+    console.log('[GRAVAÇÃO] parando gravação...');
     try {
       await audioRecorder.stop();
-      await setAudioModeAsync({ allowsRecording: false });
+      // Precisa restaurar os DOIS campos, não só allowsRecording — mandar um
+      // objeto parcial reconfigura a sessão de áudio inteira e derruba o
+      // playsInSilentMode setado ao abrir a tela, deixando a sessão presa
+      // num modo que carrega metadados normalmente mas não reproduz som.
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       const uri = audioRecorder.uri;
+      console.log(`[GRAVAÇÃO] gravação parada, arquivo local: ${uri}`);
       await enviarAudio(uri);
-    } catch (_) {
-      // Falhou ao parar/enviar — nada a limpar manualmente, o estado do
-      // recorder já reflete "não gravando" assim que stop() resolve.
+    } catch (err) {
+      console.error('[GRAVAÇÃO] erro ao parar/enviar gravação', err?.message || err);
     }
   }
 

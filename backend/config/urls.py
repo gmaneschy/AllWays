@@ -14,12 +14,24 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import mimetypes
+
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
 from apps.users.views import LoginView
+
+# Registrado aqui (em vez de num AppConfig.ready()) porque é o ponto mais
+# cedo e mais confiável de startup do projeto pra isso — mimetypes.guess_type
+# é usado tanto pela serve_media_com_range abaixo quanto por qualquer storage
+# real (S3 etc.) em produção, e o registro do Python nem sempre reconhece
+# essas extensões por padrão (principalmente em imagens Docker enxutas),
+# o que fazia o servidor mandar Content-Type: application/octet-stream e
+# confundir o AVPlayer no iOS.
+mimetypes.add_type('audio/mp4', '.m4a')
+mimetypes.add_type('audio/webm', '.webm')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -34,4 +46,16 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Substitui o static() padrão do Django por uma view que suporta Range
+    # requests (ver core/media_serve.py) — o static.serve original nunca
+    # devolve 206, o que travava a reprodução de áudio/vídeo no AVPlayer
+    # (iOS) direto da URL remota, sem baixar o arquivo antes.
+    from core.media_serve import serve_media_com_range
+
+    urlpatterns += [
+        re_path(
+            r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'),
+            serve_media_com_range,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]
