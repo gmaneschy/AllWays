@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, Image as RNImage,
   KeyboardAvoidingView, Platform, Alert, StyleSheet,
@@ -471,6 +471,26 @@ function PaginaChat() {
   const temMensagensRef = useRef(false);
   useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
 
+  // ─── Abrir a conversa já no fim ────────────────────────────────────────
+  // Antes disso tentamos forçar scrollToEnd na hora certa (esperando dados +
+  // transição de navegação + janela de ajuste pra virtualização assentar).
+  // Só que "assentar" não tem prazo fixo: itens de vídeo, por exemplo,
+  // trocam de um placeholder pequeno pro player em tamanho real quando o
+  // processamento no servidor termina, o que pode acontecer bem depois de
+  // qualquer janela razoável — daí o scroll parar "quase no fim" ou "na
+  // metade" de forma imprevisível.
+  //
+  // A solução correta pra chat é outra categoria de abordagem: inverter a
+  // FlatList (mesmo padrão do WhatsApp/Telegram). Com `inverted`, o item de
+  // índice 0 (que aqui é a mensagem mais recente, por isso o array
+  // invertido abaixo) já nasce ancorado visualmente embaixo — não existe
+  // "rolar até o fim" porque o fim É o ponto de partida da lista. Isso
+  // elimina o problema pela raiz: não há mais altura nenhuma pra medir ou
+  // corrida nenhuma pra vencer, então nenhuma quantidade de conteúdo
+  // assentando depois pode deixar o scroll pra trás.
+  const listaRef = useRef(null);
+  const mensagensInvertidas = useMemo(() => [...mensagens].reverse(), [mensagens]);
+
   useEffect(() => {
     console.log(`[PÁGINA] PaginaChat montada — conversa com ${conversaAtiva}`);
     getUsuarioLogado().then((u) => {
@@ -680,27 +700,38 @@ function PaginaChat() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <FlatList
-        data={mensagens}
+        ref={listaRef}
+        data={mensagensInvertidas}
+        inverted
         keyExtractor={(m) => String(m.id)}
         contentContainerStyle={{ padding: 16, gap: 8 }}
         renderItem={({ item: m }) => {
           const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
           return (
-            <BolhaMensagem
-              m={m}
-              minha={minha}
-              onCurtir={handleCurtir}
-              onAbrirImagem={() => {}}
-              i18n={i18n}
-              t={t}
-              navigation={navigation}
-            />
+            // O `inverted` da FlatList espelha verticalmente (scaleY: -1) todo
+            // o conteúdo da lista pra inverter a direção do scroll — sem essa
+            // contra-transformação aqui, cada bolha apareceria de cabeça pra
+            // baixo. As duas transformações se cancelam e a bolha renderiza
+            // normal, mas a lista como um todo continua ancorada no fim.
+            <View style={{ transform: [{ scaleY: -1 }] }}>
+              <BolhaMensagem
+                m={m}
+                minha={minha}
+                onCurtir={handleCurtir}
+                onAbrirImagem={() => {}}
+                i18n={i18n}
+                t={t}
+                navigation={navigation}
+              />
+            </View>
           );
         }}
         ListEmptyComponent={
-          carregando
-            ? <Text style={estilos.estadoLista}>{t('mensagens.carregando')}</Text>
-            : <Text style={estilos.estadoLista}>{t('mensagens.nenhuma_mensagem')}</Text>
+          <View style={{ transform: [{ scaleY: -1 }] }}>
+            {carregando
+              ? <Text style={estilos.estadoLista}>{t('mensagens.carregando')}</Text>
+              : <Text style={estilos.estadoLista}>{t('mensagens.nenhuma_mensagem')}</Text>}
+          </View>
         }
       />
 

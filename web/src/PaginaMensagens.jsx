@@ -134,10 +134,40 @@ function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
   };
 }
 
+// ─── Um áudio tocando por vez ──────────────────────────────────────────────
+// Mesmo padrão do mobile (ver tocarAudioExclusivo/liberarAudioExclusivo em
+// PaginaChat.jsx), pra padronizar o comportamento nas duas plataformas.
+// Registro em escopo de módulo (não React state) de propósito: pausar o
+// áudio anterior é uma ação imperativa pontual, não precisa disparar
+// re-render de mais nada além do próprio elemento <audio> que perde o play.
+// Guarda o id da mensagem tocando + uma função pra pausá-la; quando outra
+// mensagem começa a tocar, pausa a anterior automaticamente (se ainda for
+// outra).
+let idAudioTocando = null;
+let pausarAudioTocando = null;
+
+function tocarAudioExclusivo(mensagemId, pausar) {
+  if (idAudioTocando !== null && idAudioTocando !== mensagemId && pausarAudioTocando) {
+    pausarAudioTocando();
+  }
+  idAudioTocando = mensagemId;
+  pausarAudioTocando = pausar;
+}
+
+function liberarAudioExclusivo(mensagemId) {
+  if (idAudioTocando === mensagemId) {
+    idAudioTocando = null;
+    pausarAudioTocando = null;
+  }
+}
+
 // Player de áudio próprio — antes era um <audio controls> "cru" do
 // navegador. Agora espelha o layout padronizado do mobile: botão redondo
 // de play/pause + barra de progresso + hora, com o mesmo <audio> nativo
-// escondido só pra tocar/controlar o som.
+// escondido só pra tocar/controlar o som. A exclusividade (só um áudio
+// tocando por vez) escuta os eventos nativos 'play'/'pause' do elemento —
+// assim funciona tanto quando o usuário clica no botão quanto se o áudio
+// for pausado por qualquer outro motivo.
 function BolhaAudio({ m, minha, hora, lida }) {
   const audioRef = useRef(null);
   const [tocando, setTocando] = useState(false);
@@ -149,26 +179,37 @@ function BolhaAudio({ m, minha, hora, lida }) {
     if (!audio) return;
     function aoCarregarMetadados() { setDuracao(audio.duration || 0); }
     function aoAtualizarTempo() { setTempoAtual(audio.currentTime); }
-    function aoTerminar() { setTocando(false); setTempoAtual(0); }
+    function aoTocar() {
+      setTocando(true);
+      tocarAudioExclusivo(m.id, () => audio.pause());
+    }
+    function aoPausar() {
+      setTocando(false);
+      liberarAudioExclusivo(m.id);
+    }
+    function aoTerminar() { setTempoAtual(0); }
     audio.addEventListener('loadedmetadata', aoCarregarMetadados);
     audio.addEventListener('timeupdate', aoAtualizarTempo);
+    audio.addEventListener('play', aoTocar);
+    audio.addEventListener('pause', aoPausar);
     audio.addEventListener('ended', aoTerminar);
     return () => {
       audio.removeEventListener('loadedmetadata', aoCarregarMetadados);
       audio.removeEventListener('timeupdate', aoAtualizarTempo);
+      audio.removeEventListener('play', aoTocar);
+      audio.removeEventListener('pause', aoPausar);
       audio.removeEventListener('ended', aoTerminar);
+      liberarAudioExclusivo(m.id);
     };
-  }, []);
+  }, [m.id]);
 
   function alternar() {
     const audio = audioRef.current;
     if (!audio) return;
     if (tocando) {
       audio.pause();
-      setTocando(false);
     } else {
       audio.play();
-      setTocando(true);
     }
   }
 
