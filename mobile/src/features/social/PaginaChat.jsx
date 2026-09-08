@@ -56,11 +56,11 @@ function SeloCurtida({ curtido }) {
 // Mesmo mapeamento tipo → ícone/rótulo do PaginaMensagens (lista de
 // conversas) e do web — usado aqui pro preview da mensagem respondida.
 function previewDaMensagem(m, t) {
-  if (m?.apagada) return { Icone: IconeRemover, texto: t('mensagens.mensagem_apagada', 'Mensagem apagada') };
+  if (m?.apagada) return { Icone: IconeRemover, texto: t('mensagens.mensagem_apagada') };
   const tipo = m?.tipo;
-  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio', 'Áudio') };
-  if (tipo === 'imagem') return { Icone: IconePlay, texto: t('mensagens.preview_imagem', 'Imagem') };
-  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video', 'Vídeo') };
+  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio') };
+  if (tipo === 'imagem') return { Icone: IconePlay, texto: t('mensagens.preview_imagem') };
+  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video') };
   if (tipo === 'itinerario') return { Icone: IconePin, texto: t('mensagens.itinerario_compartilhado') };
   return { Icone: null, texto: m?.texto || '' };
 }
@@ -73,7 +73,7 @@ function PreviaResposta({ respondidaA, minha, usuarioLogado, t }) {
     return (
       <View style={[estilos.previaResposta, minha && estilos.previaRespostaMinha]}>
         <Text style={estilos.previaRespostaIndisponivel}>
-          {t('mensagens.resposta_indisponivel', 'Mensagem indisponível')}
+          {t('mensagens.resposta_indisponivel')}
         </Text>
       </View>
     );
@@ -81,7 +81,7 @@ function PreviaResposta({ respondidaA, minha, usuarioLogado, t }) {
 
   const { Icone, texto } = previewDaMensagem({ tipo: respondidaA.tipo, texto: respondidaA.texto }, t);
   const autorLabel = respondidaA.autor_username === usuarioLogado?.username
-    ? t('mensagens.voce', 'Você')
+    ? t('mensagens.voce')
     : respondidaA.autor_username;
 
   return (
@@ -260,7 +260,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n,
       <View style={wrapper}>
         <View style={[estilos.bolhaApagada, minha && estilos.bolhaApagadaMinha]}>
           <IconeRemover size={13} color={cores.textoMuted} />
-          <Text style={estilos.bolhaApagadaTexto}>{t('mensagens.mensagem_apagada', 'Mensagem apagada')}</Text>
+          <Text style={estilos.bolhaApagadaTexto}>{t('mensagens.mensagem_apagada')}</Text>
         </View>
         <Text style={estilos.horaFora}>{hora}</Text>
       </View>
@@ -484,7 +484,7 @@ function PaginaChat() {
   async function handleApagar(mensagemId) {
     Alert.alert(
       t('mensagens.apagar'),
-      t('mensagens.confirmar_apagar', 'Apagar esta mensagem para todos?'),
+      t('mensagens.confirmar_apagar'),
       [
         { text: t('common:avisos.cancelar'), style: 'cancel' },
         {
@@ -652,7 +652,7 @@ function PaginaChat() {
 
   function autorDaMensagem(m) {
     const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-    return minha ? t('mensagens.voce', 'Você') : m.remetente_nome;
+    return minha ? t('mensagens.voce') : m.remetente_nome;
   }
 
   if (erro && mensagens.length === 0) {
@@ -665,51 +665,55 @@ function PaginaChat() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <FlatList
-        ref={flatListRef}
-        inverted
-        data={mensagensInvertidas}
-        keyExtractor={(m) => String(m.id)}
-        contentContainerStyle={{ padding: 16, gap: 8 }}
-        onScroll={(e) => {
-          // Em lista invertida, offset 0 = fim visual (embaixo). "Perto do
-          // fim" vira simplesmente "offset baixo", sem precisar de
-          // contentSize/layoutMeasurement como na versão não invertida.
-          pertoDoFimRef.current = e.nativeEvent.contentOffset.y < 150;
-        }}
-        scrollEventThrottle={16}
-        renderItem={({ item: m }) => {
-          const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-          return (
-            <LinhaComGestos
-              desabilitado={!!m.apagada}
-              onResponder={() => handleResponder(m)}
-              onLongPress={() => abrirMenuMensagem(m)}
-            >
-              <BolhaMensagem
-                m={m}
-                minha={minha}
-                onCurtir={handleCurtir}
-                onAbrirImagem={(url) => setMidiaLightbox({ tipo: 'foto', url })}
-                usuarioLogado={usuarioLogado}
-                i18n={i18n}
-                t={t}
-                navigation={navigation}
-              />
-            </LinhaComGestos>
-          );
-        }}
-        ListEmptyComponent={
-          // Lista invertida renderiza tudo de cabeça pra baixo — inclusive
-          // o ListEmptyComponent, que não faz parte do conteúdo invertido
-          // "de verdade". Contrarrota o texto pra ele aparecer normal.
-          <View style={{ transform: [{ scaleY: -1 }] }}>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          ref={flatListRef}
+          inverted
+          data={mensagensInvertidas}
+          keyExtractor={(m) => String(m.id)}
+          contentContainerStyle={{ padding: 16, gap: 8 }}
+          onScroll={(e) => {
+            // Em lista invertida, offset 0 = fim visual (embaixo). "Perto do
+            // fim" vira simplesmente "offset baixo", sem precisar de
+            // contentSize/layoutMeasurement como na versão não invertida.
+            pertoDoFimRef.current = e.nativeEvent.contentOffset.y < 150;
+          }}
+          scrollEventThrottle={16}
+          renderItem={({ item: m }) => {
+            const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
+            return (
+              <LinhaComGestos
+                desabilitado={!!m.apagada}
+                onResponder={() => handleResponder(m)}
+                onLongPress={() => abrirMenuMensagem(m)}
+              >
+                <BolhaMensagem
+                  m={m}
+                  minha={minha}
+                  onCurtir={handleCurtir}
+                  onAbrirImagem={(url) => setMidiaLightbox({ tipo: 'foto', url })}
+                  usuarioLogado={usuarioLogado}
+                  i18n={i18n}
+                  t={t}
+                  navigation={navigation}
+                />
+              </LinhaComGestos>
+            );
+          }}
+        />
+
+        {mensagens.length === 0 && (
+          // Em lista invertida o ListEmptyComponent renderiza torto (bug
+          // conhecido do RN: facebook/react-native#21196, sem correção
+          // definitiva mesmo contrarrotacionando com scaleY). Por isso o
+          // estado vazio/carregando fica fora do FlatList, sobreposto a ele.
+          <View style={estilos.estadoListaOverlay} pointerEvents="none">
             {carregando
               ? <Text style={estilos.estadoLista}>{t('mensagens.carregando')}</Text>
               : <Text style={estilos.estadoLista}>{t('mensagens.nenhuma_mensagem')}</Text>}
           </View>
-        }
-      />
+        )}
+      </View>
 
       {respondendoA && (
         <View style={estilos.respostaAtiva}>
@@ -794,7 +798,11 @@ function PaginaChat() {
 }
 
 const estilos = StyleSheet.create({
-  estadoLista: { textAlign: 'center', color: cores.textoSecundario, marginTop: 24 },
+  estadoLista: { textAlign: 'center', color: cores.textoSecundario },
+  estadoListaOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
   swipeWrapper: { position: 'relative', justifyContent: 'center' },
   swipeIconeResposta: {
     position: 'absolute',

@@ -101,12 +101,12 @@ function SeletorDestinatario({ onSelecionar }) {
 // citação dentro da bolha) — mesmo mapeamento do mobile.
 function previewDaConversa(ultimaMensagem, t) {
   if (ultimaMensagem?.apagada) {
-    return { Icone: null, texto: t('mensagens.mensagem_apagada', 'Mensagem apagada') };
+    return { Icone: null, texto: t('mensagens.mensagem_apagada') };
   }
   const tipo = ultimaMensagem?.tipo;
-  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio', 'Áudio') };
-  if (tipo === 'imagem') return { Icone: IconeImagem, texto: t('mensagens.preview_imagem', 'Imagem') };
-  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video', 'Vídeo') };
+  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio') };
+  if (tipo === 'imagem') return { Icone: IconeImagem, texto: t('mensagens.preview_imagem') };
+  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video') };
   if (tipo === 'itinerario') return { Icone: IconePin, texto: t('mensagens.itinerario_compartilhado') };
   return { Icone: null, texto: ultimaMensagem?.texto || '' };
 }
@@ -151,14 +151,14 @@ function PreviaResposta({ respondidaA, minha, usuarioLogado, t }) {
   if (!respondidaA.disponivel) {
     return (
       <div className={`previa-resposta previa-resposta--indisponivel${minha ? ' previa-resposta--minha' : ''}`}>
-        {t('mensagens.resposta_indisponivel', 'Mensagem indisponível')}
+        {t('mensagens.resposta_indisponivel')}
       </div>
     );
   }
 
   const { Icone, texto } = previewDaConversa({ tipo: respondidaA.tipo, texto: respondidaA.texto }, t);
   const autorLabel = respondidaA.autor_username === usuarioLogado?.username
-    ? t('mensagens.voce', 'Você')
+    ? t('mensagens.voce')
     : respondidaA.autor_username;
 
   return (
@@ -289,7 +289,7 @@ function BolhaMensagem({ m, minha, usuarioLogado, onCurtir, onResponder, onApaga
       <div className={wrapperClasse}>
         <div className={`bolha-apagada${minha ? ' bolha-apagada--minha' : ''}`}>
           <IconeRemover size={13} />
-          <span>{t('mensagens.mensagem_apagada', 'Mensagem apagada')}</span>
+          <span>{t('mensagens.mensagem_apagada')}</span>
         </div>
         <div className={horaFora}>{hora}</div>
       </div>
@@ -554,7 +554,7 @@ function PaginaMensagens() {
   // Só quem enviou pode apagar — o backend já recusa (403) o resto, isso
   // aqui é só a confirmação + atualização otimista da bolha.
   async function handleApagarMensagem(mensagemId) {
-    if (!window.confirm(t('mensagens.confirmar_apagar', 'Apagar esta mensagem para todos?'))) return;
+    if (!window.confirm(t('mensagens.confirmar_apagar'))) return;
     try {
       const atualizada = await apagarMensagem(mensagemId);
       setMensagens((prev) => prev.map((m) => (m.id === mensagemId ? atualizada : m)));
@@ -650,7 +650,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas(t('mensagens.preview_imagem', 'Imagem'), 'imagem');
+      atualizarPreviewConversas(t('mensagens.preview_imagem'), 'imagem');
       buscarConversas();
     } catch (_) {}
     finally { setEnviando(false); setPreviewImagem(null); }
@@ -668,7 +668,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas(t('mensagens.preview_audio', 'Áudio'), 'audio');
+      atualizarPreviewConversas(t('mensagens.preview_audio'), 'audio');
       buscarConversas();
     } catch (_) {}
     finally { setEnviando(false); }
@@ -686,7 +686,7 @@ function PaginaMensagens() {
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
-      atualizarPreviewConversas(t('mensagens.preview_video', 'Vídeo'), 'video');
+      atualizarPreviewConversas(t('mensagens.preview_video'), 'video');
       buscarConversas();
     } catch (err) {
       alert(err.response?.data?.erro || t('mensagens.erro_enviar_video'));
@@ -719,7 +719,7 @@ function PaginaMensagens() {
   // acima do input quanto reaproveitado por previewDaConversa.
   function autorDaMensagem(m) {
     const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-    return minha ? t('mensagens.voce', 'Você') : m.remetente_nome;
+    return minha ? t('mensagens.voce') : m.remetente_nome;
   }
 
   return (

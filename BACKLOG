@@ -24,14 +24,11 @@ mobile:
 ! - Em fullscreen, deve ser possível dar zoom na imagem. Além disso, fullscreen deve ser desativado ao clicar fora da imagem.
 ! - Corrigir exibição de modal no excluir rascunho.
 ! - Na PaginaItinerario, resolver prioridades: É possível clicar na imagem e abri-la em fullscreen enquanto o "Mais opções" está ativo.
-
-
 ! - Conferir LightboxMidia no mobile
-! - Adicionar "Nova conversa", como existe no web, no PaginaMensagens do mobile.
 
 
-Substituir chaves hardcoded na PaginaMensagens e PaginaChat por chaves do json em social.json.
-Novas chaves
+Substituir chaves hardcoded na PaginaMensagens e PaginaChat por chaves do json em social.json. Seguindo o modelo existente de aplicação de chave.
+Também preciso incluir no novas chaves no social.json.
 mensagens.responder            "Responder"
 mensagens.apagar               "Apagar"
 mensagens.confirmar_apagar     "Apagar esta mensagem para todos?"
