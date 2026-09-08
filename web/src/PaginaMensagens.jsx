@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api, { getUsuarioLogado, curtir, validarVideoLocal } from './api';
+import api, { getUsuarioLogado, curtir, validarVideoLocal, apagarMensagem } from './api';
 import EstadoErro from './EstadoErro';
+import LightboxMidia from './LightboxMidia';
 import { classificarErro } from './erros';
 import {
   IconeLike,
@@ -20,6 +22,8 @@ import {
   IconePlay,
   IconePausar,
   IconeImagem,
+  IconeResposta,
+  IconeRemover,
 } from './icons';
 import './PaginaMensagens.css';
 
@@ -92,13 +96,18 @@ function SeletorDestinatario({ onSelecionar }) {
   );
 }
 
-// Mesmo mapeamento tipo → ícone/rótulo usado no mobile, pra manter a
-// lista de conversas padronizada nas duas plataformas.
+// Mapeia tipo → ícone/rótulo padronizado, usado tanto no preview da lista
+// de conversas quanto no preview de "respondendo a" (barra de input e
+// citação dentro da bolha) — mesmo mapeamento do mobile.
 function previewDaConversa(ultimaMensagem, t) {
+  if (ultimaMensagem?.apagada) {
+    return { Icone: null, texto: t('mensagens.mensagem_apagada', 'Mensagem apagada') };
+  }
   const tipo = ultimaMensagem?.tipo;
   if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio', 'Áudio') };
   if (tipo === 'imagem') return { Icone: IconeImagem, texto: t('mensagens.preview_imagem', 'Imagem') };
   if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video', 'Vídeo') };
+  if (tipo === 'itinerario') return { Icone: IconePin, texto: t('mensagens.itinerario_compartilhado') };
   return { Icone: null, texto: ultimaMensagem?.texto || '' };
 }
 
@@ -134,40 +143,36 @@ function useCliqueDuplo(aoDuplo, aoUnico, atraso = 250) {
   };
 }
 
-// ─── Um áudio tocando por vez ──────────────────────────────────────────────
-// Mesmo padrão do mobile (ver tocarAudioExclusivo/liberarAudioExclusivo em
-// PaginaChat.jsx), pra padronizar o comportamento nas duas plataformas.
-// Registro em escopo de módulo (não React state) de propósito: pausar o
-// áudio anterior é uma ação imperativa pontual, não precisa disparar
-// re-render de mais nada além do próprio elemento <audio> que perde o play.
-// Guarda o id da mensagem tocando + uma função pra pausá-la; quando outra
-// mensagem começa a tocar, pausa a anterior automaticamente (se ainda for
-// outra).
-let idAudioTocando = null;
-let pausarAudioTocando = null;
+// Citação da mensagem original, exibida dentro da bolha de quem respondeu —
+// mesmo dado que vem em m.respondida_a (ver MessageSerializer.get_respondida_a).
+function PreviaResposta({ respondidaA, minha, usuarioLogado, t }) {
+  if (!respondidaA) return null;
 
-function tocarAudioExclusivo(mensagemId, pausar) {
-  if (idAudioTocando !== null && idAudioTocando !== mensagemId && pausarAudioTocando) {
-    pausarAudioTocando();
+  if (!respondidaA.disponivel) {
+    return (
+      <div className={`previa-resposta previa-resposta--indisponivel${minha ? ' previa-resposta--minha' : ''}`}>
+        {t('mensagens.resposta_indisponivel', 'Mensagem indisponível')}
+      </div>
+    );
   }
-  idAudioTocando = mensagemId;
-  pausarAudioTocando = pausar;
+
+  const { Icone, texto } = previewDaConversa({ tipo: respondidaA.tipo, texto: respondidaA.texto }, t);
+  const autorLabel = respondidaA.autor_username === usuarioLogado?.username
+    ? t('mensagens.voce', 'Você')
+    : respondidaA.autor_username;
+
+  return (
+    <div className={`previa-resposta${minha ? ' previa-resposta--minha' : ''}`}>
+      <span className="previa-resposta__autor">{autorLabel}</span>
+      <span className="previa-resposta__texto">
+        {Icone && <Icone size={12} />} {texto}
+      </span>
+    </div>
+  );
 }
 
-function liberarAudioExclusivo(mensagemId) {
-  if (idAudioTocando === mensagemId) {
-    idAudioTocando = null;
-    pausarAudioTocando = null;
-  }
-}
-
-// Player de áudio próprio — antes era um <audio controls> "cru" do
-// navegador. Agora espelha o layout padronizado do mobile: botão redondo
-// de play/pause + barra de progresso + hora, com o mesmo <audio> nativo
-// escondido só pra tocar/controlar o som. A exclusividade (só um áudio
-// tocando por vez) escuta os eventos nativos 'play'/'pause' do elemento —
-// assim funciona tanto quando o usuário clica no botão quanto se o áudio
-// for pausado por qualquer outro motivo.
+// Player de áudio próprio — botão redondo de play/pause + barra de
+// progresso + hora, espelhando o layout padronizado no mobile.
 function BolhaAudio({ m, minha, hora, lida }) {
   const audioRef = useRef(null);
   const [tocando, setTocando] = useState(false);
@@ -179,37 +184,26 @@ function BolhaAudio({ m, minha, hora, lida }) {
     if (!audio) return;
     function aoCarregarMetadados() { setDuracao(audio.duration || 0); }
     function aoAtualizarTempo() { setTempoAtual(audio.currentTime); }
-    function aoTocar() {
-      setTocando(true);
-      tocarAudioExclusivo(m.id, () => audio.pause());
-    }
-    function aoPausar() {
-      setTocando(false);
-      liberarAudioExclusivo(m.id);
-    }
-    function aoTerminar() { setTempoAtual(0); }
+    function aoTerminar() { setTocando(false); setTempoAtual(0); }
     audio.addEventListener('loadedmetadata', aoCarregarMetadados);
     audio.addEventListener('timeupdate', aoAtualizarTempo);
-    audio.addEventListener('play', aoTocar);
-    audio.addEventListener('pause', aoPausar);
     audio.addEventListener('ended', aoTerminar);
     return () => {
       audio.removeEventListener('loadedmetadata', aoCarregarMetadados);
       audio.removeEventListener('timeupdate', aoAtualizarTempo);
-      audio.removeEventListener('play', aoTocar);
-      audio.removeEventListener('pause', aoPausar);
       audio.removeEventListener('ended', aoTerminar);
-      liberarAudioExclusivo(m.id);
     };
-  }, [m.id]);
+  }, []);
 
   function alternar() {
     const audio = audioRef.current;
     if (!audio) return;
     if (tocando) {
       audio.pause();
+      setTocando(false);
     } else {
       audio.play();
+      setTocando(true);
     }
   }
 
@@ -238,14 +232,69 @@ function BolhaAudio({ m, minha, hora, lida }) {
   );
 }
 
-function BolhaMensagem({ m, minha, onCurtir }) {
+// Ícones de "Responder" / "Apagar" que aparecem no hover da linha da
+// mensagem (WhatsApp Web). "Apagar" só aparece pra mensagens minhas — o
+// backend também recusa (403) se o usuário tentar apagar mensagem alheia,
+// isso aqui é só o espelho visual da regra.
+function AcoesHover({ minha, apagada, onResponder, onApagar, t }) {
+  if (apagada) return null;
+  return (
+    <div className="bolha-acoes">
+      <button type="button" onClick={onResponder} title={t('mensagens.responder')} className="bolha-acoes__botao">
+        <IconeResposta size={15} />
+      </button>
+      {minha && (
+        <button
+          type="button"
+          onClick={onApagar}
+          title={t('mensagens.apagar')}
+          className="bolha-acoes__botao bolha-acoes__botao--perigo"
+        >
+          <IconeRemover size={15} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BolhaMensagem({ m, minha, usuarioLogado, onCurtir, onResponder, onApagar, onAbrirImagem }) {
   const { t, i18n } = useTranslation('social');
   const navigate = useNavigate();
-  const wrapperClasse = `bolha-wrapper ${minha ? 'bolha-wrapper--minha' : 'bolha-wrapper--deles'}`;
+  // .bolha-wrapper precisa ser o filho DIRETO de .mensagens-lista (ver
+  // comentário no CSS) e levar o modificador --minha/--deles pro
+  // align-self funcionar. As ações (responder/apagar) precisam ficar
+  // DENTRO dele — não como irmã — porque o CSS usa
+  // ".bolha-wrapper:hover .bolha-acoes" (seletor de descendente) e
+  // ".bolha-acoes" é posicionado (absolute) relativo ao próprio wrapper.
+  const wrapperClasse = `bolha-wrapper${minha ? ' bolha-wrapper--minha' : ' bolha-wrapper--deles'}`;
   const horaFora = `bolha-hora-fora ${minha ? 'bolha-hora-fora--minha' : 'bolha-hora-fora--deles'}`;
-  // Antes: locale 'pt-BR' fixo — mesmo bug já corrigido em
-  // PaginaItinerario/PaginaNotificacoes. Agora usa i18n.language.
   const hora = new Date(m.enviada_em).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
+
+  const acoes = (
+    <AcoesHover
+      minha={minha}
+      apagada={m.apagada}
+      onResponder={() => onResponder(m)}
+      onApagar={() => onApagar(m.id)}
+      t={t}
+    />
+  );
+
+  // Mensagem apagada: bolha genérica, sem conteúdo real (o backend já
+  // esvazia texto/mídia em to_representation), sem ações (AcoesHover já
+  // retorna null quando apagada=true) e sem selo de curtida — não faz
+  // sentido reagir a algo que não existe mais.
+  if (m.apagada) {
+    return (
+      <div className={wrapperClasse}>
+        <div className={`bolha-apagada${minha ? ' bolha-apagada--minha' : ''}`}>
+          <IconeRemover size={13} />
+          <span>{t('mensagens.mensagem_apagada', 'Mensagem apagada')}</span>
+        </div>
+        <div className={horaFora}>{hora}</div>
+      </div>
+    );
+  }
 
   function handleDuploClique() {
     onCurtir(m.id);
@@ -253,7 +302,7 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   function handleCliqueUnico() {
     if (m.tipo === 'imagem') {
-      window.open(m.imagem, '_blank');
+      onAbrirImagem(m.imagem);
     } else if (m.tipo === 'itinerario' && m.itinerario?.disponivel) {
       navigate(`/itinerario/${m.itinerario.id}`);
     }
@@ -261,10 +310,16 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   const handleClique = useCliqueDuplo(handleDuploClique, handleCliqueUnico);
 
+  const previa = (
+    <PreviaResposta respondidaA={m.respondida_a} minha={minha} usuarioLogado={usuarioLogado} t={t} />
+  );
+
   if (m.tipo === 'itinerario') {
     const preview = m.itinerario;
     return (
       <div className={wrapperClasse}>
+        {acoes}
+        {previa}
         {preview?.disponivel ? (
           <div
             onClick={handleClique}
@@ -295,6 +350,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'video') {
     return (
       <div className={wrapperClasse}>
+        {acoes}
+        {previa}
         {m.video_status === 'pronto' && m.video ? (
           <video
             src={m.video}
@@ -319,6 +376,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'imagem') {
     return (
       <div className={wrapperClasse}>
+        {acoes}
+        {previa}
         <img src={m.imagem} alt="imagem" onClick={handleClique} className="bolha-imagem" />
         <div className={horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></div>
         <SeloCurtida curtido={m.curtido} minha={minha} />
@@ -329,6 +388,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
   if (m.tipo === 'audio') {
     return (
       <div className={wrapperClasse} onDoubleClick={handleDuploClique}>
+        {acoes}
+        {previa}
         <BolhaAudio m={m} minha={minha} hora={hora} lida={m.lida} />
         <SeloCurtida curtido={m.curtido} minha={minha} />
       </div>
@@ -337,6 +398,8 @@ function BolhaMensagem({ m, minha, onCurtir }) {
 
   return (
     <div className={wrapperClasse}>
+      {acoes}
+      {previa}
       <div
         onDoubleClick={handleDuploClique}
         className={`bolha-texto${minha ? ' bolha-texto--minha' : ''}`}
@@ -398,12 +461,22 @@ function PaginaMensagens() {
   const [mostraSeletor, setMostraSeletor] = useState(false);
   const [previewImagem, setPreviewImagem] = useState(null);
   const [previewVideo, setPreviewVideo] = useState(null);
+  const [respondendoA, setRespondendoA] = useState(null);
+  const [midiaLightbox, setMidiaLightbox] = useState(null);
   const fimRef = useRef(null);
+  const listaRef = useRef(null);
   const inputRef = useRef(null);
   const midiaInputRef = useRef(null);
   const pollingRef = useRef(null);
   const temMensagensRef = useRef(false);
   useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
+  // Controla quando de fato rolar a lista. Sem isso, o efeito de scroll
+  // (mais abaixo) dispara em QUALQUER atualização de `mensagens` — inclusive
+  // o polling de 5 em 5s, que troca `mensagens` por um array novo mesmo
+  // quando o conteúdo é idêntico — e é isso que "puxa" a conversa pro fim
+  // periodicamente mesmo sem mensagem nova.
+  const ultimoIdRef = useRef(null);
+  const cargaInicialRef = useRef(false);
 
   const { gravando, iniciarGravacao, pararGravacao } = useGravacaoAudio(enviarAudio, t);
 
@@ -423,6 +496,11 @@ function PaginaMensagens() {
     if (!conversaAtiva) return;
     setSearchParams({ com: conversaAtiva });
     setErroMensagens(null);
+    setRespondendoA(null); // troca de conversa cancela uma resposta pendente da anterior
+    // Conversa nova: a próxima rolagem deve pular direto pro fim (como no
+    // WhatsApp/Instagram), sem animar por cima do histórico inteiro.
+    cargaInicialRef.current = true;
+    ultimoIdRef.current = null;
     buscarMensagensAtivas({ inicial: true });
     pollingRef.current = setInterval(() => buscarMensagensAtivas({ inicial: false }), 5000);
     return () => clearInterval(pollingRef.current);
@@ -473,7 +551,53 @@ function PaginaMensagens() {
     }
   }
 
-  useEffect(() => { fimRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [mensagens]);
+  // Só quem enviou pode apagar — o backend já recusa (403) o resto, isso
+  // aqui é só a confirmação + atualização otimista da bolha.
+  async function handleApagarMensagem(mensagemId) {
+    if (!window.confirm(t('mensagens.confirmar_apagar', 'Apagar esta mensagem para todos?'))) return;
+    try {
+      const atualizada = await apagarMensagem(mensagemId);
+      setMensagens((prev) => prev.map((m) => (m.id === mensagemId ? atualizada : m)));
+      if (respondendoA?.id === mensagemId) setRespondendoA(null);
+      buscarConversas();
+    } catch (_) {}
+  }
+
+  function handleResponder(mensagem) {
+    setRespondendoA(mensagem);
+    inputRef.current?.focus();
+  }
+
+  useEffect(() => {
+    if (mensagens.length === 0) return;
+    const ultimaMensagem = mensagens[mensagens.length - 1];
+
+    // Atualizações otimistas (curtir, apagar) trocam o array mas não mudam
+    // qual é a última mensagem, e o polling às vezes devolve os mesmos dados
+    // de novo — em nenhum dos dois casos deve haver rolagem.
+    const chegouMensagemNova = ultimaMensagem.id !== ultimoIdRef.current;
+    ultimoIdRef.current = ultimaMensagem.id;
+    if (!chegouMensagemNova) return;
+
+    if (cargaInicialRef.current) {
+      // Conversa recém-aberta: pula direto pro fim, sem animação.
+      cargaInicialRef.current = false;
+      fimRef.current?.scrollIntoView({ behavior: 'auto' });
+      return;
+    }
+
+    // Depois disso, só rola sozinho se o usuário já estava perto do fim
+    // (não interrompe quem subiu pra ler mensagens antigas) ou se a
+    // mensagem nova é minha (acabei de enviar).
+    const lista = listaRef.current;
+    const pertoDoFim = !lista || lista.scrollHeight - lista.scrollTop - lista.clientHeight < 150;
+    const minhaUltima = ultimaMensagem.remetente === usuarioLogado?.id
+      || ultimaMensagem.remetente_nome === usuarioLogado?.username;
+
+    if (pertoDoFim || minhaUltima) {
+      fimRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [mensagens, usuarioLogado]);
 
   function selecionarDestinatario(usuario) {
     setMostraSeletor(false);
@@ -498,9 +622,15 @@ function PaginaMensagens() {
     if (!texto.trim() || !conversaAtiva || enviando) return;
     setEnviando(true);
     const textoEnviado = texto;
+    const respostaId = respondendoA?.id;
     setTexto('');
+    setRespondendoA(null);
     try {
-      const res = await api.post(`/social/mensagens/${conversaAtiva}/`, { tipo: 'texto', texto: textoEnviado });
+      const res = await api.post(`/social/mensagens/${conversaAtiva}/`, {
+        tipo: 'texto',
+        texto: textoEnviado,
+        ...(respostaId && { respondida_a_id: respostaId }),
+      });
       setMensagens((prev) => [...prev, res.data]);
       atualizarPreviewConversas(textoEnviado, 'texto');
       buscarConversas();
@@ -511,9 +641,12 @@ function PaginaMensagens() {
   async function enviarImagem(file) {
     if (!file || !conversaAtiva) return;
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'imagem');
     form.append('imagem', file);
+    if (respostaId) form.append('respondida_a_id', respostaId);
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
@@ -526,9 +659,12 @@ function PaginaMensagens() {
   async function enviarAudio(blob) {
     if (!blob || !conversaAtiva) return;
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'audio');
     form.append('audio', blob, 'audio.webm');
+    if (respostaId) form.append('respondida_a_id', respostaId);
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
@@ -541,9 +677,12 @@ function PaginaMensagens() {
   async function enviarVideo(file) {
     if (!file || !conversaAtiva) return;
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'video');
     form.append('video', file);
+    if (respostaId) form.append('respondida_a_id', respostaId);
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
@@ -563,8 +702,6 @@ function PaginaMensagens() {
     if (file.type.startsWith('video/')) {
       const resultado = await validarVideoLocal(file);
       if (!resultado.valido) {
-        // resultado.erro vem de validarVideoLocal (api.js) — stand-by,
-        // fora do escopo deste componente.
         alert(resultado.erro);
         return;
       }
@@ -577,6 +714,13 @@ function PaginaMensagens() {
   }
 
   const interlocutorAtivo = conversas.find((c) => c.usuario.username === conversaAtiva)?.usuario;
+
+  // Rótulo de autor da resposta, tanto pro preview de "respondendo a X"
+  // acima do input quanto reaproveitado por previewDaConversa.
+  function autorDaMensagem(m) {
+    const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
+    return minha ? t('mensagens.voce', 'Você') : m.remetente_nome;
+  }
 
   return (
     <div className="pagina-mensagens">
@@ -605,7 +749,8 @@ function PaginaMensagens() {
               )}
               {conversas.map((c) => {
                 const enviadaPorEle = !!(
-                  c.ultima_mensagem?.texto && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
+                  (c.ultima_mensagem?.texto || c.ultima_mensagem?.apagada)
+                  && !c.ultima_mensagem?.minha && !c.ultima_mensagem?.lida
                 );
                 const { Icone: IconePreview, texto: textoPreview } = previewDaConversa(c.ultima_mensagem, t);
                 return (
@@ -625,7 +770,7 @@ function PaginaMensagens() {
                       <div className={`conversa-item__preview${enviadaPorEle ? ' conversa-item__preview--destaque' : ''}`}>
                         {IconePreview && <IconePreview size={13} className="conversa-item__preview-icone" />}
                         <span className="conversa-item__preview-texto">
-                          {c.ultima_mensagem?.minha ? t('mensagens.prefixo_voce') : ''}{textoPreview}
+                          {c.ultima_mensagem?.minha && !c.ultima_mensagem?.apagada ? t('mensagens.prefixo_voce') : ''}{textoPreview}
                         </span>
                       </div>
                     </div>
@@ -649,7 +794,7 @@ function PaginaMensagens() {
             <Link to={`/perfil/${conversaAtiva}`} className="chat-painel__header-nome">{conversaAtiva}</Link>
           </div>
 
-          <div className="mensagens-lista">
+          <div className="mensagens-lista" ref={listaRef}>
             {erroMensagens ? (
               <EstadoErro erro={erroMensagens} onRetentar={retentarMensagens} tamanho="inline" />
             ) : (
@@ -660,12 +805,35 @@ function PaginaMensagens() {
                 )}
                 {mensagens.map((m) => {
                   const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
-                  return <BolhaMensagem key={m.id} m={m} minha={minha} onCurtir={handleCurtirMensagem} />;
+                  return (
+                    <BolhaMensagem
+                      key={m.id}
+                      m={m}
+                      minha={minha}
+                      usuarioLogado={usuarioLogado}
+                      onCurtir={handleCurtirMensagem}
+                      onResponder={handleResponder}
+                      onApagar={handleApagarMensagem}
+                      onAbrirImagem={(url) => setMidiaLightbox({ tipo: 'foto', url })}
+                    />
+                  );
                 })}
                 <div ref={fimRef} />
               </>
             )}
           </div>
+
+          {respondendoA && (
+            <div className="resposta-ativa">
+              <div className="resposta-ativa__conteudo">
+                <span className="resposta-ativa__autor">{autorDaMensagem(respondendoA)}</span>
+                <span className="resposta-ativa__texto">{previewDaConversa(respondendoA, t).texto}</span>
+              </div>
+              <button onClick={() => setRespondendoA(null)} className="resposta-ativa__fechar" title={t('common:avisos.cancelar')}>
+                <IconeFechar size={16} />
+              </button>
+            </div>
+          )}
 
           {previewImagem && (
             <div className="preview-midia">
@@ -736,6 +904,12 @@ function PaginaMensagens() {
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {midiaLightbox && (
+          <LightboxMidia midia={midiaLightbox} onFechar={() => setMidiaLightbox(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

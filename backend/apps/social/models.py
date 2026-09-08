@@ -123,10 +123,6 @@ class Message(models.Model):
     texto = models.TextField(blank=True)
     imagem = models.ImageField(upload_to='mensagens/imagens/', null=True, blank=True)
     audio = models.FileField(upload_to='mensagens/audios/', null=True, blank=True)
-    # Vídeo segue o mesmo padrão assíncrono do VideoPontoItinerario: o arquivo
-    # enviado entra com video_status='processando' e a task Celery
-    # (apps.social.tasks.comprimir_video_mensagem_task) troca pelo comprimido
-    # + gera a thumbnail.
     video = models.FileField(upload_to='mensagens/videos/', null=True, blank=True)
     video_thumbnail = models.ImageField(upload_to='mensagens/videos/thumbs/', null=True, blank=True)
     video_status = models.CharField(max_length=12, choices=VIDEO_STATUS_CHOICES, blank=True)
@@ -135,6 +131,21 @@ class Message(models.Model):
         'itineraries.Itinerario', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='mensagens_compartilhado'
     )
+    # Resposta estilo WhatsApp. SET_NULL (não CASCADE): apagar a mensagem
+    # original não pode arrastar quem respondeu a ela junto — mas na prática
+    # isso quase nunca dispara sozinho, porque apagar mensagem é soft-delete
+    # (ver apagada_em) e SET_NULL só entraria em ação se a linha original
+    # fosse excluída de verdade do banco (não é o fluxo normal).
+    respondida_a = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='respostas'
+    )
+    # Soft delete: "apagar pros dois" (só quem enviou pode, ver
+    # ApagarMensagemView) preenche isto em vez de deletar a linha — preserva
+    # a referência de quem respondeu a esta mensagem (respondida_a acima) e
+    # deixa o MessageSerializer devolver um preview tipo "mensagem apagada"
+    # em vez de sumir de vez do histórico de quem está lendo.
+    apagada_em = models.DateTimeField(null=True, blank=True)
     lida = models.BooleanField(
         default=False,
         help_text="Marcada True quando o destinatário abre a conversa (ver MensagensConversaView.get)."

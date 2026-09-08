@@ -88,3 +88,15 @@
 .lightbox-video-btn--mudo {
   right: 14px;
 }
+
+.lightbox-midia--zoomavel {
+  cursor: zoom-in;
+}
+
+.lightbox-midia--arrastavel {
+  cursor: grab;
+}
+
+.lightbox-midia--arrastavel:active {
+  cursor: grabbing;
+}

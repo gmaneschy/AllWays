@@ -148,6 +148,13 @@ export async function curtir(tipo, id) {
   return data; // { curtido, total_curtidas }
 }
 
+// ─── Apagar mensagem ──────────────────────────────────────────────────────
+// Soft delete no backend — só quem enviou pode apagar, some pros dois.
+export async function apagarMensagem(mensagemId) {
+  const { data } = await api.post(`/social/mensagens/apagar/${mensagemId}/`);
+  return data;
+}
+
 // ─── Compartilhamento de itinerário via mensagem ───────────────────────────
 
 export async function compartilharItinerario(username, itinerarioId) {

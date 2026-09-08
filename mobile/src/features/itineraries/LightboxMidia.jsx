@@ -1,4 +1,9 @@
-import { View, Text, Image, Pressable, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import { Image as RNImage } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle, useSharedValue, withSpring, runOnJS,
+} from 'react-native-reanimated';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
 import { useTranslation } from 'react-i18next';
@@ -6,14 +11,16 @@ import { IconeFechar, IconeSom, IconeSomMudo, IconePlay } from '../../components
 import { useMudoGlobal, alternarMudoGlobal } from './estadoVideoGlobal';
 import { usePlayVideoControlado } from './usePlayVideoControlado';
 
-/** Mídia em tela cheia. Diferente do resto dos modais do app (ver
- * Avisos.jsx), este usa o <Modal> nativo do RN de propósito: precisa
- * cobrir a tela INTEIRA, inclusive por cima da tab bar, e pode ser aberto
- * de dentro de um item de lista (Feed, Fase 6) — o truque de
- * position:absolute que os Avisos usam só cobre a árvore da própria tela,
- * não o app inteiro. Como bônus, o Modal nativo resolve o botão físico de
- * voltar do Android sozinho via onRequestClose, sem precisar do
- * BackHandler manual que o Avisos.jsx precisou. */
+const ESCALA_MIN = 1;
+const ESCALA_MAX = 4;
+const ESCALA_DUPLO_TOQUE = 2.5;
+
+/** Mídia em tela cheia com zoom por pinça (só fotos — vídeo mantém o
+ * comportamento original de toque pra play/pause). Usa o mesmo padrão de
+ * <Modal> nativo do resto do Lightbox (ver comentário original abaixo) —
+ * o gesture handler funciona normalmente aqui porque o app já embrulha a
+ * árvore raiz em GestureHandlerRootView (App.js); só dentro de OUTRO
+ * <Modal> nativo é que precisaria de um wrapper próprio. */
 function LightboxMidia({ midia, onFechar }) {
   const { t } = useTranslation('itinerarios');
   const mudo = useMudoGlobal();
@@ -29,6 +36,60 @@ function LightboxMidia({ midia, onFechar }) {
 
   usePlayVideoControlado(player, midia?.tipo === 'video', midia?.id);
 
+  // ─── Zoom (só foto) ─────────────────────────────────────────────────
+  const escala = useSharedValue(1);
+  const escalaInicio = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const inicioX = useSharedValue(0);
+  const inicioY = useSharedValue(0);
+
+  function resetarZoom() {
+    escala.value = withSpring(1);
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+  }
+
+  const pinca = Gesture.Pinch()
+    .onStart(() => { escalaInicio.value = escala.value; })
+    .onUpdate((e) => {
+      escala.value = Math.min(ESCALA_MAX, Math.max(ESCALA_MIN, escalaInicio.value * e.scale));
+    })
+    .onEnd(() => {
+      if (escala.value <= ESCALA_MIN) runOnJS(resetarZoom)();
+    });
+
+  const arrasto = Gesture.Pan()
+    .onStart(() => {
+      inicioX.value = translateX.value;
+      inicioY.value = translateY.value;
+    })
+    .onUpdate((e) => {
+      if (escala.value <= ESCALA_MIN) return;
+      translateX.value = inicioX.value + e.translationX;
+      translateY.value = inicioY.value + e.translationY;
+    });
+
+  const toqueDuplo = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (escala.value > ESCALA_MIN) {
+        runOnJS(resetarZoom)();
+      } else {
+        escala.value = withSpring(ESCALA_DUPLO_TOQUE);
+      }
+    });
+
+  const gestoFoto = Gesture.Simultaneous(pinca, arrasto, toqueDuplo);
+
+  const estiloAnimadoFoto = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: escala.value },
+    ],
+  }));
+
   function fechar() {
     const tempoFinal = midia?.tipo === 'video' && player ? player.currentTime : undefined;
     onFechar(tempoFinal);
@@ -38,14 +99,18 @@ function LightboxMidia({ midia, onFechar }) {
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={fechar}>
-      <Pressable style={estilos.overlay} onPress={fechar}>
+      <View style={estilos.overlay}>
         <Pressable onPress={fechar} style={estilos.fechar} hitSlop={10}>
           <IconeFechar size={24} color="#fff" />
         </Pressable>
 
-        <Pressable style={estilos.conteudo} onPress={(e) => e.stopPropagation?.()}>
+        <View style={estilos.conteudo}>
           {midia.tipo === 'foto' ? (
-            <Image source={{ uri: midia.url }} style={estilos.midia} resizeMode="contain" />
+            <GestureDetector gesture={gestoFoto}>
+              <Animated.View style={[estilos.midia, estiloAnimadoFoto]}>
+                <RNImage source={{ uri: midia.url }} style={estilos.midia} resizeMode="contain" />
+              </Animated.View>
+            </GestureDetector>
           ) : (
             <View style={estilos.videoWrapper}>
               <Pressable
@@ -69,8 +134,8 @@ function LightboxMidia({ midia, onFechar }) {
               </Pressable>
             </View>
           )}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

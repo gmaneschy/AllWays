@@ -4,7 +4,7 @@
 
 .pagina-mensagens {
   display: flex;
-  height: calc(100vh - 57px);
+  height: calc(100vh - 0px);
   font: var(--fonte-corpo);
   color: var(--texto-principal);
 }
@@ -239,6 +239,11 @@
 }
 
 /* --- Bolhas de mensagem --- */
+/* .bolha-wrapper é filho DIRETO de .mensagens-lista (flex column) — não
+   colocar nenhum wrapper extra entre os dois, senão align-self perde o
+   pai flex certo e o wrapper volta a ocupar 100% da largura, o que
+   distorce qualquer mídia dentro dele (o align-items:stretch do próprio
+   .bolha-wrapper estica a largura da imagem sem respeitar a proporção). */
 
 .bolha-wrapper {
   max-width: 65%;
@@ -253,6 +258,53 @@
 
 .bolha-wrapper--deles {
   align-self: flex-start;
+}
+
+/* --- Ações de hover (responder/apagar) — badge fixo no canto
+     superior direito da bolha, independente de ser minha ou dela --- */
+
+.bolha-acoes {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  display: flex;
+  gap: 2px;
+  background: var(--fundo-card);
+  border-radius: 20px;
+  padding: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+
+.bolha-wrapper:hover .bolha-acoes {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bolha-acoes__botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--texto-secundario);
+  cursor: pointer;
+}
+
+.bolha-acoes__botao:hover {
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria);
+}
+
+.bolha-acoes__botao--perigo:hover {
+  background: #FDECEA;
+  color: var(--cor-perigo);
 }
 
 .bolha-texto {
@@ -344,6 +396,7 @@
   max-height: 280px;
   display: block;
   background: #000;
+  align-self: flex-start;
 }
 
 .bolha-video-erro {
@@ -371,6 +424,7 @@
   max-height: 280px;
   display: block;
   cursor: pointer;
+  align-self: flex-start;
 }
 
 .bolha-audio {
@@ -490,6 +544,119 @@
 
 .bolha-curtida-selo--deles {
   left: 6px;
+}
+
+/* --- Citação da mensagem respondida, dentro da bolha --- */
+
+.previa-resposta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 3px solid var(--cor-primaria);
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font: var(--fonte-meta);
+  max-width: 100%;
+}
+
+.previa-resposta--minha {
+  background: #da7a59;
+  border-left-color: #D85A30;
+}
+
+.previa-resposta--indisponivel {
+  font-style: italic;
+  color: var(--texto-muted);
+}
+
+.previa-resposta__autor {
+  font-weight: bold;
+  color: var(--cor-primaria);
+}
+
+.previa-resposta--minha .previa-resposta__autor {
+  color: #fff;
+}
+
+.previa-resposta__texto {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previa-resposta--minha .previa-resposta__texto {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* --- Barra "respondendo a" acima do input --- */
+
+.resposta-ativa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-top: 1px solid var(--borda-sutil);
+  background: var(--fundo-hover);
+}
+
+.resposta-ativa__conteudo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--cor-primaria);
+  padding-left: 8px;
+}
+
+.resposta-ativa__autor {
+  font: var(--fonte-meta);
+  font-weight: bold;
+  color: var(--cor-primaria);
+}
+
+.resposta-ativa__texto {
+  font: var(--fonte-meta);
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resposta-ativa__fechar {
+  border: none;
+  background: none;
+  color: var(--texto-muted);
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.resposta-ativa__fechar:hover {
+  color: var(--cor-perigo);
+}
+
+/* --- Bolha de mensagem apagada --- */
+
+.bolha-apagada {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 16px 16px 16px 4px;
+  padding: 8px 14px;
+  background: var(--fundo-hover);
+  color: var(--texto-muted);
+  font-style: italic;
+  font: var(--fonte-corpo);
+}
+
+.bolha-apagada--minha {
+  border-radius: 16px 16px 4px 16px;
 }
 
 /* --- Preview de mídia antes de enviar --- */

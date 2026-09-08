@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, Text, Switch, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   getConfiguracoes, atualizarConfiguracoes, alterarSenha,
@@ -190,6 +190,27 @@ function PaginaConfiguracoes({ aoDeslogar }) {
     } finally {
       setExcluindo(false);
     }
+  }
+
+  // Mesmo padrão de handleDesativarConta/handleExcluirConta pra parte de
+  // logout em si (chama logout() na api e delega a troca Auth<->App pro
+  // aoDeslogar(), sem navigate() aqui — ver RootNavigator). A confirmação
+  // usa as mesmas strings de common:avisos.sair que o modal do navbar
+  // web já usava, só que via Alert nativo em vez de modal customizado.
+  async function confirmarLogout() {
+    await logout();
+    aoDeslogar?.();
+  }
+
+  function handleLogout() {
+    Alert.alert(
+      t('common:avisos.sair.titulo'),
+      t('common:avisos.sair.mensagem'),
+      [
+        { text: t('common:avisos.cancelar'), style: 'cancel' },
+        { text: t('common:avisos.sair.confirmar'), style: 'destructive', onPress: confirmarLogout },
+      ],
+    );
   }
 
   if (carregando) {
@@ -480,6 +501,13 @@ function PaginaConfiguracoes({ aoDeslogar }) {
           </View>
         )}
       </View>
+
+      {/* ─── Sair ─── */}
+      {/* No web isso era um ícone no Navbar; aqui não há navbar fixo,
+          então a ação de logout mora no fim da própria página. */}
+      <Botao variante="outline" onPress={handleLogout} style={estilos.botaoSair}>
+        {t('common:navbar.sair')}
+      </Botao>
     </ScrollView>
   );
 }
@@ -639,6 +667,12 @@ const estilos = StyleSheet.create({
   },
   botaoSecundarioTexto: {
     fontWeight: 'bold',
+  },
+
+  botaoSair: {
+    alignSelf: 'center',
+    minWidth: 160,
+    marginTop: 4,
   },
 });
 

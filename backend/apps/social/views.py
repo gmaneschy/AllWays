@@ -1,6 +1,6 @@
 import os
 import tempfile
-
+from django.utils import timezone
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -489,7 +489,9 @@ class ConversasView(APIView):
                 .order_by('-enviada_em')
                 .first()
             )
-            if ultima.tipo == 'imagem':
+            if ultima.apagada_em:
+                preview = None  # frontend mostra o texto traduzido de "mensagem apagada"
+            elif ultima.tipo == 'imagem':
                 preview = '📷 Imagem'
             elif ultima.tipo == 'audio':
                 preview = '🎤 Áudio'
@@ -505,11 +507,12 @@ class ConversasView(APIView):
                     'id': interlocutor.id,
                     'username': interlocutor.username,
                     'foto_perfil': request.build_absolute_uri(interlocutor.foto_perfil.url)
-                                   if interlocutor.foto_perfil else None,
+                    if interlocutor.foto_perfil else None,
                 },
                 'ultima_mensagem': {
                     'texto': preview,
                     'tipo': ultima.tipo,
+                    'apagada': bool(ultima.apagada_em),
                     'enviada_em': ultima.enviada_em,
                     'minha': ultima.remetente_id == user.id,
                     'lida': ultima.lida,
@@ -550,7 +553,8 @@ class MensagensConversaView(APIView):
         outro = get_object_or_404(User, username=username)
         _checar_conta_visivel(outro, request)
         if outro == request.user:
-            return Response({'erro': 'Você não pode enviar mensagens para si mesmo.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'erro': 'Você não pode enviar mensagens para si mesmo.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         tipo = request.data.get('tipo', 'texto')
         data = {
@@ -563,27 +567,41 @@ class MensagensConversaView(APIView):
         if tipo == 'audio' and 'audio' in request.FILES:
             data['audio'] = request.FILES['audio']
         if tipo == 'itinerario':
-            # A validação de "só publicado" acontece no queryset do
-            # PrimaryKeyRelatedField (itinerario_id) do serializer.
             data['itinerario_id'] = request.data.get('itinerario_id')
+
+        # Resposta a uma mensagem específica — só aceita id de uma mensagem
+        # que já exista NESSA conversa entre os dois (não dá pra "responder"
+        # uma mensagem de outra conversa), e não pode ser uma já apagada.
+        respondida_a_id = request.data.get('respondida_a_id')
+        if respondida_a_id:
+            respondida_a = get_object_or_404(
+                Message.objects.filter(
+                    Q(remetente=request.user, destinatario=outro) |
+                    Q(remetente=outro, destinatario=request.user)
+                ),
+                pk=respondida_a_id,
+            )
+            if respondida_a.apagada_em:
+                return Response(
+                    {'erro': 'Não é possível responder a uma mensagem apagada.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            data['respondida_a_id'] = respondida_a.id
 
         duracao_video = None
         if tipo == 'video' and 'video' in request.FILES:
             arquivo = request.FILES['video']
-
             tamanho_maximo_bytes = settings.VIDEO_TAMANHO_MAXIMO_MB * 1024 * 1024
             if arquivo.size > tamanho_maximo_bytes:
                 return Response(
                     {'erro': f'O vídeo excede o tamanho máximo de {settings.VIDEO_TAMANHO_MAXIMO_MB}MB.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
             sufixo = os.path.splitext(arquivo.name)[1] or '.mp4'
             with tempfile.NamedTemporaryFile(suffix=sufixo, delete=False) as tmp:
                 for chunk in arquivo.chunks():
                     tmp.write(chunk)
                 caminho_temp = tmp.name
-
             try:
                 duracao_video, largura, altura = probe_video(caminho_temp)
                 validar_video(duracao_video, largura, altura)
@@ -591,16 +609,12 @@ class MensagensConversaView(APIView):
                 return Response({'erro': e.detail}, status=status.HTTP_400_BAD_REQUEST)
             finally:
                 os.remove(caminho_temp)
-
-            arquivo.seek(0)  # rebobina — já foi consumido pelo .chunks() acima
+            arquivo.seek(0)
             data['video'] = arquivo
 
         serializer = MessageSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
-        # duracao_segundos e video_status são read_only no serializer (preenchidos
-        # pelo servidor, não pelo cliente), então entram como kwargs do save()
-        # em vez de em `data` — se fossem em `data`, o DRF ignoraria silenciosamente.
         extras = {}
         if tipo == 'video':
             extras['duracao_segundos'] = round(duracao_video)
@@ -614,6 +628,27 @@ class MensagensConversaView(APIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+class ApagarMensagemView(APIView):
+    """POST /api/social/mensagens/apagar/<int:pk>/
+    Soft delete — só quem ENVIOU pode apagar (padrão WhatsApp), e some
+    pros dois lados de uma vez. A linha continua no banco com apagada_em
+    preenchido: isso preserva a referência de quem respondeu a ela
+    (Message.respondida_a) e deixa o MessageSerializer devolver um preview
+    de "mensagem apagada" em vez de sumir sem deixar rastro na conversa."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        mensagem = get_object_or_404(Message, pk=pk)
+        if mensagem.remetente_id != request.user.id:
+            return Response(
+                {'erro': 'Você só pode apagar mensagens que você mesmo enviou.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if mensagem.apagada_em is None:
+            mensagem.apagada_em = timezone.now()
+            mensagem.save(update_fields=['apagada_em'])
+        serializer = MessageSerializer(mensagem, context={'request': request})
+        return Response(serializer.data)
 
 class UsuariosParaMensagemView(APIView):
     permission_classes = [permissions.IsAuthenticated]

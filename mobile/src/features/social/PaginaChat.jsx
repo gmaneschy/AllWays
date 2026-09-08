@@ -7,6 +7,10 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle, useSharedValue, withSpring, runOnJS,
+} from 'react-native-reanimated';
 import {
   AudioModule,
   RecordingPresets,
@@ -16,87 +20,22 @@ import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from 'expo-audio';
-// SDK 54+ trocou a API padrão de expo-file-system pra classes (File/
-// Directory), que não funcionam no Expo Go (só em dev build) — por isso o
-// import explícito de /legacy, que mantém as funções clássicas
-// (getInfoAsync/downloadAsync/makeDirectoryAsync) e roda no Expo Go sem
-// exigir mudança de fluxo de desenvolvimento.
-import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
-import api, { getUsuarioLogado, curtir, validarVideoLocal } from '../../api/api';
+import api, { getUsuarioLogado, curtir, validarVideoLocal, apagarMensagem } from '../../api/api';
 import { classificarErro } from '../../api/erros';
 import EstadoErro from '../../components/EstadoErro';
+import MenuAcoes from '../../components/MenuAcoes';
+import LightboxMidia from '../itineraries/LightboxMidia';
 import {
   IconeLike, IconePin, IconeVideo, IconeFechar, IconeAnexo,
   IconeMicrofone, IconePararGravacao, IconeEnviado, IconeLidoDuplo, IconeEnviar,
-  IconePlay, IconePausar,
+  IconePlay, IconePausar, IconeResposta, IconeRemover,
 } from '../../components/icons';
 import { cores, fontes } from '../../theme';
 
 const INTERVALO_POLLING_MS = 5000;
-
-// ─── Cache local de áudio ──────────────────────────────────────────────────
-// Primeira reprodução: baixa o arquivo pro cache do dispositivo. Reproduções
-// seguintes (mesmo depois de fechar e reabrir o app — cacheDirectory
-// sobrevive entre sessões, só é limpo pelo SO sob pressão de espaço) tocam
-// direto do disco: sem espera de rede, funciona offline, replay instantâneo.
-// Mesmo padrão do WhatsApp/Instagram.
-const DIR_CACHE_AUDIOS = `${FileSystem.cacheDirectory}mensagens-audios/`;
-
-async function garantirDiretorioAudios() {
-  const info = await FileSystem.getInfoAsync(DIR_CACHE_AUDIOS);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(DIR_CACHE_AUDIOS, { intermediates: true });
-  }
-}
-
-function extensaoDaUrl(url) {
-  const semQuery = url.split('?')[0];
-  const partes = semQuery.split('.');
-  return partes.length > 1 ? partes[partes.length - 1] : 'm4a';
-}
-
-async function obterAudioLocal(mensagemId, urlRemota) {
-  await garantirDiretorioAudios();
-  const caminhoLocal = `${DIR_CACHE_AUDIOS}${mensagemId}.${extensaoDaUrl(urlRemota)}`;
-
-  const info = await FileSystem.getInfoAsync(caminhoLocal);
-  if (info.exists) {
-    console.log(`[ÁUDIO] mensagem ${mensagemId} — cache local encontrado (${caminhoLocal}), pulando download`);
-    return caminhoLocal;
-  }
-
-  console.log(`[ÁUDIO] mensagem ${mensagemId} — sem cache, baixando de ${urlRemota}`);
-  const inicioMs = Date.now();
-  await FileSystem.downloadAsync(urlRemota, caminhoLocal);
-  console.log(`[ÁUDIO] mensagem ${mensagemId} — baixado e cacheado em ${Date.now() - inicioMs}ms`);
-  return caminhoLocal;
-}
-
-// ─── Um áudio tocando por vez ──────────────────────────────────────────────
-// Registro em escopo de módulo (não React state) de propósito: pausar o
-// player anterior é uma ação imperativa pontual, não precisa disparar
-// re-render de mais nada além do próprio player que perde o play. Guarda o
-// id da mensagem tocando + uma função pra pausá-la; quando outra mensagem
-// começa a tocar, pausa a anterior automaticamente (se ainda for outra).
-let idAudioTocando = null;
-let pausarAudioTocando = null;
-
-function tocarAudioExclusivo(mensagemId, pausar) {
-  if (idAudioTocando !== null && idAudioTocando !== mensagemId && pausarAudioTocando) {
-    console.log(`[ÁUDIO] mensagem ${mensagemId} — pausando mensagem ${idAudioTocando} que já estava tocando`);
-    pausarAudioTocando();
-  }
-  idAudioTocando = mensagemId;
-  pausarAudioTocando = pausar;
-}
-
-function liberarAudioExclusivo(mensagemId) {
-  if (idAudioTocando === mensagemId) {
-    idAudioTocando = null;
-    pausarAudioTocando = null;
-  }
-}
+const SWIPE_LIMIAR = 60;
+const SWIPE_MAXIMO = 90;
 
 function StatusLeitura({ minha, lida }) {
   if (!minha) return null;
@@ -110,6 +49,53 @@ function SeloCurtida({ curtido }) {
   return (
     <View style={estilos.seloCurtida}>
       <IconeLike size={10} color={cores.perigo} fill={cores.perigo} />
+    </View>
+  );
+}
+
+// Mesmo mapeamento tipo → ícone/rótulo do PaginaMensagens (lista de
+// conversas) e do web — usado aqui pro preview da mensagem respondida.
+function previewDaMensagem(m, t) {
+  if (m?.apagada) return { Icone: IconeRemover, texto: t('mensagens.mensagem_apagada', 'Mensagem apagada') };
+  const tipo = m?.tipo;
+  if (tipo === 'audio') return { Icone: IconePlay, texto: t('mensagens.preview_audio', 'Áudio') };
+  if (tipo === 'imagem') return { Icone: IconePlay, texto: t('mensagens.preview_imagem', 'Imagem') };
+  if (tipo === 'video') return { Icone: IconeVideo, texto: t('mensagens.preview_video', 'Vídeo') };
+  if (tipo === 'itinerario') return { Icone: IconePin, texto: t('mensagens.itinerario_compartilhado') };
+  return { Icone: null, texto: m?.texto || '' };
+}
+
+// Citação da mensagem original dentro da bolha de quem respondeu.
+function PreviaResposta({ respondidaA, minha, usuarioLogado, t }) {
+  if (!respondidaA) return null;
+
+  if (!respondidaA.disponivel) {
+    return (
+      <View style={[estilos.previaResposta, minha && estilos.previaRespostaMinha]}>
+        <Text style={estilos.previaRespostaIndisponivel}>
+          {t('mensagens.resposta_indisponivel', 'Mensagem indisponível')}
+        </Text>
+      </View>
+    );
+  }
+
+  const { Icone, texto } = previewDaMensagem({ tipo: respondidaA.tipo, texto: respondidaA.texto }, t);
+  const autorLabel = respondidaA.autor_username === usuarioLogado?.username
+    ? t('mensagens.voce', 'Você')
+    : respondidaA.autor_username;
+
+  return (
+    <View style={[estilos.previaResposta, minha && estilos.previaRespostaMinha]}>
+      <Text style={[estilos.previaRespostaAutor, minha && estilos.previaRespostaAutorMinha]}>{autorLabel}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        {Icone && <Icone size={11} color={minha ? 'rgba(255,255,255,0.85)' : cores.textoSecundario} />}
+        <Text
+          numberOfLines={1}
+          style={[estilos.previaRespostaTexto, minha && estilos.previaRespostaTextoMinha]}
+        >
+          {texto}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -143,194 +129,38 @@ function BolhaVideo({ m, minha }) {
   );
 }
 
-function formatarDuracao(segundos) {
-  if (segundos === null || segundos === undefined) return '';
-  const total = Math.round(segundos);
-  const min = Math.floor(total / 60);
-  const seg = total % 60;
-  return `${min}:${String(seg).padStart(2, '0')}`;
-}
-
-// Bolha de áudio — o player nativo (useAudioPlayer) só é criado quando o
-// usuário toca em play, não quando a mensagem aparece na FlatList. Antes,
-// TODAS as mensagens de áudio da conversa abriam uma sessão de streaming
-// simultaneamente assim que a tela montava (ou o polling trazia um array
-// novo), sobrecarregando a sessão de áudio nativa — daí a rajada de
-// requisições vista no log. Agora existe no máximo 1 player nativo vivo por
-// vez, e nunca mais de um tocando simultaneamente (ver tocarAudioExclusivo).
+// Áudio gravado — ver comentário original sobre o bug de travamento do
+// expo-audio com URIs remotas e o retry via remonte por `key`.
 function BolhaAudio({ m, minha, hora, lida }) {
-  const [iniciado, setIniciado] = useState(false);
-
-  if (!iniciado) {
-    return (
-      <View style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}>
-        <TouchableOpacity
-          onPress={() => {
-            console.log(`[ÁUDIO] mensagem ${m.id} — usuário tocou em play`);
-            setIniciado(true);
-          }}
-          style={estilos.botaoPlayAudio}
-        >
-          <IconePlay size={16} color={minha ? '#fff' : cores.textoPrincipal} fill={minha ? '#fff' : cores.textoPrincipal} />
-        </TouchableOpacity>
-        <View style={estilos.corpoAudio}>
-          <View style={[estilos.barraAudio, minha && estilos.barraAudioMinha]} />
-          <Text style={[estilos.horaAudio, minha && { color: 'rgba(255,255,255,0.8)' }]}>
-            {formatarDuracao(m.duracao_segundos) || hora} <StatusLeitura minha={minha} lida={lida} />
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  return <BolhaAudioAtiva m={m} minha={minha} hora={hora} lida={lida} />;
-}
-
-const MAX_TENTATIVAS_AUDIO = 2; // tentativa inicial + 2 remontes automáticos
-
-// Resolve o cache local (baixando se preciso) ANTES de criar o player, e só
-// então monta BolhaAudioPlayer — mantém o player nativo recebendo sempre uma
-// URI já pronta pra tocar, igual antes, só que apontando pro arquivo local
-// em vez da URL remota depois da primeira vez.
-function BolhaAudioAtiva({ m, minha, hora, lida }) {
-  const { t } = useTranslation('social');
   const [tentativa, setTentativa] = useState(0);
-  const [falhou, setFalhou] = useState(false);
-  const [uriParaTocar, setUriParaTocar] = useState(null);
-
-  useEffect(() => {
-    let cancelado = false;
-    obterAudioLocal(m.id, m.audio)
-      .then((caminho) => { if (!cancelado) setUriParaTocar(caminho); })
-      .catch((err) => {
-        // Falhou o cache (sem espaço, rede caiu no meio do download etc.) —
-        // não trava a reprodução por causa disso, cai pro streaming direto
-        // da URL remota como fallback.
-        console.error(`[ÁUDIO] mensagem ${m.id} — falha ao cachear localmente, streamando direto da URL remota`, err?.message || err);
-        if (!cancelado) setUriParaTocar(m.audio);
-      });
-    return () => { cancelado = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m.id, m.audio]);
-
-  function handleTravou() {
-    if (tentativa >= MAX_TENTATIVAS_AUDIO) {
-      console.error(`[ÁUDIO] mensagem ${m.id} — falhou definitivamente após ${MAX_TENTATIVAS_AUDIO} remonte(s) automático(s)`);
-      setFalhou(true);
-      return;
-    }
-    console.warn(`[ÁUDIO] mensagem ${m.id} — travou, forçando remonte #${tentativa + 1}`);
-    setTentativa((v) => v + 1);
-  }
-
-  if (falhou) {
-    return (
-      <TouchableOpacity
-        onPress={() => {
-          console.log(`[ÁUDIO] mensagem ${m.id} — usuário pediu nova tentativa manual após falha`);
-          setFalhou(false);
-          setTentativa(0);
-        }}
-        style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}
-      >
-        <Text style={[estilos.horaAudio, minha && { color: '#fff' }]}>
-          {t('mensagens.audio_falha', 'Não foi possível carregar. Toque para tentar de novo.')}
-        </Text>
-      </TouchableOpacity>
-    );
-  }
-
-  if (!uriParaTocar) {
-    // Ainda resolvendo cache local (checando se existe / baixando pela 1ª
-    // vez) — mesmo visual do estado "antes do toque", só sem o onPress.
-    return (
-      <View style={[estilos.bolhaAudio, minha && estilos.bolhaAudioMinha]}>
-        <View style={[estilos.botaoPlayAudio, { opacity: 0.5 }]}>
-          <IconePlay size={16} color={minha ? '#fff' : cores.textoPrincipal} fill={minha ? '#fff' : cores.textoPrincipal} />
-        </View>
-        <View style={estilos.corpoAudio}>
-          <View style={[estilos.barraAudio, minha && estilos.barraAudioMinha]} />
-          <Text style={[estilos.horaAudio, minha && { color: 'rgba(255,255,255,0.8)' }]}>{hora}</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <BolhaAudioPlayer
-      key={`${tentativa}-${uriParaTocar}`}
+      key={tentativa}
       m={m}
-      uri={uriParaTocar}
       minha={minha}
       hora={hora}
       lida={lida}
-      onTravou={handleTravou}
+      onTravou={() => setTentativa((v) => v + 1)}
     />
   );
 }
 
-function BolhaAudioPlayer({ m, uri, minha, hora, lida, onTravou }) {
-  const player = useAudioPlayer(uri);
+function BolhaAudioPlayer({ m, minha, hora, lida, onTravou }) {
+  const player = useAudioPlayer(m.audio);
   const status = useAudioPlayerStatus(player);
-  const jaAutoTocouRef = useRef(false);
-  const montadoEmRef = useRef(Date.now());
-
-  useEffect(() => {
-    console.log(`[ÁUDIO] mensagem ${m.id} — player montado (uri: ${uri})`);
-    return () => {
-      console.log(`[ÁUDIO] mensagem ${m.id} — player desmontado (viveu ${Date.now() - montadoEmRef.current}ms)`);
-      liberarAudioExclusivo(m.id);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    console.log(`[ÁUDIO] mensagem ${m.id} — status`, {
-      isLoaded: status.isLoaded,
-      playing: status.playing,
-      duration: status.duration,
-      currentTime: status.currentTime,
-      didJustFinish: status.didJustFinish,
-      msDesdeMontagem: Date.now() - montadoEmRef.current,
-    });
-    // Assim que este player para de tocar (pausado manualmente, terminou,
-    // ou foi pausado por outro áudio via tocarAudioExclusivo), libera o
-    // registro — só se ainda for o dono dele (liberarAudioExclusivo já
-    // checa isso, então é seguro chamar aqui sempre).
-    if (!status.playing) {
-      liberarAudioExclusivo(m.id);
-    }
-  }, [m.id, status.isLoaded, status.playing, status.didJustFinish, status.duration]);
 
   useEffect(() => {
     if (status.isLoaded) return;
-    const timeout = setTimeout(() => {
-      console.warn(`[ÁUDIO] mensagem ${m.id} — 4000ms sem carregar, considerando travado (uri: ${uri})`);
-      onTravou();
-    }, 4000);
+    const timeout = setTimeout(onTravou, 4000);
     return () => clearTimeout(timeout);
-  }, [status.isLoaded, onTravou, m.id, uri]);
-
-  // Como o player só é criado depois do toque do usuário em play (ver
-  // BolhaAudio), assim que ele terminar de carregar já toca sozinho.
-  useEffect(() => {
-    if (status.isLoaded && !jaAutoTocouRef.current) {
-      jaAutoTocouRef.current = true;
-      console.log(`[ÁUDIO] mensagem ${m.id} — carregou em ${Date.now() - montadoEmRef.current}ms, autoplay disparado`);
-      tocarAudioExclusivo(m.id, () => player.pause());
-      player.play();
-    }
-  }, [status.isLoaded, player, m.id]);
+  }, [status.isLoaded, onTravou]);
 
   function alternar() {
     if (!status.isLoaded) return;
     if (status.playing) {
-      console.log(`[ÁUDIO] mensagem ${m.id} — pause manual`);
       player.pause();
     } else {
       if (status.didJustFinish) player.seekTo(0);
-      console.log(`[ÁUDIO] mensagem ${m.id} — play manual`);
-      tocarAudioExclusivo(m.id, () => player.pause());
       player.play();
     }
   }
@@ -363,14 +193,87 @@ function BolhaAudioPlayer({ m, uri, minha, hora, lida, onTravou }) {
   );
 }
 
-function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation }) {
+// Embrulha cada linha de mensagem com o gesto de arrastar-pra-responder
+// (estilo WhatsApp) + long-press pra abrir o MenuAcoes. Um ícone de
+// resposta vai ficando mais opaco conforme o usuário arrasta, e solta
+// disparando onResponder se passar do limiar — senão volta com spring.
+function LinhaComGestos({ children, desabilitado, onResponder, onLongPress }) {
+  const translateX = useSharedValue(0);
+
+  function dispararResposta() {
+    onResponder();
+  }
+
+  function dispararMenu() {
+    onLongPress();
+  }
+
+  const arrasto = Gesture.Pan()
+    .enabled(!desabilitado)
+    .activeOffsetX(15)
+    .onUpdate((e) => {
+      if (e.translationX < 0) return; // só arrasta pra direita
+      translateX.value = Math.min(SWIPE_MAXIMO, e.translationX);
+    })
+    .onEnd(() => {
+      if (translateX.value > SWIPE_LIMIAR) {
+        runOnJS(dispararResposta)();
+      }
+      translateX.value = withSpring(0, { damping: 18, stiffness: 180 });
+    });
+
+  const longPress = Gesture.LongPress()
+    .enabled(!desabilitado)
+    .minDuration(350)
+    .onStart(() => {
+      runOnJS(dispararMenu)();
+    });
+
+  const gestoComposto = Gesture.Race(arrasto, longPress);
+
+  const estiloIcone = useAnimatedStyle(() => ({
+    opacity: Math.min(1, translateX.value / SWIPE_LIMIAR),
+  }));
+
+  const estiloConteudo = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <View style={estilos.swipeWrapper}>
+      <Animated.View style={[estilos.swipeIconeResposta, estiloIcone]}>
+        <IconeResposta size={16} color={cores.textoSecundario} />
+      </Animated.View>
+      <GestureDetector gesture={gestoComposto}>
+        <Animated.View style={estiloConteudo}>{children}</Animated.View>
+      </GestureDetector>
+    </View>
+  );
+}
+
+function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n, t, navigation }) {
   const hora = new Date(m.enviada_em).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
   const wrapper = [estilos.bolhaWrapper, minha ? estilos.bolhaWrapperMinha : estilos.bolhaWrapperDeles];
+
+  if (m.apagada) {
+    return (
+      <View style={wrapper}>
+        <View style={[estilos.bolhaApagada, minha && estilos.bolhaApagadaMinha]}>
+          <IconeRemover size={13} color={cores.textoMuted} />
+          <Text style={estilos.bolhaApagadaTexto}>{t('mensagens.mensagem_apagada', 'Mensagem apagada')}</Text>
+        </View>
+        <Text style={estilos.horaFora}>{hora}</Text>
+      </View>
+    );
+  }
+
+  const previa = <PreviaResposta respondidaA={m.respondida_a} minha={minha} usuarioLogado={usuarioLogado} t={t} />;
 
   if (m.tipo === 'itinerario') {
     const preview = m.itinerario;
     return (
       <View style={wrapper}>
+        {previa}
         {preview?.disponivel ? (
           <TouchableOpacity
             onPress={() => navigation.navigate('Itinerario', { id: preview.id })}
@@ -404,6 +307,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation 
   if (m.tipo === 'video') {
     return (
       <View style={wrapper}>
+        {previa}
         <BolhaVideo m={m} minha={minha} />
         <Text style={estilos.horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></Text>
         <SeloCurtida curtido={m.curtido} />
@@ -414,6 +318,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation 
   if (m.tipo === 'imagem') {
     return (
       <View style={wrapper}>
+        {previa}
         <TouchableOpacity onPress={() => onAbrirImagem(m.imagem)} onLongPress={() => onCurtir(m.id)}>
           <Image source={{ uri: m.imagem }} style={estilos.bolhaImagem} contentFit="cover" />
         </TouchableOpacity>
@@ -426,6 +331,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation 
   if (m.tipo === 'audio') {
     return (
       <View style={wrapper}>
+        {previa}
         <BolhaAudio m={m} minha={minha} hora={hora} lida={m.lida} />
         <SeloCurtida curtido={m.curtido} />
       </View>
@@ -434,6 +340,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation 
 
   return (
     <View style={wrapper}>
+      {previa}
       <TouchableOpacity
         onLongPress={() => onCurtir(m.id)}
         style={[estilos.bolhaTexto, minha && estilos.bolhaTextoMinha]}
@@ -449,7 +356,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, i18n, t, navigation 
 }
 
 function PaginaChat() {
-  const { t, i18n } = useTranslation(['social', 'itinerarios']);
+  const { t, i18n } = useTranslation(['social', 'itinerarios', 'common']);
   const route = useRoute();
   const navigation = useNavigation();
   const { username: conversaAtiva } = route.params;
@@ -462,6 +369,9 @@ function PaginaChat() {
   const [erro, setErro] = useState(null);
   const [previewImagem, setPreviewImagem] = useState(null);
   const [previewVideo, setPreviewVideo] = useState(null);
+  const [respondendoA, setRespondendoA] = useState(null);
+  const [mensagemMenu, setMensagemMenu] = useState(null);
+  const [midiaLightbox, setMidiaLightbox] = useState(null);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
@@ -471,55 +381,38 @@ function PaginaChat() {
   const temMensagensRef = useRef(false);
   useEffect(() => { temMensagensRef.current = mensagens.length > 0; }, [mensagens]);
 
-  // ─── Abrir a conversa já no fim ────────────────────────────────────────
-  // Antes disso tentamos forçar scrollToEnd na hora certa (esperando dados +
-  // transição de navegação + janela de ajuste pra virtualização assentar).
-  // Só que "assentar" não tem prazo fixo: itens de vídeo, por exemplo,
-  // trocam de um placeholder pequeno pro player em tamanho real quando o
-  // processamento no servidor termina, o que pode acontecer bem depois de
-  // qualquer janela razoável — daí o scroll parar "quase no fim" ou "na
-  // metade" de forma imprevisível.
-  //
-  // A solução correta pra chat é outra categoria de abordagem: inverter a
-  // FlatList (mesmo padrão do WhatsApp/Telegram). Com `inverted`, o item de
-  // índice 0 (que aqui é a mensagem mais recente, por isso o array
-  // invertido abaixo) já nasce ancorado visualmente embaixo — não existe
-  // "rolar até o fim" porque o fim É o ponto de partida da lista. Isso
-  // elimina o problema pela raiz: não há mais altura nenhuma pra medir ou
-  // corrida nenhuma pra vencer, então nenhuma quantidade de conteúdo
-  // assentando depois pode deixar o scroll pra trás.
-  const listaRef = useRef(null);
+  // Rolagem: em vez de tentar acertar o scrollToEnd "na mão" (instável em
+  // listas de altura variável — texto, áudio, imagem, vídeo — porque a
+  // FlatList estima a altura do que ainda não foi medido), usamos a
+  // solução nativa pra listas de chat: a prop `inverted`. Com ela, o
+  // conteúdo é renderizado de baixo pra cima e a lista já abre ancorada no
+  // fim (offset 0), sem precisar calcular nem esperar layout nenhum — é
+  // por isso que todo app de chat feito em RN usa esse padrão.
+  const flatListRef = useRef(null);
+  const ultimoIdRef = useRef(null);
+  const pertoDoFimRef = useRef(true);
+
+  // `mensagens` continua vindo da API em ordem cronológica (mais antiga
+  // primeiro); a FlatList invertida espera o oposto (mais nova primeiro),
+  // já que index 0 é o que aparece embaixo na tela.
   const mensagensInvertidas = useMemo(() => [...mensagens].reverse(), [mensagens]);
 
   useEffect(() => {
-    console.log(`[PÁGINA] PaginaChat montada — conversa com ${conversaAtiva}`);
-    getUsuarioLogado().then((u) => {
-      console.log(`[PÁGINA] usuário logado resolvido: ${u?.username}`);
-      setUsuarioLogado(u);
-    });
+    getUsuarioLogado().then(setUsuarioLogado);
     navigation.setOptions({ title: route.params?.usuario?.username || conversaAtiva });
-    return () => console.log(`[PÁGINA] PaginaChat desmontada — conversa com ${conversaAtiva}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    console.log('[ÁUDIO] configurando modo de sessão (playback)...');
-    setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
-      .then(() => console.log('[ÁUDIO] modo de sessão configurado com sucesso'))
-      .catch((err) => console.error('[ÁUDIO] falha ao configurar modo de sessão', err));
+    setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false }).catch(() => {});
   }, []);
 
   const buscarMensagens = useCallback(async ({ inicial = false } = {}) => {
-    const inicioMs = Date.now();
-    console.log(`[MENSAGENS] buscarMensagens iniciado (inicial=${inicial})`);
     if (inicial) setCarregando(true);
     try {
       const res = await api.get(`/social/mensagens/${conversaAtiva}/`);
-      console.log(`[MENSAGENS] ${res.data.length} mensagens recebidas em ${Date.now() - inicioMs}ms`);
       setMensagens(res.data);
       setErro(null);
     } catch (err) {
-      console.error(`[MENSAGENS] erro ao buscar após ${Date.now() - inicioMs}ms`, err?.message || err);
       const classificado = await classificarErro(err);
       if (!classificado.podeRetentar) {
         clearInterval(pollingRef.current);
@@ -534,15 +427,34 @@ function PaginaChat() {
 
   useEffect(() => {
     buscarMensagens({ inicial: true });
-    pollingRef.current = setInterval(() => {
-      console.log('[POLLING] tick de 5s disparado');
-      buscarMensagens({ inicial: false });
-    }, INTERVALO_POLLING_MS);
-    return () => {
-      console.log('[POLLING] intervalo limpo');
-      clearInterval(pollingRef.current);
-    };
+    pollingRef.current = setInterval(() => buscarMensagens({ inicial: false }), INTERVALO_POLLING_MS);
+    return () => clearInterval(pollingRef.current);
   }, [buscarMensagens]);
+
+  useEffect(() => {
+    if (mensagens.length === 0) return;
+    const ultimaMensagem = mensagens[mensagens.length - 1];
+
+    // Atualizações otimistas (curtir, apagar) trocam o array mas não mudam
+    // qual é a última mensagem, e o polling às vezes devolve os mesmos
+    // dados de novo — em nenhum dos dois casos deve haver rolagem.
+    const chegouMensagemNova = ultimaMensagem.id !== ultimoIdRef.current;
+    const primeiraCarga = ultimoIdRef.current === null;
+    ultimoIdRef.current = ultimaMensagem.id;
+    if (!chegouMensagemNova) return;
+
+    // Com a lista invertida, mensagens novas já entram "no fim" (index 0
+    // do array invertido, embaixo na tela) sem empurrar o que o usuário
+    // está lendo lá em cima — então só precisamos forçar a rolagem em três
+    // casos: a conversa acabou de abrir, a mensagem nova é minha (quero
+    // ver o que acabei de mandar), ou o usuário já estava perto do fim.
+    const minhaUltima = ultimaMensagem.remetente === usuarioLogado?.id
+      || ultimaMensagem.remetente_nome === usuarioLogado?.username;
+
+    if (primeiraCarga || minhaUltima || pertoDoFimRef.current) {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: !primeiraCarga });
+    }
+  }, [mensagens, usuarioLogado]);
 
   async function handleCurtir(mensagemId) {
     const alvo = mensagens.find((m) => m.id === mensagemId);
@@ -559,13 +471,69 @@ function PaginaChat() {
     }
   }
 
+  function handleResponder(mensagem) {
+    if (mensagem.apagada) return;
+    setRespondendoA(mensagem);
+  }
+
+  function abrirMenuMensagem(mensagem) {
+    if (mensagem.apagada) return;
+    setMensagemMenu(mensagem);
+  }
+
+  async function handleApagar(mensagemId) {
+    Alert.alert(
+      t('mensagens.apagar'),
+      t('mensagens.confirmar_apagar', 'Apagar esta mensagem para todos?'),
+      [
+        { text: t('common:avisos.cancelar'), style: 'cancel' },
+        {
+          text: t('mensagens.apagar'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const atualizada = await apagarMensagem(mensagemId);
+              setMensagens((prev) => prev.map((m) => (m.id === mensagemId ? atualizada : m)));
+              if (respondendoA?.id === mensagemId) setRespondendoA(null);
+            } catch (_) {}
+          },
+        },
+      ],
+    );
+  }
+
+  const opcoesMenu = mensagemMenu ? [
+    {
+      key: 'responder',
+      label: t('mensagens.responder'),
+      Icone: IconeResposta,
+      onPress: () => handleResponder(mensagemMenu),
+    },
+    ...(mensagemMenu.remetente === usuarioLogado?.id || mensagemMenu.remetente_nome === usuarioLogado?.username
+      ? [{
+          key: 'apagar',
+          label: t('mensagens.apagar'),
+          Icone: IconeRemover,
+          perigo: true,
+          onPress: () => handleApagar(mensagemMenu.id),
+        }]
+      : []
+    ),
+  ] : [];
+
   async function enviarTexto() {
     if (!texto.trim() || enviando) return;
     setEnviando(true);
     const textoEnviado = texto;
+    const respostaId = respondendoA?.id;
     setTexto('');
+    setRespondendoA(null);
     try {
-      const res = await api.post(`/social/mensagens/${conversaAtiva}/`, { tipo: 'texto', texto: textoEnviado });
+      const res = await api.post(`/social/mensagens/${conversaAtiva}/`, {
+        tipo: 'texto',
+        texto: textoEnviado,
+        ...(respostaId && { respondida_a_id: respostaId }),
+      });
       setMensagens((prev) => [...prev, res.data]);
     } catch (_) {
       setTexto(textoEnviado);
@@ -577,9 +545,12 @@ function PaginaChat() {
   async function enviarImagem(asset) {
     if (!asset) return;
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'imagem');
     form.append('imagem', { uri: asset.uri, name: asset.fileName ?? 'imagem.jpg', type: asset.mimeType ?? 'image/jpeg' });
+    if (respostaId) form.append('respondida_a_id', String(respostaId));
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
@@ -593,9 +564,12 @@ function PaginaChat() {
   async function enviarVideo(asset) {
     if (!asset) return;
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'video');
     form.append('video', { uri: asset.uri, name: asset.fileName ?? 'video.mp4', type: asset.mimeType ?? 'video/mp4' });
+    if (respostaId) form.append('respondida_a_id', String(respostaId));
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setMensagens((prev) => [...prev, res.data]);
@@ -609,18 +583,17 @@ function PaginaChat() {
 
   async function enviarAudio(uri) {
     if (!uri) return;
-    console.log(`[GRAVAÇÃO] enviando áudio local: ${uri}`);
-    const inicioMs = Date.now();
     setEnviando(true);
+    const respostaId = respondendoA?.id;
+    setRespondendoA(null);
     const form = new FormData();
     form.append('tipo', 'audio');
     form.append('audio', { uri, name: 'audio.m4a', type: 'audio/m4a' });
+    if (respostaId) form.append('respondida_a_id', String(respostaId));
     try {
       const res = await api.post(`/social/mensagens/${conversaAtiva}/`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      console.log(`[GRAVAÇÃO] áudio enviado e persistido em ${Date.now() - inicioMs}ms — mensagem id ${res.data.id}, url: ${res.data.audio}`);
       setMensagens((prev) => [...prev, res.data]);
-    } catch (err) {
-      console.error(`[GRAVAÇÃO] falha ao enviar áudio após ${Date.now() - inicioMs}ms`, err?.message || err);
+    } catch (_) {
     } finally {
       setEnviando(false);
     }
@@ -629,7 +602,7 @@ function PaginaChat() {
   async function handleAnexar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('', t('mensagens.permissao_microfone_negada')); // TODO: chave própria pra galeria
+      Alert.alert('', t('mensagens.permissao_microfone_negada'));
       return;
     }
     const resultado = await ImagePicker.launchImageLibraryAsync({
@@ -653,40 +626,33 @@ function PaginaChat() {
   }
 
   async function iniciarGravacao() {
-    console.log('[GRAVAÇÃO] solicitando permissão de microfone...');
     try {
       const permissao = await AudioModule.requestRecordingPermissionsAsync();
       if (!permissao.granted) {
-        console.warn('[GRAVAÇÃO] permissão de microfone negada');
         Alert.alert('', t('mensagens.permissao_microfone_negada'));
         return;
       }
-      console.log('[GRAVAÇÃO] permissão concedida, configurando modo de sessão para gravação...');
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
-      console.log('[GRAVAÇÃO] gravação iniciada');
-    } catch (err) {
-      console.error('[GRAVAÇÃO] erro ao iniciar gravação', err?.message || err);
+    } catch (_) {
       Alert.alert('', t('mensagens.permissao_microfone_negada'));
     }
   }
 
   async function pararGravacao() {
-    console.log('[GRAVAÇÃO] parando gravação...');
     try {
       await audioRecorder.stop();
-      // Precisa restaurar os DOIS campos, não só allowsRecording — mandar um
-      // objeto parcial reconfigura a sessão de áudio inteira e derruba o
-      // playsInSilentMode setado ao abrir a tela, deixando a sessão presa
-      // num modo que carrega metadados normalmente mas não reproduz som.
-      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      await setAudioModeAsync({ allowsRecording: false });
       const uri = audioRecorder.uri;
-      console.log(`[GRAVAÇÃO] gravação parada, arquivo local: ${uri}`);
       await enviarAudio(uri);
-    } catch (err) {
-      console.error('[GRAVAÇÃO] erro ao parar/enviar gravação', err?.message || err);
+    } catch (_) {
     }
+  }
+
+  function autorDaMensagem(m) {
+    const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
+    return minha ? t('mensagens.voce', 'Você') : m.remetente_nome;
   }
 
   if (erro && mensagens.length === 0) {
@@ -700,33 +666,43 @@ function PaginaChat() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <FlatList
-        ref={listaRef}
-        data={mensagensInvertidas}
+        ref={flatListRef}
         inverted
+        data={mensagensInvertidas}
         keyExtractor={(m) => String(m.id)}
         contentContainerStyle={{ padding: 16, gap: 8 }}
+        onScroll={(e) => {
+          // Em lista invertida, offset 0 = fim visual (embaixo). "Perto do
+          // fim" vira simplesmente "offset baixo", sem precisar de
+          // contentSize/layoutMeasurement como na versão não invertida.
+          pertoDoFimRef.current = e.nativeEvent.contentOffset.y < 150;
+        }}
+        scrollEventThrottle={16}
         renderItem={({ item: m }) => {
           const minha = m.remetente === usuarioLogado?.id || m.remetente_nome === usuarioLogado?.username;
           return (
-            // O `inverted` da FlatList espelha verticalmente (scaleY: -1) todo
-            // o conteúdo da lista pra inverter a direção do scroll — sem essa
-            // contra-transformação aqui, cada bolha apareceria de cabeça pra
-            // baixo. As duas transformações se cancelam e a bolha renderiza
-            // normal, mas a lista como um todo continua ancorada no fim.
-            <View style={{ transform: [{ scaleY: -1 }] }}>
+            <LinhaComGestos
+              desabilitado={!!m.apagada}
+              onResponder={() => handleResponder(m)}
+              onLongPress={() => abrirMenuMensagem(m)}
+            >
               <BolhaMensagem
                 m={m}
                 minha={minha}
                 onCurtir={handleCurtir}
-                onAbrirImagem={() => {}}
+                onAbrirImagem={(url) => setMidiaLightbox({ tipo: 'foto', url })}
+                usuarioLogado={usuarioLogado}
                 i18n={i18n}
                 t={t}
                 navigation={navigation}
               />
-            </View>
+            </LinhaComGestos>
           );
         }}
         ListEmptyComponent={
+          // Lista invertida renderiza tudo de cabeça pra baixo — inclusive
+          // o ListEmptyComponent, que não faz parte do conteúdo invertido
+          // "de verdade". Contrarrota o texto pra ele aparecer normal.
           <View style={{ transform: [{ scaleY: -1 }] }}>
             {carregando
               ? <Text style={estilos.estadoLista}>{t('mensagens.carregando')}</Text>
@@ -734,6 +710,20 @@ function PaginaChat() {
           </View>
         }
       />
+
+      {respondendoA && (
+        <View style={estilos.respostaAtiva}>
+          <View style={estilos.respostaAtivaConteudo}>
+            <Text style={estilos.respostaAtivaAutor}>{autorDaMensagem(respondendoA)}</Text>
+            <Text numberOfLines={1} style={estilos.respostaAtivaTexto}>
+              {previewDaMensagem(respondendoA, t).texto}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => setRespondendoA(null)} hitSlop={10}>
+            <IconeFechar size={18} color={cores.textoMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {previewImagem && (
         <View style={estilos.previewBarra}>
@@ -789,12 +779,29 @@ function PaginaChat() {
           <IconeEnviar size={18} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <MenuAcoes
+        aberto={!!mensagemMenu}
+        opcoes={opcoesMenu}
+        onFechar={() => setMensagemMenu(null)}
+      />
+
+      {midiaLightbox && (
+        <LightboxMidia midia={midiaLightbox} onFechar={() => setMidiaLightbox(null)} />
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const estilos = StyleSheet.create({
   estadoLista: { textAlign: 'center', color: cores.textoSecundario, marginTop: 24 },
+  swipeWrapper: { position: 'relative', justifyContent: 'center' },
+  swipeIconeResposta: {
+    position: 'absolute',
+    left: 4,
+    top: '50%',
+    marginTop: -12,
+  },
   bolhaWrapper: { maxWidth: '75%' },
   bolhaWrapperMinha: { alignSelf: 'flex-end' },
   bolhaWrapperDeles: { alignSelf: 'flex-start' },
@@ -832,6 +839,43 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.fundoCard, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, elevation: 2,
   },
+  previaResposta: {
+    borderLeftWidth: 3,
+    borderLeftColor: cores.primaria,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  previaRespostaMinha: {
+    backgroundColor: 'rgba(218, 122, 89, 1)',
+    borderLeftColor: '#D85A30',
+  },
+  previaRespostaAutor: { fontSize: 11, fontWeight: 'bold', color: cores.primaria },
+  previaRespostaAutorMinha: { color: '#fff' },
+  previaRespostaTexto: { fontSize: 11, color: cores.textoSecundario, flexShrink: 1 },
+  previaRespostaTextoMinha: { color: 'rgba(255,255,255,0.85)' },
+  previaRespostaIndisponivel: { fontSize: 11, fontStyle: 'italic', color: cores.textoMuted },
+  bolhaApagada: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 16, borderBottomLeftRadius: 4,
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: cores.fundoHover,
+  },
+  bolhaApagadaMinha: { borderBottomLeftRadius: 16, borderBottomRightRadius: 4 },
+  bolhaApagadaTexto: { color: cores.textoMuted, fontStyle: 'italic', ...fontes.corpo },
+  respostaAtiva: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: cores.bordaSutil,
+    backgroundColor: cores.fundoHover,
+  },
+  respostaAtivaConteudo: {
+    flex: 1, borderLeftWidth: 3, borderLeftColor: cores.primaria, paddingLeft: 8,
+  },
+  respostaAtivaAutor: { ...fontes.meta, fontWeight: 'bold', color: cores.primaria },
+  respostaAtivaTexto: { ...fontes.meta, color: cores.textoSecundario },
   previewBarra: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: cores.bordaSutil },
   previewImagem: { width: 56, height: 56, borderRadius: 8 },
   barraInput: {

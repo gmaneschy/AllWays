@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     FollowToggleView, SeguidoresUsuarioView, SeguindoUsuarioView, StatusFollowView,
     ComentariosItinerarioView, HashtagFeedView,
-    ConversasView, MensagensConversaView, UsuariosParaMensagemView,
+    ConversasView, MensagensConversaView, UsuariosParaMensagemView, ApagarMensagemView,
     BuscaView, ExplorarView, CurtidaToggleView,
     NotificacoesView, NotificacoesNaoLidasView,
     MarcarNotificacaoLidaView, MarcarTodasNotificacoesLidasView, LugaresSeguidosView,
@@ -33,6 +33,7 @@ urlpatterns = [
     path('mensagens/', ConversasView.as_view(), name='conversas'),
     path('mensagens/destinatarios/', UsuariosParaMensagemView.as_view(), name='destinatarios'),
     path('mensagens/nao-lidas/', MensagensNaoLidasView.as_view()),
+    path('mensagens/apagar/<int:pk>/', ApagarMensagemView.as_view(), name='mensagem-apagar'),
     path('mensagens/<str:username>/', MensagensConversaView.as_view()),
     path('solicitacoes-seguir/de/<str:username>/responder/', ResponderSolicitacaoSeguirPorUsernameView.as_view()),
 

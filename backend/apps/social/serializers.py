@@ -57,8 +57,6 @@ class FollowSerializer(serializers.ModelSerializer):
 
 
 class SolicitacaoSeguirSerializer(serializers.ModelSerializer):
-    """Usado em GET /social/solicitacoes-seguir/ — pedidos pendentes PARA o
-    usuário logado (ele é sempre o 'alvo'; não precisa serializar o próprio)."""
     solicitante = UsuarioResumoSerializer(read_only=True)
 
     class Meta:
@@ -108,14 +106,8 @@ class CommentSerializer(serializers.ModelSerializer):
         return serializar_badge_destaque(obj.autor, context=self.context)
 
     def get_respostas(self, obj):
-        # Só o comentário raiz carrega respostas aninhadas — uma resposta nunca
-        # tem `respostas` própria (thread de 1 nível só), então isso já vem vazio
-        # naturalmente pra elas, sem precisar de um serializer separado.
         if obj.parent_id:
             return []
-        # Mesmo filtro de visibilidade usado em ComentariosItinerarioView pros
-        # comentários-raiz: respostas de autor com conta desativada/excluída
-        # não aparecem pra ninguém além do próprio autor.
         respostas_visiveis = obj.respostas.filter(autor__in=User.objects.visiveis())
         return CommentSerializer(respostas_visiveis, many=True, context=self.context).data
 
@@ -149,16 +141,22 @@ class MessageSerializer(serializers.ModelSerializer):
     total_curtidas = serializers.SerializerMethodField()
     curtido = serializers.SerializerMethodField()
     video_thumbnail_url = serializers.SerializerMethodField()
+    apagada = serializers.SerializerMethodField()
 
-    # Escrita: cliente manda só o id; restrito a itinerários publicados —
-    # não dá pra compartilhar rascunho de ninguém (nem o próprio).
     itinerario_id = serializers.PrimaryKeyRelatedField(
         source='itinerario', queryset=Itinerario.objects.filter(status='publicado'),
         write_only=True, required=False,
     )
-    # Leitura: preview compacto pro balão de chat. 'disponivel: False' cobre tanto
-    # o caso do SET_NULL (itinerário apagado) quanto o autor ter voltado pra rascunho.
     itinerario = serializers.SerializerMethodField()
+
+    # Resposta: cliente manda só o id (validado quanto a pertencer à mesma
+    # conversa e não estar apagada em MensagensConversaView.post, porque só
+    # a view tem os dois participantes à mão pra montar esse filtro).
+    respondida_a_id = serializers.PrimaryKeyRelatedField(
+        source='respondida_a', queryset=Message.objects.all(),
+        write_only=True, required=False, allow_null=True,
+    )
+    respondida_a = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
@@ -167,14 +165,16 @@ class MessageSerializer(serializers.ModelSerializer):
             'destinatario', 'destinatario_nome',
             'tipo', 'texto', 'imagem', 'audio',
             'video', 'video_thumbnail_url', 'video_status', 'duracao_segundos',
-            'itinerario_id', 'itinerario', 'enviada_em', 'lida',
+            'itinerario_id', 'itinerario', 'respondida_a_id', 'respondida_a',
+            'enviada_em', 'lida', 'apagada',
             'total_curtidas', 'curtido',
         ]
-        # video_status e duracao_segundos são preenchidos pelo servidor
-        # (upload seta duração; a task Celery seta status='pronto'/'erro').
-        # lida é preenchida só por MensagensConversaView.get (quando o
-        # destinatário abre a conversa) — nunca pelo cliente diretamente.
-        read_only_fields = ['remetente', 'enviada_em', 'video_status', 'duracao_segundos', 'lida']
+        read_only_fields = [
+            'remetente', 'enviada_em', 'video_status', 'duracao_segundos', 'lida', 'apagada',
+        ]
+
+    def get_apagada(self, obj):
+        return obj.apagada_em is not None
 
     def get_video_thumbnail_url(self, obj):
         request = self.context.get('request')
@@ -206,6 +206,23 @@ class MessageSerializer(serializers.ModelSerializer):
             'autor_username': it.autor.username if it.autor else None,
         }
 
+    def get_respondida_a(self, obj):
+        # Preview leve da mensagem original — o frontend reaproveita o mesmo
+        # mapeamento tipo→ícone/rótulo que já usa na lista de conversas
+        # (previewDaConversa), passando {tipo, texto} daqui.
+        original = obj.respondida_a
+        if original is None:
+            return None
+        if original.apagada_em:
+            return {'disponivel': False}
+        return {
+            'disponivel': True,
+            'id': original.id,
+            'tipo': original.tipo,
+            'texto': original.texto if original.tipo == 'texto' else '',
+            'autor_username': original.remetente.username if original.remetente else None,
+        }
+
     def _resumo_curtida(self, obj):
         if not hasattr(obj, '_resumo_curtida_cache'):
             from .services import resumo_curtida
@@ -220,6 +237,21 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_curtido(self, obj):
         return self._resumo_curtida(obj)['curtido']
 
+    def to_representation(self, instance):
+        # Mensagem apagada: esvazia o conteúdo real na resposta (mas mantém
+        # id/tipo/respondida_a/hora), pro frontend renderizar a bolha
+        # "mensagem apagada" em vez do conteúdo de verdade.
+        rep = super().to_representation(instance)
+        if instance.apagada_em:
+            rep['texto'] = ''
+            rep['imagem'] = None
+            rep['audio'] = None
+            rep['video'] = None
+            rep['video_thumbnail_url'] = None
+            rep['duracao_segundos'] = None
+            rep['itinerario'] = None
+        return rep
+
     def validate(self, data):
         tipo = data.get('tipo', 'texto')
         if tipo == 'texto' and not data.get('texto', '').strip():
@@ -233,6 +265,7 @@ class MessageSerializer(serializers.ModelSerializer):
         if tipo == 'itinerario' and not data.get('itinerario'):
             raise serializers.ValidationError(_("Mensagem de itinerário requer um itinerario_id válido e publicado."))
         return data
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     ator_username = serializers.CharField(source='ator.username', read_only=True)
@@ -264,33 +297,21 @@ class NotificationSerializer(serializers.ModelSerializer):
         }.get(obj.tipo, '')
 
     def get_link(self, obj):
-        # Import local pra evitar import circular no topo do módulo.
         from apps.itineraries.models import Itinerario, PontoItinerario
         alvo = obj.alvo
 
         if obj.tipo == 'follow':
             return f'/perfil/{obj.ator.username}' if obj.ator else None
-
         if obj.tipo == 'solicitacao_seguir':
-            # Ainda não existe uma tela dedicada de "solicitações" — por ora
-            # leva pro perfil de quem pediu, pra decidir lá se aceita ou não.
             return f'/perfil/{obj.ator.username}' if obj.ator else None
-
         if obj.tipo == 'comentario':
-            # alvo é o Itinerario (é o que o signal de comentário de 1º nível manda).
             return f'/itinerario/{alvo.id}' if alvo else None
-
         if obj.tipo == 'resposta_comentario':
-            # alvo é o Comment respondido.
             return f'/itinerario/{alvo.itinerario_id}' if alvo else None
-
         if obj.tipo == 'mensagem':
             return f'/mensagens?usuario={obj.ator.username}' if obj.ator else None
-
         if obj.tipo == 'novo_post':
-            # alvo é o próprio Itinerario publicado.
             return f'/itinerario/{alvo.id}' if alvo else None
-
         if obj.tipo == 'curtida':
             if isinstance(alvo, Itinerario):
                 return f'/itinerario/{alvo.id}'
@@ -301,5 +322,4 @@ class NotificationSerializer(serializers.ModelSerializer):
             if isinstance(alvo, Message):
                 return f'/mensagens?usuario={obj.ator.username}' if obj.ator else None
             return None
-
         return None

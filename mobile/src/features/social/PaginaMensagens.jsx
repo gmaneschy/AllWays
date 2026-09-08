@@ -27,30 +27,28 @@ function Avatar({ usuario, tamanho = 40 }) {
   );
 }
 
-function useDebounce(valor, delay) {
-  const [debouncado, setDebouncado] = useState(valor);
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncado(valor), delay);
-    return () => clearTimeout(t);
-  }, [valor, delay]);
-  return debouncado;
-}
-
-// Tela de busca de destinatário — igual ao SeletorDestinatario do web,
-// mas aqui vive dentro do próprio header da lista (ListHeaderComponent)
-// em vez de um bloco animado, já que não há espaço lateral no mobile.
-function SeletorDestinatario({ query, setQuery, onSelecionar }) {
+// Port 1:1 do SeletorDestinatario do web (PaginaMensagens.jsx) — mesmas
+// chaves de social.json, mesmo comportamento de busca (busca na hora
+// quando query vazia, debounce de 300ms só quando há texto digitado).
+// Único ajuste real pro mobile: `onSelecionar` aqui navega direto pra
+// tela de Chat (ver abrirChat), já que no web o resultado só troca a
+// conversa ativa dentro da mesma página — no mobile a lista de conversas
+// e a conversa em si viraram telas separadas (PaginaMensagens/PaginaChat).
+// Estado da busca (`query`) é interno ao componente, igual no web — não
+// precisa ser levantado pro pai porque o componente já desmonta (e reseta
+// esse estado sozinho) quando `mostraSeletor` volta a `false` no pai.
+function SeletorDestinatario({ onSelecionar }) {
   const { t } = useTranslation('social');
+  const [query, setQuery] = useState('');
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const debounced = useDebounce(query, 300);
 
   useEffect(() => {
     let cancelado = false;
     async function buscar() {
       setCarregando(true);
       try {
-        const params = debounced ? `?q=${encodeURIComponent(debounced)}` : '';
+        const params = query ? `?q=${encodeURIComponent(query)}` : '';
         const res = await api.get(`/social/mensagens/destinatarios/${params}`);
         if (!cancelado) setUsuarios(res.data);
       } catch (_) {
@@ -58,12 +56,18 @@ function SeletorDestinatario({ query, setQuery, onSelecionar }) {
         if (!cancelado) setCarregando(false);
       }
     }
-    buscar();
-    return () => { cancelado = true; };
-  }, [debounced]);
+    // Mesmo delay do web: 0 quando a busca está vazia (lista inicial
+    // aparece na hora), 300ms de debounce só quando há texto digitado.
+    const timer = setTimeout(buscar, query ? 300 : 0);
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   return (
     <View style={estilos.seletor}>
+      <Text style={estilos.seletorTitulo}>{t('mensagens.nova_conversa')}</Text>
       <TextInput
         autoFocus
         value={query}
@@ -107,7 +111,6 @@ function PaginaMensagens() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
   const [mostraSeletor, setMostraSeletor] = useState(false);
-  const [query, setQuery] = useState('');
 
   const buscarConversas = useCallback(async () => {
     try {
@@ -133,7 +136,6 @@ function PaginaMensagens() {
 
   function abrirChat(usuario) {
     setMostraSeletor(false);
-    setQuery('');
     navigation.navigate('Chat', { username: usuario.username, usuario });
   }
 
@@ -148,9 +150,7 @@ function PaginaMensagens() {
           data={mostraSeletor ? [] : conversas}
           keyExtractor={(c) => c.usuario.username}
           ListHeaderComponent={
-            mostraSeletor ? (
-              <SeletorDestinatario query={query} setQuery={setQuery} onSelecionar={abrirChat} />
-            ) : null
+            mostraSeletor ? <SeletorDestinatario onSelecionar={abrirChat} /> : null
           }
           ListEmptyComponent={
             !mostraSeletor ? (
@@ -226,6 +226,8 @@ const estilos = StyleSheet.create({
   pontoNovo: { width: 8, height: 8, borderRadius: 4, backgroundColor: cores.primaria },
   estadoTexto: { ...fontes.meta, color: cores.textoSecundario, textAlign: 'center', marginTop: 24 },
   seletor: { padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cores.bordaSutil },
+  // Espelha .seletor-destinatario__titulo do web (fonte meta, secundário, bold)
+  seletorTitulo: { ...fontes.meta, color: cores.textoSecundario, fontWeight: 'bold', marginBottom: 8 },
   seletorInput: {
     borderWidth: 1,
     borderColor: cores.bordaPadrao,
