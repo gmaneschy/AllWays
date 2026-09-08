@@ -197,7 +197,7 @@ function BolhaAudioPlayer({ m, minha, hora, lida, onTravou }) {
 // (estilo WhatsApp) + long-press pra abrir o MenuAcoes. Um ícone de
 // resposta vai ficando mais opaco conforme o usuário arrasta, e solta
 // disparando onResponder se passar do limiar — senão volta com spring.
-function LinhaComGestos({ children, desabilitado, onResponder, onLongPress }) {
+function LinhaComGestos({ children, desabilitado, onResponder, onLongPress, onCurtir }) {
   const translateX = useSharedValue(0);
 
   function dispararResposta() {
@@ -206,6 +206,10 @@ function LinhaComGestos({ children, desabilitado, onResponder, onLongPress }) {
 
   function dispararMenu() {
     onLongPress();
+  }
+
+  function dispararCurtida() {
+    onCurtir();
   }
 
   const arrasto = Gesture.Pan()
@@ -229,7 +233,20 @@ function LinhaComGestos({ children, desabilitado, onResponder, onLongPress }) {
       runOnJS(dispararMenu)();
     });
 
-  const gestoComposto = Gesture.Race(arrasto, longPress);
+  // Dois toques rápidos curtem a mensagem (padrão Instagram/WhatsApp).
+  // Fica na mesma Race do arrasto e do long-press: como cada gesto exige
+  // um padrão de toque diferente (mover >15px, segurar 350ms, ou dois
+  // toques rápidos), eles não competem de verdade entre si — e por estar
+  // aqui, cobre todos os tipos de bolha (texto, imagem, itinerário, vídeo,
+  // áudio) de uma vez, sem precisar de onLongPress individual em cada uma.
+  const duploTap = Gesture.Tap()
+    .enabled(!desabilitado)
+    .numberOfTaps(2)
+    .onStart(() => {
+      runOnJS(dispararCurtida)();
+    });
+
+  const gestoComposto = Gesture.Race(arrasto, longPress, duploTap);
 
   const estiloIcone = useAnimatedStyle(() => ({
     opacity: Math.min(1, translateX.value / SWIPE_LIMIAR),
@@ -251,7 +268,7 @@ function LinhaComGestos({ children, desabilitado, onResponder, onLongPress }) {
   );
 }
 
-function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n, t, navigation }) {
+function BolhaMensagem({ m, minha, onAbrirImagem, usuarioLogado, i18n, t, navigation }) {
   const hora = new Date(m.enviada_em).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
   const wrapper = [estilos.bolhaWrapper, minha ? estilos.bolhaWrapperMinha : estilos.bolhaWrapperDeles];
 
@@ -277,7 +294,6 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n,
         {preview?.disponivel ? (
           <TouchableOpacity
             onPress={() => navigation.navigate('Itinerario', { id: preview.id })}
-            onLongPress={() => onCurtir(m.id)}
             style={[estilos.bolhaItinerario, minha && estilos.bolhaItinerarioMinha]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -319,7 +335,7 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n,
     return (
       <View style={wrapper}>
         {previa}
-        <TouchableOpacity onPress={() => onAbrirImagem(m.imagem)} onLongPress={() => onCurtir(m.id)}>
+        <TouchableOpacity onPress={() => onAbrirImagem(m.imagem)}>
           <Image source={{ uri: m.imagem }} style={estilos.bolhaImagem} contentFit="cover" />
         </TouchableOpacity>
         <Text style={estilos.horaFora}>{hora} <StatusLeitura minha={minha} lida={m.lida} /></Text>
@@ -341,15 +357,12 @@ function BolhaMensagem({ m, minha, onCurtir, onAbrirImagem, usuarioLogado, i18n,
   return (
     <View style={wrapper}>
       {previa}
-      <TouchableOpacity
-        onLongPress={() => onCurtir(m.id)}
-        style={[estilos.bolhaTexto, minha && estilos.bolhaTextoMinha]}
-      >
+      <View style={[estilos.bolhaTexto, minha && estilos.bolhaTextoMinha]}>
         <Text style={minha ? estilos.textoBolhaMinha : estilos.textoBolhaDeles}>{m.texto}</Text>
         <Text style={[estilos.horaTexto, minha && { color: 'rgba(255,255,255,0.75)' }]}>
           {hora} <StatusLeitura minha={minha} lida={m.lida} />
         </Text>
-      </TouchableOpacity>
+      </View>
       <SeloCurtida curtido={m.curtido} />
     </View>
   );
@@ -686,11 +699,11 @@ function PaginaChat() {
                 desabilitado={!!m.apagada}
                 onResponder={() => handleResponder(m)}
                 onLongPress={() => abrirMenuMensagem(m)}
+                onCurtir={() => handleCurtir(m.id)}
               >
                 <BolhaMensagem
                   m={m}
                   minha={minha}
-                  onCurtir={handleCurtir}
                   onAbrirImagem={(url) => setMidiaLightbox({ tipo: 'foto', url })}
                   usuarioLogado={usuarioLogado}
                   i18n={i18n}
