@@ -119,6 +119,15 @@ def notificar_seguidores_novo_post(sender, instance, created, **kwargs):
 def notificar_curtida(sender, instance, created, **kwargs):
     if not created:
         return
+
+    from .models import Message
+    if isinstance(instance.alvo, Message):
+        # Curtida em mensagem é só um selo social dentro da própria conversa
+        # (ver SeloCurtida em PaginaChat.jsx / PaginaMensagens.jsx) — não gera
+        # notificação central, mesma decisão já tomada pro tipo 'mensagem'
+        # em si (aposentado; ver NotificacoesView.get_queryset).
+        return
+
     from .tasks import criar_notificacao_task
     destinatario_id = _dono_do_alvo(instance.alvo)
     if destinatario_id and destinatario_id != instance.usuario_id:

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"POT-Creation-Date: 2026-09-09 15:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -31,8 +31,8 @@ msgid ""
 "Não é possível publicar diretamente por aqui. Salve como rascunho, envie as "
 "fotos/vídeos de cada ponto e então chame POST /itinerarios/{id}/publicar/."
 msgstr ""
-"无法直接从这里发布。请先保存为草稿，上传每个地点的照片/视频，然后调用 POST "
-"/itinerarios/{id}/publicar/。"
+"无法直接从这里发布。请先保存为草稿，上传每个地点的照片/视频，然后调用 POST /"
+"itinerarios/{id}/publicar/。"
 
 #: apps/itineraries/services.py:27
 msgid "Título é obrigatório."
@@ -55,24 +55,24 @@ msgstr "结束日期不能早于开始日期。"
 msgid "O itinerário precisa de pelo menos um ponto."
 msgstr "行程至少需要一个地点。"
 
-#: apps/itineraries/services.py:55
+#: apps/itineraries/services.py:56
 #, python-format
 msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
 msgstr "地点 #%(numero)s：发布时必须填写字段“%(campo)s”。"
 
-#: apps/itineraries/services.py:61
+#: apps/itineraries/services.py:62
 #, python-format
 msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
 msgstr "地点 #%(numero)s：免费地点不应设置价格评级。"
 
-#: apps/itineraries/services.py:66
+#: apps/itineraries/services.py:67
 #, python-format
 msgid ""
 "Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
 "gratuita."
 msgstr "地点 #%(numero)s：请填写价格评级，或标记为免费入场。"
 
-#: apps/itineraries/services.py:78
+#: apps/itineraries/services.py:79
 #, python-format
 msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
 msgstr "地点 #%(numero)s：请至少添加一张照片或一段视频。"
@@ -81,35 +81,74 @@ msgstr "地点 #%(numero)s：请至少添加一张照片或一段视频。"
 msgid "Você não pode seguir a si mesmo."
 msgstr "您不能关注自己。"
 
-#: apps/social/serializers.py:79
+#: apps/social/serializers.py:77
 msgid "Descreva o motivo da denúncia."
 msgstr "请描述举报原因。"
 
-#: apps/social/serializers.py:126
+#: apps/social/serializers.py:118
 msgid ""
 "Respostas devem apontar `parent` para o comentário raiz da thread, não para "
 "outra resposta."
 msgstr "回复的 `parent` 必须指向该讨论的根评论，而不能指向另一条回复。"
 
-#: apps/social/serializers.py:226
+#: apps/social/serializers.py:258
 msgid "Mensagem de texto não pode ser vazia."
 msgstr "文本消息不能为空。"
 
-#: apps/social/serializers.py:228
+#: apps/social/serializers.py:260
 msgid "Mensagem de imagem requer um arquivo."
 msgstr "图片消息需要提供文件。"
 
-#: apps/social/serializers.py:230
+#: apps/social/serializers.py:262
 msgid "Mensagem de áudio requer um arquivo."
 msgstr "语音消息需要提供文件。"
 
-#: apps/social/serializers.py:232
+#: apps/social/serializers.py:264
 msgid "Mensagem de vídeo requer um arquivo."
 msgstr "视频消息需要提供文件。"
 
-#: apps/social/serializers.py:234
+#: apps/social/serializers.py:266
 msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
 msgstr "行程消息需要提供一个有效且已发布的 itinerario_id。"
+
+#: apps/social/serializers.py:288
+msgid "Alguém"
+msgstr "有人"
+
+#: apps/social/serializers.py:290
+#, python-format
+msgid "%(nome)s começou a seguir você"
+msgstr "%(nome)s 开始关注你"
+
+#: apps/social/serializers.py:291
+#, python-format
+msgid "%(nome)s quer seguir você"
+msgstr "%(nome)s 想要关注你"
+
+#: apps/social/serializers.py:292
+#, python-format
+msgid "%(nome)s comentou no seu itinerário"
+msgstr "%(nome)s 评论了你的行程"
+
+#: apps/social/serializers.py:293
+#, python-format
+msgid "%(nome)s respondeu seu comentário"
+msgstr "%(nome)s 回复了你的评论"
+
+#: apps/social/serializers.py:294
+#, python-format
+msgid "%(nome)s enviou uma mensagem"
+msgstr "%(nome)s 给你发送了一条消息"
+
+#: apps/social/serializers.py:295
+#, python-format
+msgid "%(nome)s curtiu algo seu"
+msgstr "%(nome)s 喜欢了你的内容"
+
+#: apps/social/serializers.py:296
+#, python-format
+msgid "%(nome)s publicou um novo itinerário"
+msgstr "%(nome)s 发布了新行程"
 
 #: apps/users/serializers.py:53
 msgid ""

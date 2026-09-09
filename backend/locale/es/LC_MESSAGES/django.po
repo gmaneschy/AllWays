@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"POT-Creation-Date: 2026-09-09 15:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <LL@li.org>\n"
@@ -31,9 +31,9 @@ msgid ""
 "Não é possível publicar diretamente por aqui. Salve como rascunho, envie as "
 "fotos/vídeos de cada ponto e então chame POST /itinerarios/{id}/publicar/."
 msgstr ""
-"No es posible publicar directamente desde aquí. Guarde como borrador, "
-"suba las fotos/videos de cada punto y luego llame a POST "
-"/itinerarios/{id}/publicar/."
+"No es posible publicar directamente desde aquí. Guarde como borrador, suba "
+"las fotos/videos de cada punto y luego llame a POST /itinerarios/{id}/"
+"publicar/."
 
 #: apps/itineraries/services.py:27
 msgid "Título é obrigatório."
@@ -58,28 +58,27 @@ msgstr "La fecha de finalización no puede ser anterior a la fecha de inicio."
 msgid "O itinerário precisa de pelo menos um ponto."
 msgstr "El itinerario necesita al menos un punto."
 
-#: apps/itineraries/services.py:55
+#: apps/itineraries/services.py:56
 #, python-format
 msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
-msgstr ""
-"Punto #%(numero)s: el campo '%(campo)s' es obligatorio para publicar."
+msgstr "Punto #%(numero)s: el campo '%(campo)s' es obligatorio para publicar."
 
-#: apps/itineraries/services.py:61
+#: apps/itineraries/services.py:62
 #, python-format
 msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
 msgstr ""
 "Punto #%(numero)s: un lugar gratuito no debe tener valoración de precio."
 
-#: apps/itineraries/services.py:66
+#: apps/itineraries/services.py:67
 #, python-format
 msgid ""
 "Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
 "gratuita."
 msgstr ""
-"Punto #%(numero)s: indique la valoración de precio, o márquelo como "
-"entrada gratuita."
+"Punto #%(numero)s: indique la valoración de precio, o márquelo como entrada "
+"gratuita."
 
-#: apps/itineraries/services.py:78
+#: apps/itineraries/services.py:79
 #, python-format
 msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
 msgstr "Punto #%(numero)s: agregue al menos una foto o video."
@@ -88,38 +87,76 @@ msgstr "Punto #%(numero)s: agregue al menos una foto o video."
 msgid "Você não pode seguir a si mesmo."
 msgstr "No puedes seguirte a ti mismo."
 
-#: apps/social/serializers.py:79
+#: apps/social/serializers.py:77
 msgid "Descreva o motivo da denúncia."
 msgstr "Describa el motivo de la denuncia."
 
-#: apps/social/serializers.py:126
+#: apps/social/serializers.py:118
 msgid ""
 "Respostas devem apontar `parent` para o comentário raiz da thread, não para "
 "outra resposta."
 msgstr ""
-"Las respuestas deben apuntar `parent` al comentario raíz del hilo, no a "
-"otra respuesta."
+"Las respuestas deben apuntar `parent` al comentario raíz del hilo, no a otra "
+"respuesta."
 
-#: apps/social/serializers.py:226
+#: apps/social/serializers.py:258
 msgid "Mensagem de texto não pode ser vazia."
 msgstr "El mensaje de texto no puede estar vacío."
 
-#: apps/social/serializers.py:228
+#: apps/social/serializers.py:260
 msgid "Mensagem de imagem requer um arquivo."
 msgstr "El mensaje de imagen requiere un archivo."
 
-#: apps/social/serializers.py:230
+#: apps/social/serializers.py:262
 msgid "Mensagem de áudio requer um arquivo."
 msgstr "El mensaje de audio requiere un archivo."
 
-#: apps/social/serializers.py:232
+#: apps/social/serializers.py:264
 msgid "Mensagem de vídeo requer um arquivo."
 msgstr "El mensaje de video requiere un archivo."
 
-#: apps/social/serializers.py:234
+#: apps/social/serializers.py:266
 msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
-msgstr ""
-"El mensaje de itinerario requiere un itinerario_id válido y publicado."
+msgstr "El mensaje de itinerario requiere un itinerario_id válido y publicado."
+
+#: apps/social/serializers.py:288
+msgid "Alguém"
+msgstr "Alguien"
+
+#: apps/social/serializers.py:290
+#, python-format
+msgid "%(nome)s começou a seguir você"
+msgstr "%(nome)s comenzó a seguirte"
+
+#: apps/social/serializers.py:291
+#, python-format
+msgid "%(nome)s quer seguir você"
+msgstr "%(nome)s quiere seguirte"
+
+#: apps/social/serializers.py:292
+#, python-format
+msgid "%(nome)s comentou no seu itinerário"
+msgstr "%(nome)s comentó tu itinerario"
+
+#: apps/social/serializers.py:293
+#, python-format
+msgid "%(nome)s respondeu seu comentário"
+msgstr "%(nome)s respondió a tu comentario"
+
+#: apps/social/serializers.py:294
+#, python-format
+msgid "%(nome)s enviou uma mensagem"
+msgstr "%(nome)s te envió un mensaje"
+
+#: apps/social/serializers.py:295
+#, python-format
+msgid "%(nome)s curtiu algo seu"
+msgstr "A %(nome)s le gustó algo tuyo"
+
+#: apps/social/serializers.py:296
+#, python-format
+msgid "%(nome)s publicou um novo itinerário"
+msgstr "%(nome)s publicó un nuevo itinerario"
 
 #: apps/users/serializers.py:53
 msgid ""

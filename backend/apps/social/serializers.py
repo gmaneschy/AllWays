@@ -285,16 +285,17 @@ class NotificationSerializer(serializers.ModelSerializer):
         return None
 
     def get_mensagem(self, obj):
-        nome = obj.ator.username if obj.ator else 'Alguém'
-        return {
-            'follow': f'{nome} começou a seguir você',
-            'solicitacao_seguir': f'{nome} quer seguir você',
-            'comentario': f'{nome} comentou no seu itinerário',
-            'resposta_comentario': f'{nome} respondeu seu comentário',
-            'mensagem': f'{nome} enviou uma mensagem',
-            'curtida': f'{nome} curtiu algo seu',
-            'novo_post': f'{nome} publicou um novo itinerário',
-        }.get(obj.tipo, '')
+        nome = obj.ator.username if obj.ator else _('Alguém')
+        mensagens = {
+            'follow': _('%(nome)s começou a seguir você') % {'nome': nome},
+            'solicitacao_seguir': _('%(nome)s quer seguir você') % {'nome': nome},
+            'comentario': _('%(nome)s comentou no seu itinerário') % {'nome': nome},
+            'resposta_comentario': _('%(nome)s respondeu seu comentário') % {'nome': nome},
+            'mensagem': _('%(nome)s enviou uma mensagem') % {'nome': nome},
+            'curtida': _('%(nome)s curtiu algo seu') % {'nome': nome},
+            'novo_post': _('%(nome)s publicou um novo itinerário') % {'nome': nome},
+        }
+        return mensagens.get(obj.tipo, '')
 
     def get_link(self, obj):
         from apps.itineraries.models import Itinerario, PontoItinerario

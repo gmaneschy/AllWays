@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 15:03+0000\n"
+"POT-Creation-Date: 2026-09-09 15:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: German <LL@li.org>\n"
@@ -58,20 +58,19 @@ msgstr "Das Enddatum darf nicht vor dem Startdatum liegen."
 msgid "O itinerário precisa de pelo menos um ponto."
 msgstr "Der Reiseplan benötigt mindestens einen Punkt."
 
-#: apps/itineraries/services.py:55
+#: apps/itineraries/services.py:56
 #, python-format
 msgid "Ponto #%(numero)s: campo '%(campo)s' é obrigatório para publicar."
 msgstr ""
-"Punkt #%(numero)s: Das Feld '%(campo)s' ist zum Veröffentlichen "
-"erforderlich."
+"Punkt #%(numero)s: Das Feld '%(campo)s' ist zum Veröffentlichen erforderlich."
 
-#: apps/itineraries/services.py:61
+#: apps/itineraries/services.py:62
 #, python-format
 msgid "Ponto #%(numero)s: local gratuito não deve ter avaliação de preço."
 msgstr ""
 "Punkt #%(numero)s: Ein kostenloser Ort darf keine Preisbewertung haben."
 
-#: apps/itineraries/services.py:66
+#: apps/itineraries/services.py:67
 #, python-format
 msgid ""
 "Ponto #%(numero)s: informe a avaliação de preço, ou marque como entrada "
@@ -80,7 +79,7 @@ msgstr ""
 "Punkt #%(numero)s: Geben Sie eine Preisbewertung an oder markieren Sie den "
 "Eintritt als kostenlos."
 
-#: apps/itineraries/services.py:78
+#: apps/itineraries/services.py:79
 #, python-format
 msgid "Ponto #%(numero)s: adicione pelo menos uma foto ou vídeo."
 msgstr "Punkt #%(numero)s: Fügen Sie mindestens ein Foto oder Video hinzu."
@@ -89,39 +88,78 @@ msgstr "Punkt #%(numero)s: Fügen Sie mindestens ein Foto oder Video hinzu."
 msgid "Você não pode seguir a si mesmo."
 msgstr "Sie können sich nicht selbst folgen."
 
-#: apps/social/serializers.py:79
+#: apps/social/serializers.py:77
 msgid "Descreva o motivo da denúncia."
 msgstr "Beschreiben Sie den Grund der Meldung."
 
-#: apps/social/serializers.py:126
+#: apps/social/serializers.py:118
 msgid ""
 "Respostas devem apontar `parent` para o comentário raiz da thread, não para "
 "outra resposta."
 msgstr ""
-"Antworten müssen mit `parent` auf den Wurzelkommentar des Threads "
-"verweisen, nicht auf eine andere Antwort."
+"Antworten müssen mit `parent` auf den Wurzelkommentar des Threads verweisen, "
+"nicht auf eine andere Antwort."
 
-#: apps/social/serializers.py:226
+#: apps/social/serializers.py:258
 msgid "Mensagem de texto não pode ser vazia."
 msgstr "Die Textnachricht darf nicht leer sein."
 
-#: apps/social/serializers.py:228
+#: apps/social/serializers.py:260
 msgid "Mensagem de imagem requer um arquivo."
 msgstr "Für eine Bildnachricht ist eine Datei erforderlich."
 
-#: apps/social/serializers.py:230
+#: apps/social/serializers.py:262
 msgid "Mensagem de áudio requer um arquivo."
 msgstr "Für eine Audionachricht ist eine Datei erforderlich."
 
-#: apps/social/serializers.py:232
+#: apps/social/serializers.py:264
 msgid "Mensagem de vídeo requer um arquivo."
 msgstr "Für eine Videonachricht ist eine Datei erforderlich."
 
-#: apps/social/serializers.py:234
+#: apps/social/serializers.py:266
 msgid "Mensagem de itinerário requer um itinerario_id válido e publicado."
 msgstr ""
 "Für eine Reiseplan-Nachricht ist eine gültige und veröffentlichte "
 "itinerario_id erforderlich."
+
+#: apps/social/serializers.py:288
+msgid "Alguém"
+msgstr "Jemand"
+
+#: apps/social/serializers.py:290
+#, python-format
+msgid "%(nome)s começou a seguir você"
+msgstr "%(nome)s folgt dir jetzt"
+
+#: apps/social/serializers.py:291
+#, python-format
+msgid "%(nome)s quer seguir você"
+msgstr "%(nome)s möchte dir folgen"
+
+#: apps/social/serializers.py:292
+#, python-format
+msgid "%(nome)s comentou no seu itinerário"
+msgstr "%(nome)s hat deine Reiseroute kommentiert"
+
+#: apps/social/serializers.py:293
+#, python-format
+msgid "%(nome)s respondeu seu comentário"
+msgstr "%(nome)s hat auf deinen Kommentar geantwortet"
+
+#: apps/social/serializers.py:294
+#, python-format
+msgid "%(nome)s enviou uma mensagem"
+msgstr "%(nome)s hat dir eine Nachricht gesendet"
+
+#: apps/social/serializers.py:295
+#, python-format
+msgid "%(nome)s curtiu algo seu"
+msgstr "%(nome)s gefällt etwas von dir"
+
+#: apps/social/serializers.py:296
+#, python-format
+msgid "%(nome)s publicou um novo itinerário"
+msgstr "%(nome)s hat eine neue Reiseroute veröffentlicht"
 
 #: apps/users/serializers.py:53
 msgid ""
@@ -150,7 +188,8 @@ msgstr "Das Geburtsdatum darf nicht in der Zukunft liegen."
 #: apps/users/serializers.py:83
 #, python-format
 msgid "É necessário ter ao menos %(idade)d anos para se cadastrar."
-msgstr "Sie müssen mindestens %(idade)d Jahre alt sein, um sich zu registrieren."
+msgstr ""
+"Sie müssen mindestens %(idade)d Jahre alt sein, um sich zu registrieren."
 
 #: apps/users/serializers.py:142
 #, python-format
